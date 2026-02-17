@@ -42,7 +42,7 @@ export default function AlertsIndex({ alerts, openCount, criticalCount, filters 
             </div>
 
             {/* Filters */}
-            <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
                 <select
                     defaultValue={filters?.status || ''}
                     onChange={(e) => router.get('/alerts', { ...filters, status: e.target.value }, { preserveState: true, replace: true })}
@@ -68,6 +68,19 @@ export default function AlertsIndex({ alerts, openCount, criticalCount, filters 
                     <option value="critical">Critique</option>
                     <option value="warning">Attention</option>
                 </select>
+                <a
+                    href={`/alerts/export?${new URLSearchParams(
+                        Object.entries(filters || {}).filter(([, v]) => v)
+                    ).toString()}`}
+                    style={{
+                        marginLeft: 'auto',
+                        background: '#065f46', color: '#6ee7b7', border: 'none',
+                        borderRadius: 6, padding: '0.5rem 1rem', cursor: 'pointer',
+                        fontSize: '0.8rem', fontWeight: 600, textDecoration: 'none',
+                    }}
+                >
+                    Exporter CSV
+                </a>
             </div>
 
             {/* Alert list */}

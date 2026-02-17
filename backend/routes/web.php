@@ -83,7 +83,8 @@ Route::middleware(['auth'])->group(function () {
     // ── Read-only pages (all roles) ──────────────────────────────────
 
     // Dashboard home
-    Route::get('/', DashboardController::class)->name('dashboard');
+    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+    Route::put('/dashboard/config', [DashboardController::class, 'saveConfig'])->name('dashboard.config');
 
     // Machines
     Route::get('/machines', [MachineController::class, 'index'])->name('machines.index');
@@ -92,8 +93,9 @@ Route::middleware(['auth'])->group(function () {
     // Tags (read-only list for all roles)
     Route::get('/tags', [TagController::class, 'index'])->name('tags.index');
 
-    // Alerts (view)
+    // Alerts (view + export)
     Route::get('/alerts', [AlertController::class, 'index'])->name('alerts.index');
+    Route::get('/alerts/export', [AlertController::class, 'exportCsv'])->name('alerts.export');
 
     // Exchanges (Elasticsearch full-text search)
     Route::get('/exchanges', [ExchangeController::class, 'index'])->name('exchanges.index');

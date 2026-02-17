@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 import { useEffect, useState, useCallback } from 'react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
 
@@ -78,6 +78,26 @@ function StatCard({ label, value, color = '#3b82f6', subtitle, href, pulse }) {
     return content;
 }
 
+const defaultWidgets = [
+    { id: 'stats', visible: true, order: 0 },
+    { id: 'activity24h', visible: true, order: 1 },
+    { id: 'platformUsage', visible: true, order: 2 },
+    { id: 'dailyEvents', visible: true, order: 3 },
+    { id: 'departmentStats', visible: true, order: 4 },
+    { id: 'recentAlerts', visible: true, order: 5 },
+    { id: 'topMachines', visible: true, order: 6 },
+];
+
+const widgetLabels = {
+    stats: 'Statistiques',
+    activity24h: 'Activité 24h',
+    platformUsage: 'Plateformes IA',
+    dailyEvents: 'Tendance 7 jours',
+    departmentStats: 'Départements',
+    recentAlerts: 'Alertes récentes',
+    topMachines: 'Top machines',
+};
+
 export default function DashboardIndex({
     stats: initialStats = {},
     activity24h = [],
@@ -85,11 +105,58 @@ export default function DashboardIndex({
     recentAlerts: initialAlerts = [],
     topMachines = [],
     dailyEvents = [],
+    departmentStats = [],
+    dashboardConfig = null,
 }) {
     const [stats, setStats] = useState(initialStats);
     const [recentAlerts, setRecentAlerts] = useState(initialAlerts);
     const [liveFeed, setLiveFeed] = useState([]);
     const [wsConnected, setWsConnected] = useState(false);
+    const [showConfig, setShowConfig] = useState(false);
+    const [widgets, setWidgets] = useState(
+        dashboardConfig?.widgets?.length > 0
+            ? [...dashboardConfig.widgets].sort((a, b) => a.order - b.order)
+            : defaultWidgets
+    );
+
+    const isWidgetVisible = (id) => {
+        const w = widgets.find((w) => w.id === id);
+        return w ? w.visible : true;
+    };
+
+    const toggleWidget = (id) => {
+        setWidgets((prev) => prev.map((w) => w.id === id ? { ...w, visible: !w.visible } : w));
+    };
+
+    const moveWidget = (id, direction) => {
+        setWidgets((prev) => {
+            const sorted = [...prev].sort((a, b) => a.order - b.order);
+            const idx = sorted.findIndex((w) => w.id === id);
+            const swapIdx = idx + direction;
+            if (swapIdx < 0 || swapIdx >= sorted.length) return prev;
+            const temp = sorted[idx].order;
+            sorted[idx] = { ...sorted[idx], order: sorted[swapIdx].order };
+            sorted[swapIdx] = { ...sorted[swapIdx], order: temp };
+            return sorted.sort((a, b) => a.order - b.order);
+        });
+    };
+
+    const saveConfig = () => {
+        fetch('/dashboard/config', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-XSRF-TOKEN': decodeURIComponent(
+                    document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] || ''
+                ),
+            },
+            body: JSON.stringify({ widgets }),
+        }).then(() => setShowConfig(false));
+    };
+
+    const resetConfig = () => {
+        setWidgets([...defaultWidgets]);
+    };
 
     const addToFeed = useCallback((item) => {
         setLiveFeed((prev) => [item, ...prev].slice(0, 15));
@@ -211,8 +278,117 @@ export default function DashboardIndex({
                 </div>
             )}
 
+            {/* Config button */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
+                <button
+                    onClick={() => setShowConfig(!showConfig)}
+                    style={{
+                        background: showConfig ? '#334155' : '#1e293b',
+                        color: '#94a3b8',
+                        border: '1px solid #334155',
+                        borderRadius: 6,
+                        padding: '0.4rem 0.75rem',
+                        cursor: 'pointer',
+                        fontSize: '0.75rem',
+                        fontWeight: 500,
+                    }}
+                >
+                    Personnaliser
+                </button>
+            </div>
+
+            {/* Config panel */}
+            {showConfig && (
+                <div style={{
+                    ...cardStyle,
+                    marginBottom: '1.5rem',
+                    border: '1px solid #3b82f6',
+                }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                        <h3 style={{ color: '#f8fafc', fontSize: '1rem', margin: 0, fontWeight: 600 }}>
+                            Widgets du tableau de bord
+                        </h3>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <button onClick={resetConfig} style={{
+                                background: '#334155', color: '#94a3b8', border: 'none',
+                                borderRadius: 6, padding: '0.35rem 0.6rem', cursor: 'pointer',
+                                fontSize: '0.7rem',
+                            }}>
+                                Réinitialiser
+                            </button>
+                            <button onClick={saveConfig} style={{
+                                background: '#3b82f6', color: '#fff', border: 'none',
+                                borderRadius: 6, padding: '0.35rem 0.6rem', cursor: 'pointer',
+                                fontSize: '0.7rem', fontWeight: 600,
+                            }}>
+                                Enregistrer
+                            </button>
+                        </div>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                        {[...widgets].sort((a, b) => a.order - b.order).map((w) => (
+                            <div key={w.id} style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.75rem',
+                                padding: '0.5rem 0.75rem',
+                                background: '#0f172a',
+                                borderRadius: 6,
+                            }}>
+                                <button
+                                    onClick={() => toggleWidget(w.id)}
+                                    style={{
+                                        width: 18, height: 18, borderRadius: 4,
+                                        border: `2px solid ${w.visible ? '#3b82f6' : '#475569'}`,
+                                        background: w.visible ? '#3b82f6' : 'transparent',
+                                        cursor: 'pointer', display: 'flex',
+                                        alignItems: 'center', justifyContent: 'center',
+                                        color: '#fff', fontSize: '0.65rem', fontWeight: 700,
+                                        flexShrink: 0,
+                                    }}
+                                >
+                                    {w.visible ? '\u2713' : ''}
+                                </button>
+                                <span style={{
+                                    color: w.visible ? '#e2e8f0' : '#64748b',
+                                    fontSize: '0.8rem',
+                                    fontWeight: 500,
+                                    flex: 1,
+                                }}>
+                                    {widgetLabels[w.id] || w.id}
+                                </span>
+                                <div style={{ display: 'flex', gap: '0.25rem' }}>
+                                    <button
+                                        onClick={() => moveWidget(w.id, -1)}
+                                        style={{
+                                            background: '#1e293b', color: '#94a3b8', border: '1px solid #334155',
+                                            borderRadius: 4, width: 22, height: 22, cursor: 'pointer',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            fontSize: '0.7rem',
+                                        }}
+                                    >
+                                        ↑
+                                    </button>
+                                    <button
+                                        onClick={() => moveWidget(w.id, 1)}
+                                        style={{
+                                            background: '#1e293b', color: '#94a3b8', border: '1px solid #334155',
+                                            borderRadius: 4, width: 22, height: 22, cursor: 'pointer',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            fontSize: '0.7rem',
+                                        }}
+                                    >
+                                        ↓
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {/* Stats grid */}
-            <div style={{
+            {isWidgetVisible('stats') && <div style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
                 gap: '1rem',
@@ -255,10 +431,10 @@ export default function DashboardIndex({
                     value={stats.agent_version ?? '-'}
                     color="#94a3b8"
                 />
-            </div>
+            </div>}
 
             {/* Charts row */}
-            <div style={{
+            {(isWidgetVisible('activity24h') || isWidgetVisible('platformUsage')) && <div style={{
                 display: 'grid',
                 gridTemplateColumns: '2fr 1fr',
                 gap: '1rem',
@@ -399,10 +575,10 @@ export default function DashboardIndex({
                         </div>
                     )}
                 </div>
-            </div>
+            </div>}
 
             {/* 7-day activity trend */}
-            {dailyEvents.length > 0 && (() => {
+            {isWidgetVisible('dailyEvents') && dailyEvents.length > 0 && (() => {
                 const maxDaily = Math.max(1, ...dailyEvents.map((d) => d.total));
                 return (
                     <div style={{ ...cardStyle, marginBottom: '1.5rem' }}>
@@ -492,8 +668,101 @@ export default function DashboardIndex({
                 );
             })()}
 
+            {/* Department statistics */}
+            {isWidgetVisible('departmentStats') && departmentStats.length > 0 && (() => {
+                const maxEvents = Math.max(1, ...departmentStats.map((d) => d.event_count));
+                const deptColors = ['#3b82f6', '#8b5cf6', '#22c55e', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899', '#f97316', '#14b8a6', '#6366f1'];
+                return (
+                    <div style={{ ...cardStyle, marginBottom: '1.5rem' }}>
+                        <h3 style={{ color: '#f8fafc', fontSize: '1rem', margin: '0 0 1.25rem', fontWeight: 600 }}>
+                            Activité par département (30j)
+                        </h3>
+                        <div style={{ display: 'flex', gap: '1.5rem' }}>
+                            {/* Bar chart */}
+                            <div style={{ flex: 2, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                {departmentStats.map((dept, idx) => {
+                                    const pct = Math.max(2, Math.round((dept.event_count / maxEvents) * 100));
+                                    const color = deptColors[idx % deptColors.length];
+                                    return (
+                                        <div key={dept.department}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
+                                                <span style={{ color: '#e2e8f0', fontSize: '0.8rem', fontWeight: 500 }}>
+                                                    {dept.department}
+                                                </span>
+                                                <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>
+                                                    {dept.event_count} évén. · {dept.machine_count} machine{dept.machine_count > 1 ? 's' : ''}
+                                                </span>
+                                            </div>
+                                            <div style={{ display: 'flex', gap: 2, height: 10 }}>
+                                                <div style={{
+                                                    width: `${pct}%`,
+                                                    height: '100%',
+                                                    borderRadius: 4,
+                                                    background: color,
+                                                    transition: 'width 0.3s ease',
+                                                }} />
+                                                {dept.blocked_count > 0 && (
+                                                    <div style={{
+                                                        width: `${Math.max(2, Math.round((dept.blocked_count / maxEvents) * 100))}%`,
+                                                        height: '100%',
+                                                        borderRadius: 4,
+                                                        background: '#ef4444',
+                                                    }}
+                                                        title={`${dept.blocked_count} blocages`}
+                                                    />
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            {/* Summary side */}
+                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                {departmentStats.slice(0, 5).map((dept, idx) => {
+                                    const color = deptColors[idx % deptColors.length];
+                                    return (
+                                        <div key={dept.department} style={{
+                                            background: '#0f172a',
+                                            borderRadius: 8,
+                                            padding: '0.6rem 0.75rem',
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                        }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                <div style={{ width: 8, height: 8, borderRadius: 2, background: color }} />
+                                                <span style={{ color: '#e2e8f0', fontSize: '0.75rem', fontWeight: 500 }}>
+                                                    {dept.department}
+                                                </span>
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '0.75rem' }}>
+                                                {dept.alert_count > 0 && (
+                                                    <span style={{
+                                                        fontSize: '0.65rem',
+                                                        fontWeight: 700,
+                                                        padding: '0.1rem 0.35rem',
+                                                        borderRadius: 4,
+                                                        background: 'rgba(239,68,68,0.15)',
+                                                        color: '#ef4444',
+                                                    }}>
+                                                        {dept.alert_count} alerte{dept.alert_count > 1 ? 's' : ''}
+                                                    </span>
+                                                )}
+                                                <span style={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600 }}>
+                                                    {dept.blocked_count} bloqués
+                                                </span>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
+
             {/* Bottom row: Recent alerts + Live feed / Top machines */}
-            <div style={{
+            {(isWidgetVisible('recentAlerts') || isWidgetVisible('topMachines')) && <div style={{
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr',
                 gap: '1rem',
@@ -747,7 +1016,7 @@ export default function DashboardIndex({
                         )}
                     </div>
                 </div>
-            </div>
+            </div>}
 
             {/* CSS animation for pulse */}
             <style>{`

@@ -47,7 +47,7 @@ const eventTypeColors = {
     alert: '#f97316',
 };
 
-export default function ReportsIndex({ stats, platformUsage, alertsTrend, topMachines, eventTypes, dailyEvents, severityDistribution, filters }) {
+export default function ReportsIndex({ stats, platformUsage, alertsTrend, topMachines, eventTypes, dailyEvents, severityDistribution, departmentStats, filters }) {
     const [dateFrom, setDateFrom] = useState(filters?.date_from || '');
     const [dateTo, setDateTo] = useState(filters?.date_to || '');
 
@@ -292,7 +292,65 @@ export default function ReportsIndex({ stats, platformUsage, alertsTrend, topMac
                 </div>
             </div>
 
-            {/* Row 3: Alerts trend + Top machines */}
+            {/* Row 3: Department stats */}
+            {departmentStats?.length > 0 && (
+                <div style={{ ...cardStyle, marginBottom: '1rem' }}>
+                    <h3 style={{ color: '#f8fafc', margin: '0 0 1rem', fontSize: '1rem', fontWeight: 600 }}>
+                        Activité par département
+                    </h3>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                            <tr style={{ borderBottom: '1px solid #334155' }}>
+                                {['Département', 'Machines', 'Événements', 'Blocages', 'Taux blocage'].map((h) => (
+                                    <th key={h} style={{
+                                        padding: '0.5rem', textAlign: 'left',
+                                        color: '#94a3b8', fontSize: '0.65rem',
+                                        textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600,
+                                    }}>{h}</th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {departmentStats.map((dept) => {
+                                const blockRate = dept.event_count > 0
+                                    ? Math.round((dept.blocked_count / dept.event_count) * 100) : 0;
+                                return (
+                                    <tr key={dept.department} style={{ borderBottom: '1px solid #0f172a' }}>
+                                        <td style={{ padding: '0.5rem', color: '#f8fafc', fontSize: '0.8rem', fontWeight: 500 }}>
+                                            {dept.department}
+                                        </td>
+                                        <td style={{ padding: '0.5rem', color: '#94a3b8', fontSize: '0.8rem' }}>
+                                            {dept.machine_count}
+                                        </td>
+                                        <td style={{ padding: '0.5rem', color: '#94a3b8', fontSize: '0.8rem' }}>
+                                            {dept.event_count}
+                                        </td>
+                                        <td style={{ padding: '0.5rem', color: dept.blocked_count > 0 ? '#ef4444' : '#94a3b8', fontSize: '0.8rem', fontWeight: dept.blocked_count > 0 ? 600 : 400 }}>
+                                            {dept.blocked_count}
+                                        </td>
+                                        <td style={{ padding: '0.5rem', width: '20%' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                <div style={{ flex: 1, height: 6, borderRadius: 3, background: '#0f172a' }}>
+                                                    <div style={{
+                                                        height: '100%', width: `${blockRate}%`,
+                                                        borderRadius: 3,
+                                                        background: blockRate > 20 ? '#ef4444' : blockRate > 5 ? '#f59e0b' : '#22c55e',
+                                                    }} />
+                                                </div>
+                                                <span style={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, minWidth: 30, textAlign: 'right' }}>
+                                                    {blockRate}%
+                                                </span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+
+            {/* Row 4: Alerts trend + Top machines */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 {/* Alerts trend */}
                 <div style={cardStyle}>

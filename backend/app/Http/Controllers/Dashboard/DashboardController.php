@@ -7,13 +7,15 @@ use App\Models\Alert;
 use App\Models\Event;
 use App\Models\Machine;
 use App\Models\Setting;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class DashboardController extends Controller
 {
-    public function __invoke(): Response
+    public function index(): Response
     {
         $now = now();
 
@@ -112,6 +114,38 @@ class DashboardController extends Controller
                 'blocked' => (int) $row->blocked,
             ]);
 
+        // Department statistics (last 30 days)
+        $departmentStats = Machine::whereNotNull('department')
+            ->where('department', '!=', '')
+            ->select('department', DB::raw('COUNT(*) as machine_count'))
+            ->groupBy('department')
+            ->orderByDesc('machine_count')
+            ->limit(10)
+            ->get()
+            ->map(function ($row) use ($now) {
+                $machineIds = Machine::where('department', $row->department)->pluck('id');
+                $eventCount = Event::whereIn('machine_id', $machineIds)
+                    ->where('occurred_at', '>', $now->copy()->subDays(30))
+                    ->count();
+                $blockedCount = Event::whereIn('machine_id', $machineIds)
+                    ->where('occurred_at', '>', $now->copy()->subDays(30))
+                    ->where('event_type', 'block')
+                    ->count();
+                $alertCount = Alert::whereIn('machine_id', $machineIds)
+                    ->where('status', 'open')
+                    ->count();
+
+                return [
+                    'department' => $row->department,
+                    'machine_count' => (int) $row->machine_count,
+                    'event_count' => $eventCount,
+                    'blocked_count' => $blockedCount,
+                    'alert_count' => $alertCount,
+                ];
+            });
+
+        $dashboardConfig = auth()->user()->dashboard_config ?? self::defaultConfig();
+
         return Inertia::render('Dashboard/Index', [
             'stats' => $stats,
             'activity24h' => $activity24h,
@@ -119,6 +153,37 @@ class DashboardController extends Controller
             'recentAlerts' => $recentAlerts,
             'topMachines' => $topMachines,
             'dailyEvents' => $dailyEvents,
+            'departmentStats' => $departmentStats,
+            'dashboardConfig' => $dashboardConfig,
         ]);
+    }
+
+    public function saveConfig(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'widgets' => 'required|array',
+            'widgets.*.id' => 'required|string',
+            'widgets.*.visible' => 'required|boolean',
+            'widgets.*.order' => 'required|integer|min:0',
+        ]);
+
+        $request->user()->update(['dashboard_config' => $validated]);
+
+        return response()->json(['ok' => true]);
+    }
+
+    public static function defaultConfig(): array
+    {
+        return [
+            'widgets' => [
+                ['id' => 'stats', 'visible' => true, 'order' => 0],
+                ['id' => 'activity24h', 'visible' => true, 'order' => 1],
+                ['id' => 'platformUsage', 'visible' => true, 'order' => 2],
+                ['id' => 'dailyEvents', 'visible' => true, 'order' => 3],
+                ['id' => 'departmentStats', 'visible' => true, 'order' => 4],
+                ['id' => 'recentAlerts', 'visible' => true, 'order' => 5],
+                ['id' => 'topMachines', 'visible' => true, 'order' => 6],
+            ],
+        ];
     }
 }

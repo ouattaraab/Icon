@@ -16,6 +16,7 @@ class User extends Authenticatable
         'password',
         'role',
         'notify_critical_alerts',
+        'dashboard_config',
         'two_factor_secret',
         'two_factor_recovery_codes',
         'two_factor_confirmed_at',
@@ -33,6 +34,7 @@ class User extends Authenticatable
         return [
             'password' => 'hashed',
             'notify_critical_alerts' => 'boolean',
+            'dashboard_config' => 'array',
             'two_factor_secret' => 'encrypted',
             'two_factor_recovery_codes' => 'encrypted:array',
             'two_factor_confirmed_at' => 'datetime',

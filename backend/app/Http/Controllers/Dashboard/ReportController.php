@@ -86,6 +86,32 @@ class ReportController extends Controller
             'critical_alerts' => Alert::where('status', 'open')->where('severity', 'critical')->count(),
         ];
 
+        // Department breakdown
+        $departmentStats = Machine::whereNotNull('department')
+            ->where('department', '!=', '')
+            ->select('department', DB::raw('COUNT(*) as machine_count'))
+            ->groupBy('department')
+            ->orderByDesc('machine_count')
+            ->limit(10)
+            ->get()
+            ->map(function ($row) use ($dateFrom, $dateTo) {
+                $machineIds = Machine::where('department', $row->department)->pluck('id');
+                $eventCount = Event::whereIn('machine_id', $machineIds)
+                    ->whereBetween('occurred_at', [$dateFrom, $dateTo])
+                    ->count();
+                $blockedCount = Event::whereIn('machine_id', $machineIds)
+                    ->whereBetween('occurred_at', [$dateFrom, $dateTo])
+                    ->where('event_type', 'block')
+                    ->count();
+
+                return [
+                    'department' => $row->department,
+                    'machine_count' => (int) $row->machine_count,
+                    'event_count' => $eventCount,
+                    'blocked_count' => $blockedCount,
+                ];
+            });
+
         return Inertia::render('Reports/Index', [
             'stats' => $stats,
             'platformUsage' => $platformUsage,
@@ -94,6 +120,7 @@ class ReportController extends Controller
             'eventTypes' => $eventTypes,
             'dailyEvents' => $dailyEvents,
             'severityDistribution' => $severityDistribution,
+            'departmentStats' => $departmentStats,
             'filters' => [
                 'date_from' => $dateFrom,
                 'date_to' => $dateTo,
