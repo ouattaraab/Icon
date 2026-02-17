@@ -1,0 +1,336 @@
+name: Icon CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # ── Agent Rust Tests ──────────────────────────────────────
+  agent-test:
+    name: Agent Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: agent
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry & build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            agent/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('agent/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Install SQLCipher dev headers
+        run: sudo apt-get update && sudo apt-get install -y libsqlcipher-dev
+
+      - name: Check formatting
+        run: cargo fmt -- --check
+
+      - name: Clippy lints
+        run: cargo clippy -- -D warnings
+
+      - name: Run tests
+        run: cargo test --verbose
+
+  # ── Agent Build (multi-platform) ──────────────────────────
+  agent-build:
+    name: Build Agent (${{ matrix.target }})
+    needs: agent-test
+    if: startsWith(github.ref, 'refs/tags/v')
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            artifact: icon-agent-windows-x64
+            ext: .exe
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            artifact: icon-agent-macos-arm64
+            ext: ''
+          - target: x86_64-apple-darwin
+            os: macos-13
+            artifact: icon-agent-macos-x64
+            ext: ''
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: agent
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            agent/target
+          key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('agent/Cargo.lock') }}
+
+      - name: Build release
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Prepare artifacts
+        shell: bash
+        run: |
+          mkdir -p ../dist
+          cp target/${{ matrix.target }}/release/icon-agent${{ matrix.ext }} ../dist/
+          cp target/${{ matrix.target }}/release/icon-watchdog${{ matrix.ext }} ../dist/
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/
+
+  # ── Windows MSI Installer ─────────────────────────────────
+  build-msi:
+    name: Build Windows MSI
+    needs: agent-build
+    runs-on: windows-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Windows binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: icon-agent-windows-x64
+          path: agent/target/x86_64-pc-windows-msvc/release/
+
+      - name: Install WiX Toolset
+        run: dotnet tool install --global wix
+
+      - name: Extract version from tag
+        id: version
+        shell: bash
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Build MSI
+        working-directory: installer/windows
+        run: |
+          wix build icon.wxs -o Icon-Agent-${{ steps.version.outputs.VERSION }}.msi -d "Version=${{ steps.version.outputs.VERSION }}"
+
+      - name: Upload MSI
+        uses: actions/upload-artifact@v4
+        with:
+          name: icon-msi
+          path: installer/windows/*.msi
+
+  # ── macOS PKG Installer ───────────────────────────────────
+  build-pkg:
+    name: Build macOS PKG (${{ matrix.arch }})
+    needs: agent-build
+    runs-on: macos-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    strategy:
+      matrix:
+        include:
+          - arch: arm64
+            target: aarch64-apple-darwin
+            artifact: icon-agent-macos-arm64
+          - arch: x64
+            target: x86_64-apple-darwin
+            artifact: icon-agent-macos-x64
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download macOS binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: agent/target/${{ matrix.target }}/release/
+
+      - name: Fix permissions
+        run: chmod +x agent/target/${{ matrix.target }}/release/icon-*
+
+      - name: Extract version from tag
+        id: version
+        shell: bash
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Build PKG
+        working-directory: installer/macos
+        run: |
+          chmod +x build.sh
+          ./build.sh ${{ steps.version.outputs.VERSION }} ${{ matrix.target }}
+
+      - name: Upload PKG
+        uses: actions/upload-artifact@v4
+        with:
+          name: icon-pkg-${{ matrix.arch }}
+          path: installer/macos/*.pkg
+
+  # ── Backend Tests ─────────────────────────────────────────
+  backend-test:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: icon_test
+          POSTGRES_USER: icon
+          POSTGRES_PASSWORD: testing
+        ports: ['5432:5432']
+        options: --health-cmd="pg_isready -U icon" --health-interval=10s --health-timeout=5s --health-retries=5
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_pgsql, pgsql, redis, pcntl, zip
+          coverage: xdebug
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-progress
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Copy env
+        run: cp .env.example .env
+
+      - name: Generate app key
+        run: php artisan key:generate
+
+      - name: Run migrations
+        env:
+          DB_CONNECTION: pgsql
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_DATABASE: icon_test
+          DB_USERNAME: icon
+          DB_PASSWORD: testing
+          REDIS_HOST: localhost
+        run: php artisan migrate --force
+
+      - name: Run tests
+        env:
+          DB_CONNECTION: pgsql
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_DATABASE: icon_test
+          DB_USERNAME: icon
+          DB_PASSWORD: testing
+          REDIS_HOST: localhost
+        run: php artisan test --parallel
+
+  # ── Docker Image ──────────────────────────────────────────
+  docker-build:
+    name: Build Docker Image
+    needs: backend-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/icon-backend
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=sha
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: backend
+          file: docker/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ── Release ───────────────────────────────────────────────
+  release:
+    name: Create Release
+    needs: [build-msi, build-pkg, docker-build]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+
+      - name: Extract version
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Compute checksums
+        working-directory: release-artifacts
+        run: |
+          find . -type f \( -name "*.msi" -o -name "*.pkg" -o -name "icon-agent*" -o -name "icon-watchdog*" \) | while read f; do
+            sha256sum "$f" >> checksums.sha256
+          done
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Icon Agent v${{ steps.version.outputs.VERSION }}
+          generate_release_notes: true
+          files: |
+            release-artifacts/**/*.msi
+            release-artifacts/**/*.pkg
+            release-artifacts/**/icon-agent*
+            release-artifacts/**/icon-watchdog*
+            release-artifacts/checksums.sha256

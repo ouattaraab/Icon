@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Icon - Requête bloquée</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: #e0e0e0;
+        }
+        .container {
+            text-align: center;
+            padding: 3rem 2.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-width: 520px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        .shield {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1.5rem;
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            box-shadow: 0 4px 20px rgba(231, 76, 60, 0.4);
+        }
+        h1 {
+            color: #e74c3c;
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+        .message {
+            color: #bbb;
+            line-height: 1.7;
+            font-size: 0.95rem;
+            margin-bottom: 1rem;
+        }
+        .rule-info {
+            background: rgba(243, 156, 18, 0.1);
+            border: 1px solid rgba(243, 156, 18, 0.3);
+            border-radius: 10px;
+            padding: 0.8rem 1.2rem;
+            margin: 1.5rem 0;
+        }
+        .rule-label {
+            color: #999;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .rule-name {
+            color: #f39c12;
+            font-weight: 600;
+            font-size: 0.95rem;
+            margin-top: 0.3rem;
+        }
+        .redirect-btn {
+            display: inline-block;
+            margin-top: 1.5rem;
+            padding: 0.85rem 2.5rem;
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            color: #fff;
+            text-decoration: none;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3);
+        }
+        .redirect-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(46, 204, 113, 0.4);
+        }
+        .footer {
+            margin-top: 2rem;
+            color: #666;
+            font-size: 0.75rem;
+        }
+        .footer img {
+            height: 16px;
+            vertical-align: middle;
+            margin-right: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="shield">🛡️</div>
+        <h1>Requête bloquée par Icon</h1>
+        <p class="message">{{MESSAGE}}</p>
+        <div class="rule-info">
+            <div class="rule-label">Règle de sécurité</div>
+            <div class="rule-name">{{RULE_NAME}}</div>
+        </div>
+        <p class="message">
+            Pour vos besoins en intelligence artificielle, utilisez la plateforme interne approuvée par GS2E.
+        </p>
+        <a class="redirect-btn" href="https://marcelia.gs2e.ci">
+            Accéder à Marcel'IA
+        </a>
+        <div class="footer">
+            Icon Security — GS2E © 2024
+        </div>
+    </div>
+</body>
+</html>

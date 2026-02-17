@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Icon Agent — Windows MSI Installer (WiX v4)
+    Build with: wix build icon.wxs -o Icon-Agent.msi
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+
+    <Package
+        Name="Icon Agent"
+        Manufacturer="GS2E"
+        Version="!(bind.FileVersion.IconAgentExe)"
+        UpgradeCode="7E8F4A2C-5B1D-4C9E-A3F6-2D8E9B1C4F5A"
+        Scope="perMachine"
+        InstallerVersion="500">
+
+        <SummaryInformation
+            Description="Icon AI Monitoring Agent for GS2E"
+            Manufacturer="GS2E" />
+
+        <!-- Major upgrade: remove previous versions -->
+        <MajorUpgrade
+            DowngradeErrorMessage="A newer version of Icon Agent is already installed."
+            AllowSameVersionUpgrades="yes" />
+
+        <!-- Program Files installation -->
+        <StandardDirectory Id="ProgramFiles64Folder">
+            <Directory Id="INSTALLFOLDER" Name="Icon">
+                <Component Id="AgentBinary" Guid="A1B2C3D4-E5F6-7890-ABCD-EF1234567890">
+                    <File Id="IconAgentExe"
+                          Source="..\..\agent\target\x86_64-pc-windows-msvc\release\icon-agent.exe"
+                          Name="icon-agent.exe"
+                          KeyPath="yes" />
+                </Component>
+
+                <Component Id="WatchdogBinary" Guid="B2C3D4E5-F6A7-8901-BCDE-F12345678901">
+                    <File Id="IconWatchdogExe"
+                          Source="..\..\agent\target\x86_64-pc-windows-msvc\release\icon-watchdog.exe"
+                          Name="icon-watchdog.exe"
+                          KeyPath="yes" />
+                </Component>
+
+                <Component Id="BlockPage" Guid="C3D4E5F6-A7B8-9012-CDEF-123456789012">
+                    <File Id="BlockPageHtml"
+                          Source="..\..\agent\assets\block_page.html"
+                          Name="block_page.html" />
+                </Component>
+            </Directory>
+        </StandardDirectory>
+
+        <!-- ProgramData for config and data -->
+        <StandardDirectory Id="CommonAppDataFolder">
+            <Directory Id="IconDataFolder" Name="Icon">
+                <Component Id="ConfigDirectory" Guid="D4E5F6A7-B8C9-0123-DEF0-123456789ABC">
+                    <CreateFolder />
+                    <RemoveFolder Id="RemoveIconDataFolder" On="uninstall" />
+                </Component>
+            </Directory>
+        </StandardDirectory>
+
+        <!-- Windows Service: Icon Agent -->
+        <Component Id="AgentService" Directory="INSTALLFOLDER"
+                   Guid="E5F6A7B8-C9D0-1234-EF01-23456789ABCD">
+            <ServiceInstall
+                Id="IconAgentService"
+                Name="IconAgent"
+                DisplayName="Icon AI Monitoring Agent"
+                Description="Monitors and controls AI platform usage for GS2E security compliance."
+                Type="ownProcess"
+                Start="auto"
+                ErrorControl="normal"
+                Account="LocalSystem">
+                <ServiceConfig
+                    DelayedAutoStart="yes"
+                    OnInstall="yes"
+                    OnReinstall="yes" />
+            </ServiceInstall>
+            <ServiceControl
+                Id="StartIconAgent"
+                Name="IconAgent"
+                Start="install"
+                Stop="both"
+                Remove="uninstall"
+                Wait="yes" />
+        </Component>
+
+        <!-- Windows Service: Icon Watchdog -->
+        <Component Id="WatchdogService" Directory="INSTALLFOLDER"
+                   Guid="F6A7B8C9-D0E1-2345-F012-3456789ABCDE">
+            <ServiceInstall
+                Id="IconWatchdogService"
+                Name="IconWatchdog"
+                DisplayName="Icon Watchdog"
+                Description="Monitors Icon Agent health and proxy configuration integrity."
+                Type="ownProcess"
+                Start="auto"
+                ErrorControl="normal"
+                Account="LocalSystem" />
+            <ServiceControl
+                Id="StartIconWatchdog"
+                Name="IconWatchdog"
+                Start="install"
+                Stop="both"
+                Remove="uninstall"
+                Wait="yes" />
+        </Component>
+
+        <!-- Custom Action: Generate config on install -->
+        <CustomAction Id="GenerateConfig"
+                      Directory="IconDataFolder"
+                      ExeCommand="cmd /c &quot;[INSTALLFOLDER]icon-agent.exe&quot; --generate-config"
+                      Execute="deferred"
+                      Impersonate="no"
+                      Return="ignore" />
+
+        <InstallExecuteSequence>
+            <Custom Action="GenerateConfig" After="InstallFiles">NOT REMOVE</Custom>
+        </InstallExecuteSequence>
+
+        <!-- Feature tree -->
+        <Feature Id="Complete" Title="Icon Agent" Level="1">
+            <ComponentRef Id="AgentBinary" />
+            <ComponentRef Id="WatchdogBinary" />
+            <ComponentRef Id="BlockPage" />
+            <ComponentRef Id="ConfigDirectory" />
+            <ComponentRef Id="AgentService" />
+            <ComponentRef Id="WatchdogService" />
+        </Feature>
+
+    </Package>
+</Wix>

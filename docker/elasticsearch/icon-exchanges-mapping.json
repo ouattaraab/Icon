@@ -1,0 +1,91 @@
+{
+  "settings": {
+    "number_of_shards": 2,
+    "number_of_replicas": 0,
+    "analysis": {
+      "analyzer": {
+        "french_custom": {
+          "type": "custom",
+          "tokenizer": "standard",
+          "filter": [
+            "lowercase",
+            "french_elision",
+            "french_stop",
+            "french_stemmer"
+          ]
+        }
+      },
+      "filter": {
+        "french_elision": {
+          "type": "elision",
+          "articles": ["l", "m", "t", "qu", "n", "s", "j", "d", "c"]
+        },
+        "french_stop": {
+          "type": "stop",
+          "stopwords": "_french_"
+        },
+        "french_stemmer": {
+          "type": "stemmer",
+          "language": "french"
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "event_id": {
+        "type": "keyword"
+      },
+      "machine_id": {
+        "type": "keyword"
+      },
+      "platform": {
+        "type": "keyword"
+      },
+      "domain": {
+        "type": "keyword"
+      },
+      "event_type": {
+        "type": "keyword"
+      },
+      "prompt": {
+        "type": "text",
+        "analyzer": "french_custom",
+        "fields": {
+          "raw": {
+            "type": "keyword",
+            "ignore_above": 512
+          }
+        }
+      },
+      "response": {
+        "type": "text",
+        "analyzer": "french_custom"
+      },
+      "content_hash": {
+        "type": "keyword"
+      },
+      "content_length": {
+        "type": "integer"
+      },
+      "matched_rules": {
+        "type": "keyword"
+      },
+      "severity": {
+        "type": "keyword"
+      },
+      "assigned_user": {
+        "type": "keyword"
+      },
+      "department": {
+        "type": "keyword"
+      },
+      "occurred_at": {
+        "type": "date"
+      },
+      "created_at": {
+        "type": "date"
+      }
+    }
+  }
+}

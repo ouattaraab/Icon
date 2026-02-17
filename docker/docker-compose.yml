@@ -1,0 +1,180 @@
+version: '3.8'
+
+services:
+  # Laravel Application
+  app:
+    build:
+      context: ../backend
+      dockerfile: ../docker/Dockerfile
+    container_name: icon-app
+    restart: unless-stopped
+    volumes:
+      - ../backend:/var/www/html
+      - app-storage:/var/www/html/storage
+    environment:
+      - APP_ENV=production
+      - APP_KEY=${APP_KEY}
+      - DB_CONNECTION=pgsql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_DATABASE=icon
+      - DB_USERNAME=icon
+      - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - ELASTICSEARCH_HOST=elasticsearch:9200
+      - QUEUE_CONNECTION=redis
+      - BROADCAST_CONNECTION=reverb
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - icon-network
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: icon-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ../backend/public:/var/www/html/public:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - app
+    networks:
+      - icon-network
+
+  # PostgreSQL 16
+  postgres:
+    image: postgres:16-alpine
+    container_name: icon-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: icon
+      POSTGRES_USER: icon
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U icon"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - icon-network
+
+  # Elasticsearch 8.x
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
+    container_name: icon-elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - xpack.security.http.ssl.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - cluster.name=icon-cluster
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    networks:
+      - icon-network
+
+  # Redis 7.x
+  redis:
+    image: redis:7-alpine
+    container_name: icon-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - icon-network
+
+  # Laravel Queue Worker
+  queue-worker:
+    build:
+      context: ../backend
+      dockerfile: ../docker/Dockerfile
+    container_name: icon-queue-worker
+    restart: unless-stopped
+    command: php artisan queue:work redis --sleep=3 --tries=3 --max-time=3600
+    volumes:
+      - ../backend:/var/www/html
+    environment:
+      - APP_ENV=production
+      - DB_CONNECTION=pgsql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_DATABASE=icon
+      - DB_USERNAME=icon
+      - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_HOST=redis
+      - QUEUE_CONNECTION=redis
+      - ELASTICSEARCH_HOST=elasticsearch:9200
+    depends_on:
+      - app
+      - redis
+      - postgres
+    networks:
+      - icon-network
+
+  # Laravel Scheduler (cron)
+  scheduler:
+    build:
+      context: ../backend
+      dockerfile: ../docker/Dockerfile
+    container_name: icon-scheduler
+    restart: unless-stopped
+    command: >
+      sh -c "while true; do php artisan schedule:run --no-interaction; sleep 60; done"
+    volumes:
+      - ../backend:/var/www/html
+    environment:
+      - APP_ENV=production
+      - DB_CONNECTION=pgsql
+      - DB_HOST=postgres
+      - DB_DATABASE=icon
+      - DB_USERNAME=icon
+      - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_HOST=redis
+      - ELASTICSEARCH_HOST=elasticsearch:9200
+    depends_on:
+      - app
+      - redis
+      - postgres
+    networks:
+      - icon-network
+
+volumes:
+  postgres-data:
+  elasticsearch-data:
+  redis-data:
+  app-storage:
+
+networks:
+  icon-network:
+    driver: bridge

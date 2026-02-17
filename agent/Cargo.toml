@@ -1,0 +1,101 @@
+[package]
+name = "icon-agent"
+version = "0.1.0"
+edition = "2021"
+description = "Icon - Agent endpoint de monitoring IA pour GS2E"
+authors = ["GS2E <dev@gs2e.ci>"]
+
+[dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# HTTP client + proxy
+reqwest = { version = "0.12", features = ["json", "rustls-tls", "gzip"] }
+hyper = { version = "1", features = ["full"] }
+hyper-util = { version = "0.1", features = ["full"] }
+http-body-util = "0.1"
+
+# TLS
+rustls = "0.23"
+rcgen = "0.13"
+tokio-rustls = "0.26"
+rustls-pemfile = "2"
+webpki-roots = "0.26"
+
+# WebSocket
+tokio-tungstenite = { version = "0.24", features = ["rustls-tls-webpki-roots"] }
+futures-util = "0.3"
+
+# SQLite chiffré
+rusqlite = { version = "0.31", features = ["bundled-sqlcipher"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Regex pour le rule engine
+regex = "1"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["json", "env-filter"] }
+
+# Configuration
+config = "0.14"
+
+# UUID
+uuid = { version = "1", features = ["v4", "serde"] }
+
+# Date/time
+chrono = { version = "0.4", features = ["serde"] }
+
+# HMAC signing
+hmac = "0.12"
+sha2 = "0.10"
+hex = "0.4"
+
+# Compression
+flate2 = "1"
+
+# Error handling
+anyhow = "1"
+
+# Hostname detection
+hostname = "0.4"
+
+# LRU cache for TLS certificates
+lru = "0.12"
+
+# Platform-specific clipboard
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { version = "0.58", features = [
+    "Win32_System_DataExchange",
+    "Win32_Foundation",
+    "Win32_System_Services",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_System_Threading",
+] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.5"
+objc2-app-kit = { version = "0.2", features = ["NSPasteboard"] }
+objc2-foundation = "0.2"
+
+[build-dependencies]
+chrono = "0.4"
+
+[target.'cfg(target_os = "windows")'.build-dependencies]
+winresource = "0.1"
+
+[dev-dependencies]
+mockall = "0.13"
+wiremock = "0.6"
+tempfile = "3"
+
+[[bin]]
+name = "icon-agent"
+path = "src/main.rs"
+
+[[bin]]
+name = "icon-watchdog"
+path = "src/watchdog/main_watchdog.rs"
