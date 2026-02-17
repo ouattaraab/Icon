@@ -1,4 +1,4 @@
-import { Link, usePage } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import { useState, useEffect, useCallback } from 'react';
 
 const navigation = [
@@ -10,6 +10,7 @@ const navigation = [
     { name: 'Domaines', href: '/domains', icon: '\u{1f310}' },
     { name: 'Rapports', href: '/reports', icon: '\u{1f4c8}' },
     { name: 'Audit', href: '/audit', icon: '\u{1f4dc}' },
+    { name: 'Utilisateurs', href: '/users', icon: '\u{1f465}', adminOnly: true },
 ];
 
 const severityColors = {
@@ -18,8 +19,13 @@ const severityColors = {
     info: '#3b82f6',
 };
 
+const roleLabels = { admin: 'Admin', manager: 'Manager', viewer: 'Lecteur' };
+const roleColors = { admin: '#ef4444', manager: '#f59e0b', viewer: '#3b82f6' };
+
 export default function DashboardLayout({ children, title }) {
-    const { url } = usePage();
+    const { url, props } = usePage();
+    const { auth } = props;
+    const isAdmin = auth?.is_admin ?? false;
     const [notifications, setNotifications] = useState([]);
     const [showNotifications, setShowNotifications] = useState(false);
 
@@ -128,7 +134,7 @@ export default function DashboardLayout({ children, title }) {
                 </div>
 
                 <nav style={{ flex: 1 }}>
-                    {navigation.map((item) => {
+                    {navigation.filter((item) => !item.adminOnly || isAdmin).map((item) => {
                         const isActive = url === item.href ||
                             (item.href !== '/' && url.startsWith(item.href));
 
@@ -156,6 +162,45 @@ export default function DashboardLayout({ children, title }) {
                         );
                     })}
                 </nav>
+
+                {/* User info + logout */}
+                {auth?.user && (
+                    <div style={{
+                        padding: '1rem 1.5rem',
+                        borderTop: '1px solid #334155',
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                            <span style={{ color: '#e2e8f0', fontSize: '0.8rem', fontWeight: 500 }}>
+                                {auth.user.name}
+                            </span>
+                            <span style={{
+                                padding: '0.1rem 0.4rem',
+                                borderRadius: 4,
+                                fontSize: '0.65rem',
+                                fontWeight: 600,
+                                background: `${roleColors[auth.user.role] || '#64748b'}20`,
+                                color: roleColors[auth.user.role] || '#64748b',
+                            }}>
+                                {roleLabels[auth.user.role] || auth.user.role}
+                            </span>
+                        </div>
+                        <button
+                            onClick={() => router.post('/logout')}
+                            style={{
+                                background: 'transparent',
+                                border: '1px solid #334155',
+                                borderRadius: 6,
+                                padding: '0.35rem 0.75rem',
+                                color: '#94a3b8',
+                                fontSize: '0.75rem',
+                                cursor: 'pointer',
+                                width: '100%',
+                            }}
+                        >
+                            Se déconnecter
+                        </button>
+                    </div>
+                )}
             </aside>
 
             {/* Main content */}

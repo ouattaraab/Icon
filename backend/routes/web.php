@@ -8,6 +8,7 @@ use App\Http\Controllers\Dashboard\ExchangeController;
 use App\Http\Controllers\Dashboard\MachineController;
 use App\Http\Controllers\Dashboard\ReportController;
 use App\Http\Controllers\Dashboard\RuleController;
+use App\Http\Controllers\Dashboard\UserController;
 use App\Models\AuditLog;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -56,6 +57,8 @@ Route::post('/logout', function (Request $request) {
 
 Route::middleware(['auth'])->group(function () {
 
+    // ── Read-only pages (all roles) ──────────────────────────────────
+
     // Dashboard home
     Route::get('/', DashboardController::class)->name('dashboard');
 
@@ -63,31 +66,58 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/machines', [MachineController::class, 'index'])->name('machines.index');
     Route::get('/machines/{machine}', [MachineController::class, 'show'])->name('machines.show');
 
-    // Alerts
+    // Alerts (view)
     Route::get('/alerts', [AlertController::class, 'index'])->name('alerts.index');
-    Route::post('/alerts/{alert}/acknowledge', [AlertController::class, 'acknowledge'])->name('alerts.acknowledge');
-    Route::post('/alerts/{alert}/resolve', [AlertController::class, 'resolve'])->name('alerts.resolve');
 
     // Exchanges (Elasticsearch full-text search)
     Route::get('/exchanges', [ExchangeController::class, 'index'])->name('exchanges.index');
     Route::get('/exchanges/{id}', [ExchangeController::class, 'show'])->name('exchanges.show');
 
-    // Rules CRUD
-    Route::resource('rules', RuleController::class);
-    Route::post('/rules/{rule}/toggle', [RuleController::class, 'toggleEnabled'])->name('rules.toggle');
+    // Rules (view only)
+    Route::get('/rules', [RuleController::class, 'index'])->name('rules.index');
 
-    // Reports
+    // Reports (view)
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
-    Route::get('/reports/export', [ReportController::class, 'exportCsv'])->name('reports.export');
-    Route::get('/reports/export-pdf', [ReportController::class, 'exportPdf'])->name('reports.export-pdf');
 
-    // Monitored Domains
+    // Domains (view)
     Route::get('/domains', [DomainController::class, 'index'])->name('domains.index');
-    Route::post('/domains', [DomainController::class, 'store'])->name('domains.store');
-    Route::put('/domains/{domain}', [DomainController::class, 'update'])->name('domains.update');
-    Route::delete('/domains/{domain}', [DomainController::class, 'destroy'])->name('domains.destroy');
-    Route::post('/domains/{domain}/toggle', [DomainController::class, 'toggleBlocked'])->name('domains.toggle');
 
-    // Audit Logs
+    // Audit Logs (view)
     Route::get('/audit', [AuditLogController::class, 'index'])->name('audit.index');
+
+    // ── Manager actions (admin + manager) ────────────────────────────
+
+    Route::middleware(['role:manager'])->group(function () {
+        // Alerts actions
+        Route::post('/alerts/{alert}/acknowledge', [AlertController::class, 'acknowledge'])->name('alerts.acknowledge');
+        Route::post('/alerts/{alert}/resolve', [AlertController::class, 'resolve'])->name('alerts.resolve');
+
+        // Rules CRUD
+        Route::get('/rules/create', [RuleController::class, 'create'])->name('rules.create');
+        Route::post('/rules', [RuleController::class, 'store'])->name('rules.store');
+        Route::get('/rules/{rule}/edit', [RuleController::class, 'edit'])->name('rules.edit');
+        Route::put('/rules/{rule}', [RuleController::class, 'update'])->name('rules.update');
+        Route::delete('/rules/{rule}', [RuleController::class, 'destroy'])->name('rules.destroy');
+        Route::post('/rules/{rule}/toggle', [RuleController::class, 'toggleEnabled'])->name('rules.toggle');
+
+        // Domains CRUD
+        Route::post('/domains', [DomainController::class, 'store'])->name('domains.store');
+        Route::put('/domains/{domain}', [DomainController::class, 'update'])->name('domains.update');
+        Route::delete('/domains/{domain}', [DomainController::class, 'destroy'])->name('domains.destroy');
+        Route::post('/domains/{domain}/toggle', [DomainController::class, 'toggleBlocked'])->name('domains.toggle');
+
+        // Reports export
+        Route::get('/reports/export', [ReportController::class, 'exportCsv'])->name('reports.export');
+        Route::get('/reports/export-pdf', [ReportController::class, 'exportPdf'])->name('reports.export-pdf');
+    });
+
+    // ── Admin only ───────────────────────────────────────────────────
+
+    Route::middleware(['role:admin'])->group(function () {
+        // User management
+        Route::get('/users', [UserController::class, 'index'])->name('users.index');
+        Route::post('/users', [UserController::class, 'store'])->name('users.store');
+        Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
+        Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+    });
 });
