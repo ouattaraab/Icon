@@ -1,6 +1,4 @@
-use std::time::Duration;
-use tokio::time::{interval, sleep};
-use tracing::{info, warn, error};
+use tracing::info;
 
 const AGENT_PROCESS_NAME: &str = "icon-agent";
 const CHECK_INTERVAL_SECS: u64 = 10;
@@ -84,7 +82,7 @@ pub fn is_proxy_configured() -> bool {
 }
 
 /// Restart the agent process
-fn restart_agent() {
+pub fn restart_agent() {
     info!("Attempting to restart agent...");
 
     #[cfg(target_os = "macos")]

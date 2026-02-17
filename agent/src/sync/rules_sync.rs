@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use tracing::{info, error};
+use tracing::info;
 
 use crate::rules::engine::RuleEngine;
 use crate::sync::api_client::ApiClient;

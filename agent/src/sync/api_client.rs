@@ -1,14 +1,12 @@
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use tracing::{info, warn, error};
+use tracing::info;
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
-use std::sync::Arc;
 use std::time::Duration;
 
 use crate::config::AppConfig;
 use crate::rules::models::Rule;
-use crate::storage::database::QueuedEvent;
 
 type HmacSha256 = Hmac<Sha256>;
 

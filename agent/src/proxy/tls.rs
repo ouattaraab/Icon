@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use lru::LruCache;
 use rcgen::{BasicConstraints, CertificateParams, DistinguishedName, IsCa, KeyPair};
-use rustls::pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer, ServerName};
+use rustls::pki_types::{CertificateDer, PrivateKeyDer, ServerName};
 use rustls::{ClientConfig, ServerConfig};
 use tokio::sync::Mutex;
 use tracing::{debug, info};
@@ -129,7 +129,15 @@ impl CaManager {
     /// Generate a certificate for a specific domain, signed by this CA
     fn generate_domain_cert(&self, domain: &str) -> anyhow::Result<(String, String)> {
         let ca_key = KeyPair::from_pem(&self.ca_key_pem)?;
-        let ca_params = CertificateParams::from_ca_cert_pem(&self.ca_cert_pem)?;
+
+        // Re-create CA params to sign domain certs
+        let mut ca_params = CertificateParams::default();
+        let mut ca_dn = DistinguishedName::new();
+        ca_dn.push(rcgen::DnType::CommonName, "Icon Security CA");
+        ca_dn.push(rcgen::DnType::OrganizationName, "GS2E");
+        ca_dn.push(rcgen::DnType::CountryName, "CI");
+        ca_params.distinguished_name = ca_dn;
+        ca_params.is_ca = IsCa::Ca(BasicConstraints::Unconstrained);
         let ca_cert = ca_params.self_signed(&ca_key)?;
 
         let domain_key = KeyPair::generate()?;

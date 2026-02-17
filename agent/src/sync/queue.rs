@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use tokio::time::{interval, Duration};
-use tracing::{info, warn, error, debug};
+use tracing::{warn, error, debug};
 
 use crate::storage::database::Database;
 use crate::sync::api_client::{ApiClient, EventBatch, EventPayload};

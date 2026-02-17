@@ -1,6 +1,6 @@
 use sha2::{Sha256, Digest};
 use std::path::{Path, PathBuf};
-use tracing::{info, warn, error};
+use tracing::info;
 
 /// Binary integrity checker for anti-tampering detection.
 /// Computes and stores SHA-256 hashes of critical files.

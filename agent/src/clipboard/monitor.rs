@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use tokio::time::{interval, Duration};
-use tracing::{info, debug, error};
+use tracing::{info, debug};
 use sha2::{Sha256, Digest};
 
 use crate::rules::engine::RuleEngine;
@@ -40,7 +40,7 @@ pub async fn start_monitoring(
         let result = rule_engine.evaluate(&content, RuleTarget::Clipboard).await;
 
         match result {
-            EvaluationResult::Blocked { rule_id, rule_name, message } => {
+            EvaluationResult::Blocked { rule_id, rule_name, message: _ } => {
                 info!(%rule_name, "Clipboard content matched blocking rule");
                 // Note: We can't block clipboard content, but we log it as critical
                 event_queue.log_event(

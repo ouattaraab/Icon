@@ -2,11 +2,11 @@ use std::sync::Arc;
 
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, info};
 
 use crate::config::AppConfig;
 use crate::proxy::domain_filter::DomainFilter;
-use crate::proxy::request_parser::{self, ParsedHttpRequest};
+use crate::proxy::request_parser;
 use crate::proxy::tls::CaManager;
 use crate::rules::engine::RuleEngine;
 use crate::rules::models::{EvaluationResult, RuleTarget};
@@ -266,7 +266,7 @@ async fn handle_connection(
 
         // If this was an API endpoint, try to extract and log the response
         if is_api {
-            if let Some(ref req) = parsed_request {
+            if parsed_request.is_some() {
                 let response_text = request_parser::extract_response(&response_data, platform);
                 if let Some(ref resp_text) = response_text {
                     let hash = request_parser::content_hash(&response_data);
