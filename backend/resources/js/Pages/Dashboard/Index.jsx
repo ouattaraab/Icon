@@ -1,4 +1,5 @@
 import { Link } from '@inertiajs/react';
+import { useEffect, useState, useCallback } from 'react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
 
 const platformColors = {
@@ -26,9 +27,21 @@ const cardStyle = {
     border: '1px solid #334155',
 };
 
-function StatCard({ label, value, color = '#3b82f6', subtitle, href }) {
+function StatCard({ label, value, color = '#3b82f6', subtitle, href, pulse }) {
     const content = (
-        <div style={cardStyle}>
+        <div style={{ ...cardStyle, position: 'relative' }}>
+            {pulse && (
+                <div style={{
+                    position: 'absolute',
+                    top: 12,
+                    right: 12,
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    background: color,
+                    animation: 'pulse 2s infinite',
+                }} />
+            )}
             <p style={{
                 color: '#94a3b8',
                 fontSize: '0.75rem',
@@ -66,16 +79,137 @@ function StatCard({ label, value, color = '#3b82f6', subtitle, href }) {
 }
 
 export default function DashboardIndex({
-    stats = {},
+    stats: initialStats = {},
     activity24h = [],
-    platformUsage = [],
-    recentAlerts = [],
+    platformUsage: initialPlatformUsage = [],
+    recentAlerts: initialAlerts = [],
     topMachines = [],
 }) {
+    const [stats, setStats] = useState(initialStats);
+    const [recentAlerts, setRecentAlerts] = useState(initialAlerts);
+    const [liveFeed, setLiveFeed] = useState([]);
+    const [wsConnected, setWsConnected] = useState(false);
+
+    const addToFeed = useCallback((item) => {
+        setLiveFeed((prev) => [item, ...prev].slice(0, 15));
+    }, []);
+
+    useEffect(() => {
+        if (!window.Echo) return;
+
+        const channel = window.Echo.channel('icon.dashboard');
+
+        channel.subscribed(() => setWsConnected(true));
+
+        // New alert
+        channel.listen('.alert.created', (data) => {
+            setStats((prev) => ({
+                ...prev,
+                open_alerts: (prev.open_alerts ?? 0) + 1,
+                critical_alerts: data.severity === 'critical'
+                    ? (prev.critical_alerts ?? 0) + 1
+                    : prev.critical_alerts,
+            }));
+
+            const newAlert = {
+                id: data.id,
+                severity: data.severity,
+                title: data.title,
+                machine: data.machine,
+                created_at: 'à l\'instant',
+            };
+            setRecentAlerts((prev) => [newAlert, ...prev].slice(0, 10));
+
+            addToFeed({
+                id: `alert-${data.id}`,
+                type: 'alert',
+                severity: data.severity,
+                message: data.title,
+                machine: data.machine,
+                time: new Date(),
+            });
+        });
+
+        // Machine status change
+        channel.listen('.machine.status_changed', (data) => {
+            if (data.new_status === 'online' && data.previous_status !== 'online') {
+                setStats((prev) => ({
+                    ...prev,
+                    online_machines: (prev.online_machines ?? 0) + 1,
+                }));
+            } else if (data.new_status !== 'online' && data.previous_status === 'online') {
+                setStats((prev) => ({
+                    ...prev,
+                    online_machines: Math.max(0, (prev.online_machines ?? 0) - 1),
+                }));
+            }
+
+            addToFeed({
+                id: `machine-${data.machine_id}-${Date.now()}`,
+                type: 'machine',
+                message: `${data.hostname} : ${data.previous_status} → ${data.new_status}`,
+                time: new Date(),
+            });
+        });
+
+        // Events ingested
+        channel.listen('.events.ingested', (data) => {
+            setStats((prev) => ({
+                ...prev,
+                total_events: (prev.total_events ?? 0) + data.count,
+            }));
+
+            addToFeed({
+                id: `events-${data.machine_id}-${Date.now()}`,
+                type: 'events',
+                message: `${data.count} événement${data.count > 1 ? 's' : ''} de ${data.hostname}`,
+                platform: data.platform,
+                time: new Date(),
+            });
+        });
+
+        // Rule change
+        channel.listen('.rule.changed', (data) => {
+            addToFeed({
+                id: `rule-${data.rule_id}-${Date.now()}`,
+                type: 'rule',
+                message: `Règle « ${data.rule?.name || 'inconnue'} » ${data.action === 'created' ? 'créée' : data.action === 'deleted' ? 'supprimée' : 'modifiée'}`,
+                time: new Date(),
+            });
+        });
+
+        return () => {
+            window.Echo.leave('icon.dashboard');
+            setWsConnected(false);
+        };
+    }, [addToFeed]);
+
     const maxActivity = Math.max(1, ...activity24h.map((h) => h.count));
 
     return (
         <DashboardLayout title="Tableau de bord">
+            {/* Live indicator */}
+            {wsConnected && (
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    marginBottom: '1rem',
+                }}>
+                    <span style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        background: '#22c55e',
+                        display: 'inline-block',
+                        boxShadow: '0 0 6px #22c55e',
+                    }} />
+                    <span style={{ color: '#64748b', fontSize: '0.75rem' }}>
+                        Temps réel actif
+                    </span>
+                </div>
+            )}
+
             {/* Stats grid */}
             <div style={{
                 display: 'grid',
@@ -107,6 +241,7 @@ export default function DashboardIndex({
                     color={(stats.critical_alerts ?? 0) > 0 ? '#ef4444' : '#94a3b8'}
                     subtitle={(stats.critical_alerts ?? 0) > 0 ? `${stats.critical_alerts} critiques` : null}
                     href="/alerts"
+                    pulse={(stats.critical_alerts ?? 0) > 0}
                 />
             </div>
 
@@ -196,10 +331,10 @@ export default function DashboardIndex({
                     <h3 style={{ color: '#f8fafc', fontSize: '1rem', margin: '0 0 1.25rem', fontWeight: 600 }}>
                         Usage par plateforme
                     </h3>
-                    {platformUsage.length > 0 ? (
+                    {initialPlatformUsage.length > 0 ? (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
-                            {platformUsage.map((item) => {
-                                const maxCount = platformUsage[0]?.count || 1;
+                            {initialPlatformUsage.map((item) => {
+                                const maxCount = initialPlatformUsage[0]?.count || 1;
                                 const pct = Math.round((item.count / maxCount) * 100);
                                 const color = platformColors[item.platform] || '#64748b';
                                 return (
@@ -254,7 +389,7 @@ export default function DashboardIndex({
                 </div>
             </div>
 
-            {/* Bottom row: Recent alerts + Top machines */}
+            {/* Bottom row: Recent alerts + Live feed / Top machines */}
             <div style={{
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr',
@@ -358,114 +493,227 @@ export default function DashboardIndex({
                     )}
                 </div>
 
-                {/* Top machines */}
-                <div style={cardStyle}>
-                    <div style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        marginBottom: '1rem',
-                    }}>
-                        <h3 style={{ color: '#f8fafc', fontSize: '1rem', margin: 0, fontWeight: 600 }}>
-                            Top machines (7j)
-                        </h3>
-                        <Link
-                            href="/machines"
-                            style={{
-                                color: '#3b82f6',
-                                fontSize: '0.75rem',
-                                textDecoration: 'none',
-                                fontWeight: 500,
-                            }}
-                        >
-                            Voir tout
-                        </Link>
-                    </div>
-                    {topMachines.length > 0 ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                            {topMachines.map((item, idx) => {
-                                const maxCount = topMachines[0]?.event_count || 1;
-                                const pct = Math.round((item.event_count / maxCount) * 100);
-                                return (
-                                    <Link
-                                        key={item.machine_id}
-                                        href={`/machines/${item.machine_id}`}
-                                        style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '0.75rem',
-                                            padding: '0.6rem 0.75rem',
-                                            background: '#0f172a',
-                                            borderRadius: 8,
-                                            textDecoration: 'none',
-                                            border: '1px solid transparent',
-                                            transition: 'border-color 0.15s',
-                                        }}
-                                        onMouseEnter={(e) => e.currentTarget.style.borderColor = '#334155'}
-                                        onMouseLeave={(e) => e.currentTarget.style.borderColor = 'transparent'}
-                                    >
-                                        <span style={{
-                                            color: '#475569',
-                                            fontSize: '0.75rem',
-                                            fontWeight: 700,
-                                            width: 20,
-                                            textAlign: 'center',
-                                            flexShrink: 0,
-                                        }}>
-                                            {idx + 1}
-                                        </span>
-                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                            <p style={{
-                                                color: '#e2e8f0',
-                                                fontSize: '0.8rem',
-                                                margin: 0,
-                                                fontWeight: 500,
-                                                whiteSpace: 'nowrap',
-                                                overflow: 'hidden',
-                                                textOverflow: 'ellipsis',
-                                            }}>
-                                                {item.hostname}
-                                            </p>
-                                            <div style={{
-                                                height: 4,
-                                                borderRadius: 2,
-                                                background: '#1e293b',
-                                                marginTop: 4,
-                                                overflow: 'hidden',
-                                            }}>
-                                                <div style={{
-                                                    height: '100%',
-                                                    width: `${pct}%`,
-                                                    borderRadius: 2,
-                                                    background: '#3b82f6',
-                                                    transition: 'width 0.3s ease',
-                                                }} />
-                                            </div>
-                                        </div>
-                                        <span style={{
-                                            color: '#94a3b8',
-                                            fontSize: '0.8rem',
-                                            fontWeight: 600,
-                                            flexShrink: 0,
-                                        }}>
-                                            {item.event_count}
-                                        </span>
-                                    </Link>
-                                );
-                            })}
-                        </div>
-                    ) : (
-                        <div style={{
-                            padding: '2rem 0',
-                            textAlign: 'center',
-                        }}>
-                            <p style={{ color: '#475569', fontSize: '0.85rem', margin: 0 }}>
-                                Aucune activité cette semaine
-                            </p>
+                {/* Right column: Live feed or Top machines */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    {/* Live activity feed */}
+                    {liveFeed.length > 0 && (
+                        <div style={cardStyle}>
+                            <div style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                marginBottom: '0.75rem',
+                            }}>
+                                <h3 style={{ color: '#f8fafc', fontSize: '1rem', margin: 0, fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    Activité en direct
+                                    <span style={{
+                                        width: 6,
+                                        height: 6,
+                                        borderRadius: '50%',
+                                        background: '#22c55e',
+                                        display: 'inline-block',
+                                        animation: 'pulse 2s infinite',
+                                    }} />
+                                </h3>
+                                <button
+                                    onClick={() => setLiveFeed([])}
+                                    style={{
+                                        background: 'transparent',
+                                        color: '#64748b',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        fontSize: '0.7rem',
+                                    }}
+                                >
+                                    Effacer
+                                </button>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', maxHeight: 200, overflowY: 'auto' }}>
+                                {liveFeed.map((item) => (
+                                    <FeedItem key={item.id} item={item} />
+                                ))}
+                            </div>
                         </div>
                     )}
+
+                    {/* Top machines */}
+                    <div style={cardStyle}>
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: '1rem',
+                        }}>
+                            <h3 style={{ color: '#f8fafc', fontSize: '1rem', margin: 0, fontWeight: 600 }}>
+                                Top machines (7j)
+                            </h3>
+                            <Link
+                                href="/machines"
+                                style={{
+                                    color: '#3b82f6',
+                                    fontSize: '0.75rem',
+                                    textDecoration: 'none',
+                                    fontWeight: 500,
+                                }}
+                            >
+                                Voir tout
+                            </Link>
+                        </div>
+                        {topMachines.length > 0 ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                {topMachines.map((item, idx) => {
+                                    const maxCount = topMachines[0]?.event_count || 1;
+                                    const pct = Math.round((item.event_count / maxCount) * 100);
+                                    return (
+                                        <Link
+                                            key={item.machine_id}
+                                            href={`/machines/${item.machine_id}`}
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '0.75rem',
+                                                padding: '0.6rem 0.75rem',
+                                                background: '#0f172a',
+                                                borderRadius: 8,
+                                                textDecoration: 'none',
+                                                border: '1px solid transparent',
+                                                transition: 'border-color 0.15s',
+                                            }}
+                                            onMouseEnter={(e) => e.currentTarget.style.borderColor = '#334155'}
+                                            onMouseLeave={(e) => e.currentTarget.style.borderColor = 'transparent'}
+                                        >
+                                            <span style={{
+                                                color: '#475569',
+                                                fontSize: '0.75rem',
+                                                fontWeight: 700,
+                                                width: 20,
+                                                textAlign: 'center',
+                                                flexShrink: 0,
+                                            }}>
+                                                {idx + 1}
+                                            </span>
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <p style={{
+                                                    color: '#e2e8f0',
+                                                    fontSize: '0.8rem',
+                                                    margin: 0,
+                                                    fontWeight: 500,
+                                                    whiteSpace: 'nowrap',
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                }}>
+                                                    {item.hostname}
+                                                </p>
+                                                <div style={{
+                                                    height: 4,
+                                                    borderRadius: 2,
+                                                    background: '#1e293b',
+                                                    marginTop: 4,
+                                                    overflow: 'hidden',
+                                                }}>
+                                                    <div style={{
+                                                        height: '100%',
+                                                        width: `${pct}%`,
+                                                        borderRadius: 2,
+                                                        background: '#3b82f6',
+                                                        transition: 'width 0.3s ease',
+                                                    }} />
+                                                </div>
+                                            </div>
+                                            <span style={{
+                                                color: '#94a3b8',
+                                                fontSize: '0.8rem',
+                                                fontWeight: 600,
+                                                flexShrink: 0,
+                                            }}>
+                                                {item.event_count}
+                                            </span>
+                                        </Link>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div style={{
+                                padding: '2rem 0',
+                                textAlign: 'center',
+                            }}>
+                                <p style={{ color: '#475569', fontSize: '0.85rem', margin: 0 }}>
+                                    Aucune activité cette semaine
+                                </p>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
+
+            {/* CSS animation for pulse */}
+            <style>{`
+                @keyframes pulse {
+                    0%, 100% { opacity: 1; }
+                    50% { opacity: 0.3; }
+                }
+            `}</style>
         </DashboardLayout>
     );
+}
+
+const feedTypeConfig = {
+    alert: { icon: '!', color: '#ef4444', bg: '#7f1d1d' },
+    events: { icon: '#', color: '#3b82f6', bg: '#1e3a5f' },
+    machine: { icon: 'M', color: '#22c55e', bg: '#14532d' },
+    rule: { icon: 'R', color: '#f59e0b', bg: '#78350f' },
+};
+
+function FeedItem({ item }) {
+    const config = feedTypeConfig[item.type] || feedTypeConfig.events;
+    const timeStr = item.time ? formatTimeAgo(item.time) : '';
+
+    return (
+        <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '0.4rem 0.6rem',
+            background: '#0f172a',
+            borderRadius: 6,
+        }}>
+            <span style={{
+                width: 20,
+                height: 20,
+                borderRadius: 4,
+                background: config.bg,
+                color: config.color,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '0.6rem',
+                fontWeight: 700,
+                flexShrink: 0,
+            }}>
+                {config.icon}
+            </span>
+            <span style={{
+                color: '#e2e8f0',
+                fontSize: '0.75rem',
+                flex: 1,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+            }}>
+                {item.message}
+            </span>
+            <span style={{ color: '#475569', fontSize: '0.65rem', flexShrink: 0 }}>
+                {timeStr}
+            </span>
+        </div>
+    );
+}
+
+function formatTimeAgo(date) {
+    const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+    if (seconds < 5) return 'maintenant';
+    if (seconds < 60) return `${seconds}s`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}min`;
+    return `${Math.floor(minutes / 60)}h`;
 }

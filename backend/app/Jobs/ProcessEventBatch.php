@@ -3,8 +3,10 @@
 namespace App\Jobs;
 
 use App\Events\AlertCreated;
+use App\Events\EventsIngested;
 use App\Models\Alert;
 use App\Models\Event;
+use App\Models\Machine;
 use App\Services\DlpPatternService;
 use App\Services\ElasticsearchService;
 use Illuminate\Bus\Queueable;
@@ -26,6 +28,8 @@ class ProcessEventBatch implements ShouldQueue
         private array $events,
     ) {}
 
+    private int $alertsCreated = 0;
+
     public function handle(ElasticsearchService $elasticsearch, DlpPatternService $dlp): void
     {
         foreach ($this->events as $eventData) {
@@ -39,6 +43,18 @@ class ProcessEventBatch implements ShouldQueue
                 ]);
             }
         }
+
+        // Broadcast batch summary to dashboard
+        $machine = Machine::find($this->machineId);
+        $platform = collect($this->events)->pluck('platform')->filter()->first();
+
+        broadcast(new EventsIngested(
+            machineId: $this->machineId,
+            hostname: $machine?->hostname ?? $this->machineId,
+            count: count($this->events),
+            alertsCreated: $this->alertsCreated,
+            platform: $platform,
+        ));
     }
 
     private function processEvent(array $eventData, ElasticsearchService $elasticsearch, DlpPatternService $dlp): void
@@ -105,6 +121,7 @@ class ProcessEventBatch implements ShouldQueue
             ]);
 
             broadcast(new AlertCreated($alert));
+            $this->alertsCreated++;
         }
     }
 
