@@ -2,9 +2,11 @@ import { useForm, router } from '@inertiajs/react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
 import RulePreview from '../../Components/RulePreview';
 import { useTheme } from '../../Contexts/ThemeContext';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 export default function RulesEdit({ rule }) {
     const { theme: t } = useTheme();
+    const isMobile = useIsMobile();
 
     const { data, setData, put, processing, errors } = useForm({
         name: rule.name || '',
@@ -54,13 +56,13 @@ export default function RulesEdit({ rule }) {
                     background: t.surface,
                     borderRadius: 12,
                     border: `1px solid ${t.border}`,
-                    padding: '2rem',
+                    padding: isMobile ? '1rem' : '2rem',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '1.25rem',
                 }}>
                     {/* Header with version info */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
                         <span style={{ color: t.textMuted, fontSize: '0.75rem' }}>
                             Version : {rule.version} | ID : {rule.id?.slice(0, 8)}...
                         </span>
@@ -100,7 +102,7 @@ export default function RulesEdit({ rule }) {
                     </div>
 
                     {/* Category + Target row */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1rem' }}>
                         <div>
                             <label style={labelStyle}>Cat\u00e9gorie (action)</label>
                             <select value={data.category} onChange={(e) => {
@@ -219,7 +221,7 @@ export default function RulesEdit({ rule }) {
                                     max_length: parseInt(e.target.value),
                                 })}
                                 min={100}
-                                style={{ ...inputStyle, width: 200 }}
+                                style={{ ...inputStyle, width: isMobile ? '100%' : 200 }}
                             />
                         </div>
                     )}
@@ -233,7 +235,7 @@ export default function RulesEdit({ rule }) {
                             onChange={(e) => setData('priority', parseInt(e.target.value))}
                             min={0}
                             max={1000}
-                            style={{ ...inputStyle, width: 150 }}
+                            style={{ ...inputStyle, width: isMobile ? '100%' : 150 }}
                         />
                     </div>
 
@@ -267,8 +269,8 @@ export default function RulesEdit({ rule }) {
                     </label>
 
                     {/* Actions */}
-                    <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem', justifyContent: 'space-between' }}>
-                        <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
                             <button
                                 type="submit"
                                 disabled={processing}

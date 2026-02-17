@@ -2,6 +2,7 @@ import { router, useForm, usePage } from '@inertiajs/react';
 import { useState, useCallback } from 'react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
 import { useTheme } from '../../Contexts/ThemeContext';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 const platformColors = {
     chatgpt: '#10a37f', openai: '#10a37f',
@@ -21,6 +22,7 @@ function getPlatformColor(name) {
 
 export default function DomainsIndex({ domains, platforms, filters }) {
     const { theme: t } = useTheme();
+    const isMobile = useIsMobile();
     const { flash } = usePage().props;
     const [showForm, setShowForm] = useState(false);
     const [editingId, setEditingId] = useState(null);
@@ -147,14 +149,14 @@ export default function DomainsIndex({ domains, platforms, filters }) {
             )}
 
             {/* Domains table */}
-            <div style={{
+            <div className="icon-table-wrap" style={{
                 background: t.surface, borderRadius: 12,
                 border: `1px solid ${t.border}`, overflow: 'hidden',
             }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                         <tr style={{ borderBottom: `1px solid ${t.border}` }}>
-                            {['Domaine', 'Plateforme', 'Statut', 'Ajouté le', 'Actions'].map((h) => (
+                            {['Domaine', !isMobile && 'Plateforme', 'Statut', 'Ajouté le', 'Actions'].filter(Boolean).map((h) => (
                                 <th key={h} style={{
                                     padding: '0.75rem', textAlign: 'left', color: t.textMuted,
                                     fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600,
@@ -166,7 +168,7 @@ export default function DomainsIndex({ domains, platforms, filters }) {
                         {domains?.data?.length > 0 ? domains.data.map((domain) => (
                             editingId === domain.id ? (
                                 <tr key={domain.id}>
-                                    <td colSpan={5} style={{ padding: '0.75rem' }}>
+                                    <td colSpan={isMobile ? 4 : 5} style={{ padding: '0.75rem' }}>
                                         <DomainForm
                                             domain={domain}
                                             onCancel={() => setEditingId(null)}
@@ -181,16 +183,18 @@ export default function DomainsIndex({ domains, platforms, filters }) {
                                             {domain.domain}
                                         </span>
                                     </td>
-                                    <td style={{ padding: '0.6rem 0.75rem' }}>
-                                        <span style={{
-                                            display: 'inline-block', padding: '0.15rem 0.5rem', borderRadius: 4,
-                                            fontSize: '0.75rem', fontWeight: 600,
-                                            background: `${getPlatformColor(domain.platform_name)}20`,
-                                            color: getPlatformColor(domain.platform_name),
-                                        }}>
-                                            {domain.platform_name}
-                                        </span>
-                                    </td>
+                                    {!isMobile && (
+                                        <td style={{ padding: '0.6rem 0.75rem' }}>
+                                            <span style={{
+                                                display: 'inline-block', padding: '0.15rem 0.5rem', borderRadius: 4,
+                                                fontSize: '0.75rem', fontWeight: 600,
+                                                background: `${getPlatformColor(domain.platform_name)}20`,
+                                                color: getPlatformColor(domain.platform_name),
+                                            }}>
+                                                {domain.platform_name}
+                                            </span>
+                                        </td>
+                                    )}
                                     <td style={{ padding: '0.6rem 0.75rem' }}>
                                         <button
                                             onClick={() => router.post(`/domains/${domain.id}/toggle`, {}, { preserveScroll: true })}
@@ -244,7 +248,7 @@ export default function DomainsIndex({ domains, platforms, filters }) {
                             )
                         )) : (
                             <tr>
-                                <td colSpan={5} style={{ padding: '2rem', textAlign: 'center', color: t.textFaint, fontSize: '0.85rem' }}>
+                                <td colSpan={isMobile ? 4 : 5} style={{ padding: '2rem', textAlign: 'center', color: t.textFaint, fontSize: '0.85rem' }}>
                                     {hasFilters ? 'Aucun domaine ne correspond aux filtres.' : 'Aucun domaine configuré. Ajoutez des domaines IA à surveiller.'}
                                 </td>
                             </tr>
@@ -304,6 +308,7 @@ function PagBtn({ label, onClick, disabled, active }) {
 
 function DomainForm({ domain, onCancel, onSuccess }) {
     const { theme: t } = useTheme();
+    const isMobile = useIsMobile();
     const isEdit = !!domain;
     const form = useForm({
         domain: domain?.domain || '',
@@ -329,9 +334,10 @@ function DomainForm({ domain, onCancel, onSuccess }) {
         <form onSubmit={handleSubmit} style={{
             background: t.bg, borderRadius: 8, border: `1px solid ${t.border}`,
             padding: '1rem', marginBottom: '1rem',
-            display: 'flex', gap: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap',
+            display: 'flex', gap: '0.75rem', alignItems: isMobile ? 'stretch' : 'flex-end',
+            flexWrap: 'wrap', flexDirection: isMobile ? 'column' : 'row',
         }}>
-            <div style={{ flex: 2, minWidth: 200 }}>
+            <div style={{ flex: 2, minWidth: isMobile ? '100%' : 200 }}>
                 <label style={{ color: t.textMuted, fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem' }}>Domaine</label>
                 <input
                     type="text" value={form.data.domain}
@@ -340,7 +346,7 @@ function DomainForm({ domain, onCancel, onSuccess }) {
                 />
                 {form.errors.domain && <span style={{ color: t.danger, fontSize: '0.7rem' }}>{form.errors.domain}</span>}
             </div>
-            <div style={{ flex: 1, minWidth: 150 }}>
+            <div style={{ flex: 1, minWidth: isMobile ? '100%' : 150 }}>
                 <label style={{ color: t.textMuted, fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem' }}>Plateforme</label>
                 <input
                     type="text" value={form.data.platform_name}

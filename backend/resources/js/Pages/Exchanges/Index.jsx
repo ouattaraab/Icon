@@ -2,6 +2,7 @@ import { router } from '@inertiajs/react';
 import { useState } from 'react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
 import { useTheme } from '../../Contexts/ThemeContext';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 const platformIcons = {
     chatgpt: '🤖',
@@ -25,6 +26,7 @@ const severityColors = {
 
 export default function ExchangesIndex({ exchanges = [], total = 0, page = 1, perPage = 20, totalPages = 1, filters = {}, machines = [] }) {
     const { theme: t } = useTheme();
+    const isMobile = useIsMobile();
     const [searchValue, setSearchValue] = useState(filters?.q || '');
 
     const filterSelectStyle = {
@@ -34,11 +36,12 @@ export default function ExchangesIndex({ exchanges = [], total = 0, page = 1, pe
         padding: '0.5rem 1rem',
         color: t.text,
         fontSize: '0.875rem',
+        ...(isMobile ? { width: '100%' } : {}),
     };
 
     const filterInputStyle = {
         ...filterSelectStyle,
-        width: 'auto',
+        width: isMobile ? '100%' : 'auto',
     };
 
     const applyFilter = (newFilters) => {
@@ -72,7 +75,7 @@ export default function ExchangesIndex({ exchanges = [], total = 0, page = 1, pe
                 flexWrap: 'wrap',
                 alignItems: 'center',
             }}>
-                <div style={{ flex: 1, minWidth: 300, display: 'flex', gap: '0.5rem' }}>
+                <div style={{ flex: 1, minWidth: isMobile ? 0 : 300, display: 'flex', gap: '0.5rem', width: isMobile ? '100%' : 'auto' }}>
                     <input
                         type="text"
                         placeholder="Rechercher dans les prompts et réponses..."
@@ -221,7 +224,7 @@ export default function ExchangesIndex({ exchanges = [], total = 0, page = 1, pe
                         style={{
                             background: t.surface,
                             borderRadius: 10,
-                            padding: '1.25rem',
+                            padding: isMobile ? '0.875rem' : '1.25rem',
                             border: `1px solid ${t.border}`,
                             cursor: 'pointer',
                             transition: 'border-color 0.15s',
@@ -247,7 +250,7 @@ export default function ExchangesIndex({ exchanges = [], total = 0, page = 1, pe
                                         {severityLabels[exchange.severity] || exchange.severity}
                                     </span>
                                 )}
-                                {exchange.machine_hostname && (
+                                {!isMobile && exchange.machine_hostname && (
                                     <span style={{
                                         color: t.textFaint,
                                         fontSize: '0.75rem',
@@ -277,7 +280,7 @@ export default function ExchangesIndex({ exchanges = [], total = 0, page = 1, pe
                         )}
 
                         {/* Response excerpt */}
-                        {exchange.response && (
+                        {!isMobile && exchange.response && (
                             <div>
                                 <span style={{ color: t.textFaint, fontSize: '0.7rem', fontWeight: 600 }}>RÉPONSE</span>
                                 <p style={{ color: t.textMuted, fontSize: '0.8rem', margin: '0.2rem 0 0', lineHeight: 1.5 }}>

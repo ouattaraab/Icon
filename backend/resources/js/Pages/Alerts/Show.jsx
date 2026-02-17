@@ -1,6 +1,7 @@
 import { router, usePage } from '@inertiajs/react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
 import { useTheme } from '../../Contexts/ThemeContext';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 const severityStyles = {
     critical: { bg: '#7f1d1d', color: '#fca5a5', label: 'Critique', border: '#ef4444' },
@@ -46,6 +47,7 @@ function formatDate(isoStr) {
 
 export default function AlertsShow({ alert, relatedAlerts = [] }) {
     const { theme: t } = useTheme();
+    const isMobile = useIsMobile();
     const { auth } = usePage().props;
     const canManage = auth?.is_manager ?? false;
 
@@ -54,7 +56,7 @@ export default function AlertsShow({ alert, relatedAlerts = [] }) {
 
     const cardStyle = {
         background: t.surface, borderRadius: 12,
-        border: `1px solid ${t.border}`, padding: '1.5rem',
+        border: `1px solid ${t.border}`, padding: isMobile ? '1rem' : '1.5rem',
     };
 
     return (
@@ -145,8 +147,9 @@ export default function AlertsShow({ alert, relatedAlerts = [] }) {
 
                 {/* Timeline */}
                 <div style={{
-                    display: 'flex', gap: '2rem', marginTop: '1.5rem', paddingTop: '1rem',
+                    display: 'flex', gap: isMobile ? '1rem' : '2rem', marginTop: '1.5rem', paddingTop: '1rem',
                     borderTop: `1px solid ${t.border}`, flexWrap: 'wrap',
+                    flexDirection: isMobile ? 'column' : 'row',
                 }}>
                     <TimelineItem
                         label="Creee"
@@ -173,7 +176,7 @@ export default function AlertsShow({ alert, relatedAlerts = [] }) {
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
                 {/* Machine info */}
                 {alert.machine && (
                     <div style={cardStyle}>
@@ -266,7 +269,10 @@ export default function AlertsShow({ alert, relatedAlerts = [] }) {
                                     style={{
                                         background: t.bg, borderRadius: 8,
                                         padding: '0.75rem 1rem', border: `1px solid ${t.border}`,
-                                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.75rem',
+                                        cursor: 'pointer', display: 'flex',
+                                        alignItems: isMobile ? 'flex-start' : 'center',
+                                        flexDirection: isMobile ? 'column' : 'row',
+                                        gap: isMobile ? '0.4rem' : '0.75rem',
                                         transition: 'border-color 0.15s',
                                     }}
                                     onMouseEnter={(e) => e.currentTarget.style.borderColor = t.textSubtle}

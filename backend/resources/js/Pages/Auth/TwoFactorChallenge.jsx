@@ -1,9 +1,11 @@
 import { useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import { useTheme } from '../../Contexts/ThemeContext';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 export default function TwoFactorChallenge({ user_id }) {
     const { theme: t } = useTheme();
+    const isMobile = useIsMobile();
     const [useRecovery, setUseRecovery] = useState(false);
     const { data, setData, post, processing, errors } = useForm({
         code: '',
@@ -25,11 +27,11 @@ export default function TwoFactorChallenge({ user_id }) {
         }}>
             <div style={{
                 background: t.surface,
-                borderRadius: 12,
-                padding: 40,
+                borderRadius: isMobile ? 0 : 12,
+                padding: isMobile ? '24px 16px' : 40,
                 width: '100%',
-                maxWidth: 400,
-                boxShadow: '0 25px 50px rgba(0,0,0,0.5)',
+                maxWidth: isMobile ? '100%' : 400,
+                boxShadow: isMobile ? 'none' : '0 25px 50px rgba(0,0,0,0.5)',
             }}>
                 <div style={{ textAlign: 'center', marginBottom: 32 }}>
                     <h1 style={{ fontSize: 28, fontWeight: 'bold', color: t.text, margin: 0 }}>

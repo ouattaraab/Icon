@@ -2,6 +2,7 @@ import { router } from '@inertiajs/react';
 import { useState, useMemo } from 'react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
 import { useTheme } from '../../Contexts/ThemeContext';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 const platformColors = {
     chatgpt: '#10a37f',
@@ -43,6 +44,7 @@ const eventTypeColors = {
 
 export default function ReportsIndex({ stats, platformUsage, alertsTrend, topMachines, eventTypes, dailyEvents, severityDistribution, departmentStats, filters }) {
     const { theme: t } = useTheme();
+    const isMobile = useIsMobile();
 
     const [dateFrom, setDateFrom] = useState(filters?.date_from || '');
     const [dateTo, setDateTo] = useState(filters?.date_to || '');
@@ -66,7 +68,7 @@ export default function ReportsIndex({ stats, platformUsage, alertsTrend, topMac
         background: t.surface,
         borderRadius: 12,
         border: `1px solid ${t.border}`,
-        padding: '1.5rem',
+        padding: isMobile ? '1rem' : '1.5rem',
     };
 
     const dateInputStyle = {
@@ -100,7 +102,7 @@ export default function ReportsIndex({ stats, platformUsage, alertsTrend, topMac
                 }}>
                     Appliquer
                 </button>
-                <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.5rem' }}>
+                <div style={{ marginLeft: isMobile ? 0 : 'auto', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                     <ExportButton label="CSV \u00e9v\u00e9nements" type="events" filters={filters} />
                     <ExportButton label="CSV alertes" type="alerts" filters={filters} />
                     <ExportButton label="CSV machines" type="machines" filters={filters} />
@@ -109,7 +111,7 @@ export default function ReportsIndex({ stats, platformUsage, alertsTrend, topMac
             </div>
 
             {/* Summary stats */}
-            <div style={{
+            <div className="icon-stat-grid" style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
                 gap: '1rem', marginBottom: '1.5rem',
@@ -128,7 +130,7 @@ export default function ReportsIndex({ stats, platformUsage, alertsTrend, topMac
                     <h3 style={{ color: t.text, margin: '0 0 1rem', fontSize: '1rem', fontWeight: 600 }}>
                         Activit\u00e9 quotidienne
                     </h3>
-                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 120 }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: isMobile ? 80 : 120 }}>
                         {dailyEvents.map((day) => {
                             const height = Math.max(4, (day.total / maxDaily) * 100);
                             const blockedPct = day.total > 0 ? (day.blocked / day.total) * 100 : 0;
@@ -171,7 +173,7 @@ export default function ReportsIndex({ stats, platformUsage, alertsTrend, topMac
             )}
 
             {/* Row 2: Platform + Event types + Severity */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+            <div className="icon-widget-grid" style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                 {/* Platform usage (donut-like) */}
                 <div style={cardStyle}>
                     <h3 style={{ color: t.text, margin: '0 0 1rem', fontSize: '1rem', fontWeight: 600 }}>
@@ -306,6 +308,7 @@ export default function ReportsIndex({ stats, platformUsage, alertsTrend, topMac
                     <h3 style={{ color: t.text, margin: '0 0 1rem', fontSize: '1rem', fontWeight: 600 }}>
                         Activit\u00e9 par d\u00e9partement
                     </h3>
+                    <div className="icon-table-wrap">
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
                             <tr style={{ borderBottom: `1px solid ${t.border}` }}>
@@ -355,11 +358,12 @@ export default function ReportsIndex({ stats, platformUsage, alertsTrend, topMac
                             })}
                         </tbody>
                     </table>
+                    </div>
                 </div>
             )}
 
             {/* Row 4: Alerts trend + Top machines */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="icon-widget-grid" style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1rem' }}>
                 {/* Alerts trend */}
                 <div style={cardStyle}>
                     <h3 style={{ color: t.text, margin: '0 0 1rem', fontSize: '1rem', fontWeight: 600 }}>

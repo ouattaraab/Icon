@@ -2,6 +2,7 @@ import { Link, router } from '@inertiajs/react';
 import { useEffect, useState, useCallback } from 'react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
 import { useTheme } from '../../Contexts/ThemeContext';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 const platformColors = {
     chatgpt: '#10a37f',
@@ -21,13 +22,13 @@ const severityColors = {
     info: '#3b82f6',
 };
 
-function StatCard({ label, value, color = '#3b82f6', subtitle, href, pulse }) {
+function StatCard({ label, value, color = '#3b82f6', subtitle, href, pulse, compact }) {
     const { theme: t } = useTheme();
 
     const cardStyle = {
         background: t.surface,
         borderRadius: 12,
-        padding: '1.5rem',
+        padding: compact ? '1rem' : '1.5rem',
         border: `1px solid ${t.border}`,
     };
 
@@ -57,7 +58,7 @@ function StatCard({ label, value, color = '#3b82f6', subtitle, href, pulse }) {
             </p>
             <p style={{
                 color,
-                fontSize: '2rem',
+                fontSize: compact ? '1.5rem' : '2rem',
                 fontWeight: 700,
                 margin: '0.5rem 0 0',
             }}>
@@ -112,11 +113,12 @@ export default function DashboardIndex({
     dashboardConfig = null,
 }) {
     const { theme: t } = useTheme();
+    const isMobile = useIsMobile();
 
     const cardStyle = {
         background: t.surface,
         borderRadius: 12,
-        padding: '1.5rem',
+        padding: isMobile ? '1rem' : '1.5rem',
         border: `1px solid ${t.border}`,
     };
 
@@ -421,10 +423,7 @@ export default function DashboardIndex({
             )}
 
             {/* Stats grid */}
-            {isWidgetVisible('stats') && <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                gap: '1rem',
+            {isWidgetVisible('stats') && <div className="icon-stat-grid" style={{
                 marginBottom: '2rem',
             }}>
                 <StatCard
@@ -433,17 +432,20 @@ export default function DashboardIndex({
                     color="#22c55e"
                     subtitle={`${stats.total_machines ?? 0} enregistrées`}
                     href="/machines"
+                    compact={isMobile}
                 />
                 <StatCard
                     label="Événements (30j)"
                     value={stats.total_events ?? 0}
                     color="#3b82f6"
                     href="/exchanges"
+                    compact={isMobile}
                 />
                 <StatCard
                     label="Requêtes bloquées"
                     value={stats.blocked_events ?? 0}
                     color="#f59e0b"
+                    compact={isMobile}
                 />
                 <StatCard
                     label="Alertes ouvertes"
@@ -452,25 +454,25 @@ export default function DashboardIndex({
                     subtitle={(stats.critical_alerts ?? 0) > 0 ? `${stats.critical_alerts} critiques` : null}
                     href="/alerts"
                     pulse={(stats.critical_alerts ?? 0) > 0}
+                    compact={isMobile}
                 />
                 <StatCard
                     label="Aujourd'hui"
                     value={stats.events_today ?? 0}
                     color="#8b5cf6"
                     subtitle={`${stats.blocked_today ?? 0} bloqués`}
+                    compact={isMobile}
                 />
                 <StatCard
                     label="Version agent"
                     value={stats.agent_version ?? '-'}
                     color={t.textMuted}
+                    compact={isMobile}
                 />
             </div>}
 
             {/* Charts row */}
-            {(isWidgetVisible('activity24h') || isWidgetVisible('platformUsage')) && <div style={{
-                display: 'grid',
-                gridTemplateColumns: '2fr 1fr',
-                gap: '1rem',
+            {(isWidgetVisible('activity24h') || isWidgetVisible('platformUsage')) && <div className="icon-widget-grid" style={{
                 marginBottom: '1.5rem',
             }}>
                 {/* Activity last 24h */}
@@ -510,7 +512,7 @@ export default function DashboardIndex({
                                         <div
                                             style={{
                                                 width: '100%',
-                                                maxWidth: 24,
+                                                maxWidth: isMobile ? 14 : 24,
                                                 height: `${pct}%`,
                                                 background: 'linear-gradient(to top, #3b82f6, #60a5fa)',
                                                 borderRadius: '4px 4px 0 0',
@@ -710,9 +712,9 @@ export default function DashboardIndex({
                         <h3 style={{ color: t.text, fontSize: '1rem', margin: '0 0 1.25rem', fontWeight: 600 }}>
                             Activité par département (30j)
                         </h3>
-                        <div style={{ display: 'flex', gap: '1.5rem' }}>
+                        <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
                             {/* Bar chart */}
-                            <div style={{ flex: 2, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            <div style={{ flex: 2, minWidth: isMobile ? '100%' : 300, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                 {departmentStats.map((dept, idx) => {
                                     const pct = Math.max(2, Math.round((dept.event_count / maxEvents) * 100));
                                     const color = deptColors[idx % deptColors.length];
@@ -750,7 +752,7 @@ export default function DashboardIndex({
                                 })}
                             </div>
                             {/* Summary side */}
-                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            <div style={{ flex: 1, minWidth: isMobile ? '100%' : 200, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                 {departmentStats.slice(0, 5).map((dept, idx) => {
                                     const color = deptColors[idx % deptColors.length];
                                     return (
@@ -795,10 +797,7 @@ export default function DashboardIndex({
             })()}
 
             {/* Bottom row: Recent alerts + Live feed / Top machines */}
-            {(isWidgetVisible('recentAlerts') || isWidgetVisible('topMachines')) && <div style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '1rem',
+            {(isWidgetVisible('recentAlerts') || isWidgetVisible('topMachines')) && <div className="icon-widget-grid" style={{
             }}>
                 {/* Recent open alerts */}
                 <div style={cardStyle}>

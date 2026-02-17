@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
 import { useTheme } from '../../Contexts/ThemeContext';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 const statusColors = {
     online: '#22c55e',
@@ -23,12 +24,13 @@ const alertStatusLabels = {
 
 export default function SearchIndex({ query, results }) {
     const { theme: t } = useTheme();
+    const isMobile = useIsMobile();
 
     const cardStyle = {
         background: t.surface,
         borderRadius: 12,
         border: `1px solid ${t.border}`,
-        padding: '1.5rem',
+        padding: isMobile ? '1rem' : '1.5rem',
         marginBottom: '1.5rem',
     };
 
@@ -59,10 +61,11 @@ export default function SearchIndex({ query, results }) {
                                 key={m.id}
                                 href={`/machines/${m.id}`}
                                 style={{
-                                    display: 'flex', alignItems: 'center', gap: '0.75rem',
-                                    padding: '0.65rem 0.75rem', background: t.bg,
+                                    display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', gap: '0.75rem',
+                                    padding: isMobile ? '0.5rem' : '0.65rem 0.75rem', background: t.bg,
                                     borderRadius: 8, textDecoration: 'none',
                                     border: '1px solid transparent', transition: 'border-color 0.15s',
+                                    flexWrap: isMobile ? 'wrap' : 'nowrap',
                                 }}
                                 onMouseEnter={(e) => e.currentTarget.style.borderColor = t.border}
                                 onMouseLeave={(e) => e.currentTarget.style.borderColor = 'transparent'}
@@ -111,10 +114,11 @@ export default function SearchIndex({ query, results }) {
                                 key={a.id}
                                 href="/alerts"
                                 style={{
-                                    display: 'flex', alignItems: 'center', gap: '0.75rem',
-                                    padding: '0.65rem 0.75rem', background: t.bg,
+                                    display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', gap: '0.75rem',
+                                    padding: isMobile ? '0.5rem' : '0.65rem 0.75rem', background: t.bg,
                                     borderRadius: 8, textDecoration: 'none',
                                     border: '1px solid transparent', transition: 'border-color 0.15s',
+                                    flexWrap: isMobile ? 'wrap' : 'nowrap',
                                 }}
                                 onMouseEnter={(e) => e.currentTarget.style.borderColor = t.border}
                                 onMouseLeave={(e) => e.currentTarget.style.borderColor = 'transparent'}

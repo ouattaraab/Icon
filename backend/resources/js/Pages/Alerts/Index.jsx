@@ -1,6 +1,7 @@
 import { router } from '@inertiajs/react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
 import { useTheme } from '../../Contexts/ThemeContext';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 const severityStyles = {
     critical: { bg: '#7f1d1d', color: '#fca5a5', label: 'Critique' },
@@ -15,11 +16,12 @@ const statusLabels = {
 
 export default function AlertsIndex({ alerts, openCount, criticalCount, filters }) {
     const { theme: t } = useTheme();
+    const isMobile = useIsMobile();
 
     return (
         <DashboardLayout title="Centre d'alertes">
             {/* Summary */}
-            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div className="icon-stat-grid" style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
                 <div style={{
                     background: t.surface,
                     borderRadius: 8,
@@ -52,6 +54,7 @@ export default function AlertsIndex({ alerts, openCount, criticalCount, filters 
                     style={{
                         background: t.surface, border: `1px solid ${t.border}`,
                         borderRadius: 8, padding: '0.5rem 1rem', color: t.text, fontSize: '0.875rem',
+                        ...(isMobile ? { width: '100%' } : {}),
                     }}
                 >
                     <option value="">Tous les statuts</option>
@@ -65,6 +68,7 @@ export default function AlertsIndex({ alerts, openCount, criticalCount, filters 
                     style={{
                         background: t.surface, border: `1px solid ${t.border}`,
                         borderRadius: 8, padding: '0.5rem 1rem', color: t.text, fontSize: '0.875rem',
+                        ...(isMobile ? { width: '100%' } : {}),
                     }}
                 >
                     <option value="">Toutes les sévérités</option>
@@ -94,11 +98,12 @@ export default function AlertsIndex({ alerts, openCount, criticalCount, filters 
                         <div key={alert.id} onClick={() => router.visit(`/alerts/${alert.id}`)} style={{
                             background: t.surface,
                             borderRadius: 8,
-                            padding: '1rem 1.25rem',
+                            padding: isMobile ? '0.75rem 1rem' : '1rem 1.25rem',
                             border: `1px solid ${t.border}`,
                             display: 'flex',
-                            alignItems: 'center',
-                            gap: '1rem',
+                            alignItems: isMobile ? 'flex-start' : 'center',
+                            flexDirection: isMobile ? 'column' : 'row',
+                            gap: isMobile ? '0.5rem' : '1rem',
                             cursor: 'pointer',
                             transition: 'border-color 0.15s',
                         }}
@@ -119,9 +124,11 @@ export default function AlertsIndex({ alerts, openCount, criticalCount, filters 
                                 <p style={{ color: t.text, fontSize: '0.875rem', margin: 0, fontWeight: 500 }}>
                                     {alert.title}
                                 </p>
-                                <p style={{ color: t.textFaint, fontSize: '0.75rem', margin: '0.25rem 0 0' }}>
-                                    {alert.machine?.hostname} — {alert.rule?.name || 'N/A'}
-                                </p>
+                                {!isMobile && (
+                                    <p style={{ color: t.textFaint, fontSize: '0.75rem', margin: '0.25rem 0 0' }}>
+                                        {alert.machine?.hostname} — {alert.rule?.name || 'N/A'}
+                                    </p>
+                                )}
                             </div>
                             <span style={{ color: t.textFaint, fontSize: '0.75rem' }}>
                                 {statusLabels[alert.status]}

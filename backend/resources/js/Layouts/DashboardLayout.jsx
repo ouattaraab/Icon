@@ -1,6 +1,7 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTheme } from '../Contexts/ThemeContext';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 const navigation = [
     { name: 'Tableau de bord', href: '/', icon: '\u{1f4ca}' },
@@ -23,22 +24,6 @@ const severityColors = {
 
 const roleLabels = { admin: 'Admin', manager: 'Manager', viewer: 'Lecteur' };
 const roleColors = { admin: '#ef4444', manager: '#f59e0b', viewer: '#3b82f6' };
-
-const MOBILE_BREAKPOINT = 768;
-
-function useIsMobile() {
-    const [isMobile, setIsMobile] = useState(
-        typeof window !== 'undefined' ? window.innerWidth < MOBILE_BREAKPOINT : false
-    );
-
-    useEffect(() => {
-        const handleResize = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
-
-    return isMobile;
-}
 
 function ThemeToggle({ isDark, onToggle, t }) {
     return (
@@ -600,7 +585,7 @@ export default function DashboardLayout({ children, title }) {
                             {unreadCount > 0 && (
                                 <span style={{
                                     position: 'absolute', top: -6, right: -6,
-                                    background: '#ef4444', color: '#fff',
+                                    background: t.danger, color: '#fff',
                                     fontSize: '0.65rem', fontWeight: 700, borderRadius: '50%',
                                     width: 18, height: 18, display: 'flex',
                                     alignItems: 'center', justifyContent: 'center',

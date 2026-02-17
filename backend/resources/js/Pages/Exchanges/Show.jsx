@@ -1,6 +1,7 @@
 import { router } from '@inertiajs/react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
 import { useTheme } from '../../Contexts/ThemeContext';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 const severityColors = {
     critical: { bg: '#7f1d1d', color: '#fca5a5' },
@@ -48,13 +49,14 @@ function formatDate(isoStr) {
 
 export default function ExchangesShow({ exchange, machine, event, matchedRuleNames = {} }) {
     const { theme: t } = useTheme();
+    const isMobile = useIsMobile();
     const sev = severityColors[exchange.severity] || severityColors.info;
     const dlpMatches = event?.metadata?.dlp_matches;
     const hasDlp = dlpMatches && Object.keys(dlpMatches).length > 0;
 
     const cardStyle = {
         background: t.surface, borderRadius: 12,
-        border: `1px solid ${t.border}`, padding: '1.5rem', marginBottom: '1rem',
+        border: `1px solid ${t.border}`, padding: isMobile ? '1rem' : '1.5rem', marginBottom: '1rem',
     };
 
     return (
@@ -72,7 +74,7 @@ export default function ExchangesShow({ exchange, machine, event, matchedRuleNam
 
             {/* Metadata header */}
             <div style={cardStyle}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: isMobile ? '0.5rem' : '1rem', flexDirection: isMobile ? 'column' : 'row' }}>
                     <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
                             {exchange.platform && (
@@ -121,8 +123,8 @@ export default function ExchangesShow({ exchange, machine, event, matchedRuleNam
                 </div>
 
                 <div style={{
-                    display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-                    gap: '1rem', marginTop: '1rem', paddingTop: '1rem', borderTop: `1px solid ${t.border}`,
+                    display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(180px, 1fr))',
+                    gap: isMobile ? '0.75rem' : '1rem', marginTop: '1rem', paddingTop: '1rem', borderTop: `1px solid ${t.border}`,
                 }}>
                     <MetaItem
                         label="Machine"

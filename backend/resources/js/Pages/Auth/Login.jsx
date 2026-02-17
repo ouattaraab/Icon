@@ -1,8 +1,10 @@
 import { useForm } from '@inertiajs/react';
 import { useTheme } from '../../Contexts/ThemeContext';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 export default function Login() {
     const { theme: t } = useTheme();
+    const isMobile = useIsMobile();
     const { data, setData, post, processing, errors } = useForm({
         email: '',
         password: '',
@@ -24,11 +26,11 @@ export default function Login() {
         }}>
             <div style={{
                 background: t.surface,
-                borderRadius: '12px',
-                padding: '40px',
+                borderRadius: isMobile ? '0' : '12px',
+                padding: isMobile ? '24px 16px' : '40px',
                 width: '100%',
-                maxWidth: '400px',
-                boxShadow: '0 25px 50px rgba(0,0,0,0.5)',
+                maxWidth: isMobile ? '100%' : '400px',
+                boxShadow: isMobile ? 'none' : '0 25px 50px rgba(0,0,0,0.5)',
             }}>
                 <div style={{ textAlign: 'center', marginBottom: '32px' }}>
                     <h1 style={{ fontSize: '28px', fontWeight: 'bold', color: t.text, margin: 0 }}>

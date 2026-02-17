@@ -2,6 +2,7 @@ import { router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
 import { useTheme } from '../../Contexts/ThemeContext';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 const statusColors = {
     online: '#22c55e',
@@ -81,6 +82,7 @@ function formatShortDate(dateStr) {
 
 export default function MachinesShow({ machine, stats, dailyActivity = [], eventTypes = {}, alerts = [], platformBreakdown = [], hourlyActivity = {}, pendingCommands = [] }) {
     const { theme: t } = useTheme();
+    const isMobile = useIsMobile();
     const [activeTab, setActiveTab] = useState('events');
     const [confirmAction, setConfirmAction] = useState(null);
     const [editing, setEditing] = useState(false);
@@ -94,7 +96,7 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
 
     const cardStyle = {
         background: t.surface, borderRadius: 12,
-        border: `1px solid ${t.border}`, padding: '1.5rem',
+        border: `1px solid ${t.border}`, padding: isMobile ? '1rem' : '1.5rem',
     };
 
     const handleSaveEdit = () => {
@@ -229,7 +231,7 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
                                 {machine.os === 'windows' ? 'W' : 'M'}
                             </span>
                             <div>
-                                <h2 style={{ color: t.text, margin: 0, fontSize: '1.5rem', fontWeight: 700 }}>
+                                <h2 style={{ color: t.text, margin: 0, fontSize: isMobile ? '1.15rem' : '1.5rem', fontWeight: 700 }}>
                                     {machine.hostname}
                                 </h2>
                                 <p style={{ color: t.textMuted, margin: '0.2rem 0 0', fontSize: '0.85rem' }}>
@@ -256,13 +258,13 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
                             </div>
                         )}
                     </div>
-                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap', justifyContent: isMobile ? 'flex-start' : 'flex-end' }}>
                         <button
                             onClick={() => router.visit(`/exchanges?machine_id=${machine.id}`)}
                             style={{
                                 background: t.border, color: t.textSecondary, border: 'none',
-                                borderRadius: 6, padding: '0.4rem 0.75rem',
-                                cursor: 'pointer', fontSize: '0.8rem',
+                                borderRadius: 6, padding: isMobile ? '0.35rem 0.6rem' : '0.4rem 0.75rem',
+                                cursor: 'pointer', fontSize: isMobile ? '0.7rem' : '0.8rem',
                             }}
                         >
                             Voir les echanges
@@ -331,8 +333,8 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
 
                 {!editing ? (
                     <div style={{
-                        display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                        gap: '1rem', marginTop: '1.5rem', paddingTop: '1rem', borderTop: `1px solid ${t.border}`,
+                        display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(200px, 1fr))',
+                        gap: isMobile ? '0.75rem' : '1rem', marginTop: '1.5rem', paddingTop: '1rem', borderTop: `1px solid ${t.border}`,
                     }}>
                         <InfoItem label="Adresse IP" value={machine.ip_address || '\u2014'} mono />
                         <InfoItem label="Departement" value={machine.department || '\u2014'} />
@@ -399,9 +401,8 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
             </div>
 
             {/* Stats cards */}
-            <div style={{
-                display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-                gap: '1rem', marginBottom: '1.5rem',
+            <div className="icon-stat-grid" style={{
+                marginBottom: '1.5rem',
             }}>
                 <StatCard label="Total evenements" value={stats.total_events} color="#3b82f6" />
                 <StatCard label="Blocages" value={stats.blocked_events} color="#ef4444" />
@@ -410,7 +411,7 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
             </div>
 
             {/* Daily Activity + Event Types (side by side) */}
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div className="icon-widget-grid" style={{ marginBottom: '1.5rem' }}>
                 {/* Daily Activity Chart */}
                 <div style={cardStyle}>
                     <h3 style={{ color: t.text, margin: '0 0 1rem', fontSize: '0.95rem', fontWeight: 600 }}>
@@ -494,7 +495,7 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
             </div>
 
             {/* Platform Breakdown + Hourly Activity (side by side) */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div className="icon-widget-grid" style={{ marginBottom: '1.5rem' }}>
                 {/* Platform breakdown */}
                 <div style={cardStyle}>
                     <h3 style={{ color: t.text, margin: '0 0 1rem', fontSize: '0.95rem', fontWeight: 600 }}>
@@ -591,7 +592,7 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
             </div>
 
             {/* Tabs: Events / Alerts */}
-            <div style={{ display: 'flex', gap: 0 }}>
+            <div style={{ display: 'flex', gap: 0, overflowX: isMobile ? 'auto' : 'visible', WebkitOverflowScrolling: 'touch' }}>
                 <TabButton active={activeTab === 'events'} onClick={() => setActiveTab('events')}
                     label="Evenements" count={machine.events?.length} />
                 <TabButton active={activeTab === 'alerts'} onClick={() => setActiveTab('alerts')}
@@ -602,7 +603,7 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
             {activeTab === 'events' && (
                 <div style={{ ...cardStyle, borderTopLeftRadius: 0 }}>
                     {machine.events?.length > 0 ? (
-                        <div style={{ overflowX: 'auto' }}>
+                        <div className="icon-table-wrap">
                             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                 <thead>
                                     <tr style={{ borderBottom: `1px solid ${t.border}` }}>

@@ -2,6 +2,7 @@ import { router } from '@inertiajs/react';
 import { useState, useCallback } from 'react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
 import { useTheme } from '../../Contexts/ThemeContext';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 const actionLabels = {
     'auth.login': 'Connexion',
@@ -57,6 +58,7 @@ function getActionColor(action) {
 
 export default function AuditIndex({ logs, actionTypes, users, filters }) {
     const { theme: t } = useTheme();
+    const isMobile = useIsMobile();
     const [search, setSearch] = useState(filters?.search || '');
 
     const filterInputStyle = {
@@ -199,14 +201,14 @@ export default function AuditIndex({ logs, actionTypes, users, filters }) {
             </div>
 
             {/* Audit log table */}
-            <div style={{
+            <div className="icon-table-wrap" style={{
                 background: t.surface, borderRadius: 12,
                 border: `1px solid ${t.border}`, overflow: 'hidden',
             }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                         <tr style={{ borderBottom: `1px solid ${t.border}` }}>
-                            {['Date', 'Utilisateur', 'Action', 'Cible', 'Détails', 'IP'].map((h) => (
+                            {['Date', 'Utilisateur', 'Action', !isMobile && 'Cible', !isMobile && 'Détails', !isMobile && 'IP'].filter(Boolean).map((h) => (
                                 <th key={h} style={{
                                     padding: '0.75rem', textAlign: 'left', color: t.textMuted,
                                     fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600,
@@ -248,32 +250,38 @@ export default function AuditIndex({ logs, actionTypes, users, filters }) {
                                             {actionLabels[log.action] || log.action}
                                         </span>
                                     </td>
-                                    <td style={{ padding: '0.6rem 0.75rem', color: t.textMuted, fontSize: '0.8rem' }}>
-                                        {log.target_type || '\u2014'}
-                                        {log.target_id ? (
-                                            <span style={{ color: t.textSubtle, fontSize: '0.7rem', fontFamily: 'monospace' }}>
-                                                {' #'}{log.target_id.slice(0, 8)}
-                                            </span>
-                                        ) : ''}
-                                    </td>
-                                    <td style={{ padding: '0.6rem 0.75rem', color: t.textFaint, fontSize: '0.75rem', maxWidth: 300 }}>
-                                        {log.details ? (
-                                            <span style={{
-                                                display: 'block', overflow: 'hidden',
-                                                textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 300,
-                                            }}>
-                                                {formatDetails(log.details)}
-                                            </span>
-                                        ) : '\u2014'}
-                                    </td>
-                                    <td style={{ padding: '0.6rem 0.75rem', color: t.textSubtle, fontSize: '0.75rem', fontFamily: 'monospace' }}>
-                                        {log.ip_address || '\u2014'}
-                                    </td>
+                                    {!isMobile && (
+                                        <td style={{ padding: '0.6rem 0.75rem', color: t.textMuted, fontSize: '0.8rem' }}>
+                                            {log.target_type || '\u2014'}
+                                            {log.target_id ? (
+                                                <span style={{ color: t.textSubtle, fontSize: '0.7rem', fontFamily: 'monospace' }}>
+                                                    {' #'}{log.target_id.slice(0, 8)}
+                                                </span>
+                                            ) : ''}
+                                        </td>
+                                    )}
+                                    {!isMobile && (
+                                        <td style={{ padding: '0.6rem 0.75rem', color: t.textFaint, fontSize: '0.75rem', maxWidth: 300 }}>
+                                            {log.details ? (
+                                                <span style={{
+                                                    display: 'block', overflow: 'hidden',
+                                                    textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 300,
+                                                }}>
+                                                    {formatDetails(log.details)}
+                                                </span>
+                                            ) : '\u2014'}
+                                        </td>
+                                    )}
+                                    {!isMobile && (
+                                        <td style={{ padding: '0.6rem 0.75rem', color: t.textSubtle, fontSize: '0.75rem', fontFamily: 'monospace' }}>
+                                            {log.ip_address || '\u2014'}
+                                        </td>
+                                    )}
                                 </tr>
                             ))
                         ) : (
                             <tr>
-                                <td colSpan={6} style={{ padding: '2rem', textAlign: 'center', color: t.textFaint, fontSize: '0.85rem' }}>
+                                <td colSpan={isMobile ? 3 : 6} style={{ padding: '2rem', textAlign: 'center', color: t.textFaint, fontSize: '0.85rem' }}>
                                     {hasFilters ? 'Aucun résultat pour ces filtres.' : "Aucune entrée dans le journal d'audit."}
                                 </td>
                             </tr>

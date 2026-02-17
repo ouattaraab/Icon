@@ -2,6 +2,7 @@ import { Link, router, usePage } from '@inertiajs/react';
 import { useState, useRef, useCallback } from 'react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
 import { useTheme } from '../../Contexts/ThemeContext';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 const categoryColors = {
     block: { bg: '#7f1d1d', color: '#fca5a5' },
@@ -17,6 +18,7 @@ const btnStyle = {
 
 export default function RulesIndex({ rules }) {
     const { theme: t } = useTheme();
+    const isMobile = useIsMobile();
     const { flash } = usePage().props;
     const fileInputRef = useRef(null);
     const [importing, setImporting] = useState(false);
@@ -128,7 +130,7 @@ export default function RulesIndex({ rules }) {
             </div>
 
             {/* Table */}
-            <div style={{
+            <div className="icon-table-wrap" style={{
                 background: t.surface,
                 borderRadius: 12,
                 border: `1px solid ${t.border}`,
@@ -137,7 +139,7 @@ export default function RulesIndex({ rules }) {
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                         <tr style={{ borderBottom: `1px solid ${t.border}` }}>
-                            {['Nom', 'Catégorie', 'Cible', 'Type', 'Priorité', 'Statut', 'Actions'].map((h) => (
+                            {['Nom', 'Catégorie', ...(isMobile ? [] : ['Cible']), 'Type', ...(isMobile ? [] : ['Priorité']), 'Statut', 'Actions'].map((h) => (
                                 <th key={h} style={{
                                     padding: '0.75rem 1rem', textAlign: 'left',
                                     color: t.textMuted, fontSize: '0.75rem',
@@ -151,7 +153,7 @@ export default function RulesIndex({ rules }) {
                     <tbody>
                         {rules?.data?.length === 0 && (
                             <tr>
-                                <td colSpan={7} style={{ padding: '2rem', textAlign: 'center', color: t.textFaint }}>
+                                <td colSpan={isMobile ? 5 : 7} style={{ padding: '2rem', textAlign: 'center', color: t.textFaint }}>
                                     Aucune règle configurée. Créez-en une ou importez un fichier JSON.
                                 </td>
                             </tr>
@@ -178,15 +180,19 @@ export default function RulesIndex({ rules }) {
                                             {rule.category}
                                         </span>
                                     </td>
-                                    <td style={{ padding: '0.75rem 1rem', color: t.textMuted, fontSize: '0.875rem' }}>
-                                        {rule.target}
-                                    </td>
+                                    {!isMobile && (
+                                        <td style={{ padding: '0.75rem 1rem', color: t.textMuted, fontSize: '0.875rem' }}>
+                                            {rule.target}
+                                        </td>
+                                    )}
                                     <td style={{ padding: '0.75rem 1rem', color: t.textMuted, fontSize: '0.875rem' }}>
                                         {rule.condition_type}
                                     </td>
-                                    <td style={{ padding: '0.75rem 1rem', color: t.textMuted, fontSize: '0.875rem' }}>
-                                        {rule.priority}
-                                    </td>
+                                    {!isMobile && (
+                                        <td style={{ padding: '0.75rem 1rem', color: t.textMuted, fontSize: '0.875rem' }}>
+                                            {rule.priority}
+                                        </td>
+                                    )}
                                     <td style={{ padding: '0.75rem 1rem' }}>
                                         <button
                                             onClick={() => router.post(`/rules/${rule.id}/toggle`)}

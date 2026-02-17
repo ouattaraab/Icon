@@ -2,12 +2,14 @@ import { useForm, usePage, router } from '@inertiajs/react';
 import { useState } from 'react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
 import { useTheme } from '../../Contexts/ThemeContext';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 const roleLabels = { admin: 'Administrateur', manager: 'Manager', viewer: 'Lecteur' };
 const roleColors = { admin: '#ef4444', manager: '#f59e0b', viewer: '#3b82f6' };
 
 export default function ProfileIndex({ user, sessions = [] }) {
     const { theme: t } = useTheme();
+    const isMobile = useIsMobile();
 
     const { flash } = usePage().props;
     const [twoFactorSetup, setTwoFactorSetup] = useState(null);
@@ -37,7 +39,7 @@ export default function ProfileIndex({ user, sessions = [] }) {
     const cardStyle = {
         background: t.surface,
         borderRadius: 12,
-        padding: '1.5rem',
+        padding: isMobile ? '1rem' : '1.5rem',
         border: `1px solid ${t.border}`,
         marginBottom: '1.5rem',
     };
@@ -103,7 +105,7 @@ export default function ProfileIndex({ user, sessions = [] }) {
             )}
 
             {/* Info + Role badge */}
-            <div style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div style={{ ...cardStyle, display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', flexDirection: isMobile ? 'column' : 'row', gap: '1rem' }}>
                 <div style={{
                     width: 48, height: 48, borderRadius: '50%',
                     background: roleColors[user.role] || t.textFaint,
@@ -135,7 +137,7 @@ export default function ProfileIndex({ user, sessions = [] }) {
                 <h3 style={{ color: t.text, fontSize: '1.1rem', fontWeight: 600, margin: '0 0 1.25rem' }}>
                     Informations personnelles
                 </h3>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
                     <div>
                         <label style={labelStyle}>Nom</label>
                         <input
@@ -189,7 +191,7 @@ export default function ProfileIndex({ user, sessions = [] }) {
                         />
                         {passwordForm.errors.current_password && <p style={errorStyle}>{passwordForm.errors.current_password}</p>}
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1rem' }}>
                         <div>
                             <label style={labelStyle}>Nouveau mot de passe</label>
                             <input
@@ -314,14 +316,14 @@ export default function ProfileIndex({ user, sessions = [] }) {
                                 <p style={{ color: t.textMuted, fontSize: '0.8rem', marginBottom: '0.75rem' }}>
                                     Confirmez votre mot de passe pour d\u00e9sactiver le 2FA :
                                 </p>
-                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
                                     <div>
                                         <input
                                             type="password"
                                             value={disablePassword}
                                             onChange={(e) => setDisablePassword(e.target.value)}
                                             placeholder="Mot de passe"
-                                            style={{ ...inputStyle, width: 250 }}
+                                            style={{ ...inputStyle, width: isMobile ? '100%' : 250 }}
                                         />
                                     </div>
                                     <button
@@ -391,7 +393,7 @@ export default function ProfileIndex({ user, sessions = [] }) {
                         <p style={{ color: t.textSecondary, fontSize: '0.85rem', marginBottom: '0.5rem' }}>
                             2. Entrez le code \u00e0 6 chiffres pour confirmer :
                         </p>
-                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', marginBottom: '1rem', flexWrap: 'wrap' }}>
                             <div>
                                 <input
                                     type="text"
@@ -457,7 +459,7 @@ export default function ProfileIndex({ user, sessions = [] }) {
                             <p style={{ color: '#f59e0b', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.5rem' }}>
                                 Codes de r\u00e9cup\u00e9ration (\u00e0 conserver en lieu s\u00fbr) :
                             </p>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.35rem' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '0.35rem' }}>
                                 {twoFactorSetup.recovery_codes?.map((code, i) => (
                                     <code key={i} style={{
                                         color: t.textSecondary, fontSize: '0.8rem', fontFamily: 'monospace',
@@ -516,7 +518,7 @@ export default function ProfileIndex({ user, sessions = [] }) {
 
             {/* Active sessions */}
             <div style={cardStyle}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem', flexDirection: isMobile ? 'column' : 'row' }}>
                     <h3 style={{ color: t.text, fontSize: '1.1rem', fontWeight: 600, margin: 0 }}>
                         Sessions actives
                     </h3>
@@ -533,13 +535,13 @@ export default function ProfileIndex({ user, sessions = [] }) {
                                 R\u00e9voquer toutes les autres
                             </button>
                         ) : (
-                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
                                 <input
                                     type="password"
                                     value={revokeAllPassword}
                                     onChange={(e) => setRevokeAllPassword(e.target.value)}
                                     placeholder="Mot de passe"
-                                    style={{ ...inputStyle, width: 160, fontSize: '0.8rem', padding: '0.35rem 0.5rem' }}
+                                    style={{ ...inputStyle, width: isMobile ? '100%' : 160, fontSize: '0.8rem', padding: '0.35rem 0.5rem' }}
                                 />
                                 <button
                                     onClick={() => {

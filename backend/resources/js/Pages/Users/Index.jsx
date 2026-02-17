@@ -2,6 +2,7 @@ import { router, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
 import { useTheme } from '../../Contexts/ThemeContext';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 const roleLabels = {
     admin: 'Administrateur',
@@ -17,6 +18,7 @@ const roleColors = {
 
 export default function UsersIndex({ users }) {
     const { theme: t } = useTheme();
+    const isMobile = useIsMobile();
     const { auth } = usePage().props;
     const [showForm, setShowForm] = useState(false);
     const [editingId, setEditingId] = useState(null);
@@ -54,7 +56,7 @@ export default function UsersIndex({ users }) {
             )}
 
             {/* Users table */}
-            <div style={{
+            <div className="icon-table-wrap" style={{
                 background: t.surface,
                 borderRadius: 12,
                 border: `1px solid ${t.border}`,
@@ -63,7 +65,7 @@ export default function UsersIndex({ users }) {
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                         <tr style={{ borderBottom: `1px solid ${t.border}` }}>
-                            {['Nom', 'Email', 'Rôle', 'Notifs', 'Créé le', 'Actions'].map((h) => (
+                            {['Nom', !isMobile && 'Email', 'Rôle', 'Notifs', 'Créé le', 'Actions'].filter(Boolean).map((h) => (
                                 <th key={h} style={{
                                     padding: '0.75rem',
                                     textAlign: 'left',
@@ -82,7 +84,7 @@ export default function UsersIndex({ users }) {
                         {users.length > 0 ? users.map((user) => (
                             editingId === user.id ? (
                                 <tr key={user.id}>
-                                    <td colSpan={6} style={{ padding: '0.75rem' }}>
+                                    <td colSpan={isMobile ? 5 : 6} style={{ padding: '0.75rem' }}>
                                         <UserForm
                                             user={user}
                                             onCancel={() => setEditingId(null)}
@@ -97,11 +99,13 @@ export default function UsersIndex({ users }) {
                                             {user.name}
                                         </span>
                                     </td>
-                                    <td style={{ padding: '0.6rem 0.75rem' }}>
-                                        <span style={{ color: t.textMuted, fontSize: '0.85rem', fontFamily: 'monospace' }}>
-                                            {user.email}
-                                        </span>
-                                    </td>
+                                    {!isMobile && (
+                                        <td style={{ padding: '0.6rem 0.75rem' }}>
+                                            <span style={{ color: t.textMuted, fontSize: '0.85rem', fontFamily: 'monospace' }}>
+                                                {user.email}
+                                            </span>
+                                        </td>
+                                    )}
                                     <td style={{ padding: '0.6rem 0.75rem' }}>
                                         <span style={{
                                             display: 'inline-block',
@@ -167,7 +171,7 @@ export default function UsersIndex({ users }) {
                             )
                         )) : (
                             <tr>
-                                <td colSpan={6} style={{ padding: '2rem', textAlign: 'center', color: t.textFaint, fontSize: '0.85rem' }}>
+                                <td colSpan={isMobile ? 5 : 6} style={{ padding: '2rem', textAlign: 'center', color: t.textFaint, fontSize: '0.85rem' }}>
                                     Aucun utilisateur.
                                 </td>
                             </tr>
@@ -196,6 +200,7 @@ export default function UsersIndex({ users }) {
 
 function UserForm({ user, onCancel, onSuccess }) {
     const { theme: t } = useTheme();
+    const isMobile = useIsMobile();
     const isEdit = !!user;
 
     const inputStyle = {
@@ -249,10 +254,11 @@ function UserForm({ user, onCancel, onSuccess }) {
             marginBottom: '1rem',
             display: 'flex',
             gap: '0.75rem',
-            alignItems: 'flex-end',
+            alignItems: isMobile ? 'stretch' : 'flex-end',
             flexWrap: 'wrap',
+            flexDirection: isMobile ? 'column' : 'row',
         }}>
-            <div style={{ flex: 1, minWidth: 150 }}>
+            <div style={{ flex: 1, minWidth: isMobile ? '100%' : 150 }}>
                 <label style={{ color: t.textMuted, fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem' }}>
                     Nom
                 </label>
@@ -267,7 +273,7 @@ function UserForm({ user, onCancel, onSuccess }) {
                     <span style={{ color: t.danger, fontSize: '0.7rem' }}>{form.errors.name}</span>
                 )}
             </div>
-            <div style={{ flex: 1, minWidth: 180 }}>
+            <div style={{ flex: 1, minWidth: isMobile ? '100%' : 180 }}>
                 <label style={{ color: t.textMuted, fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem' }}>
                     Email
                 </label>
@@ -282,7 +288,7 @@ function UserForm({ user, onCancel, onSuccess }) {
                     <span style={{ color: t.danger, fontSize: '0.7rem' }}>{form.errors.email}</span>
                 )}
             </div>
-            <div style={{ flex: 1, minWidth: 140 }}>
+            <div style={{ flex: 1, minWidth: isMobile ? '100%' : 140 }}>
                 <label style={{ color: t.textMuted, fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem' }}>
                     Mot de passe {isEdit && <span style={{ color: t.textFaint }}>(laisser vide pour ne pas changer)</span>}
                 </label>
@@ -297,7 +303,7 @@ function UserForm({ user, onCancel, onSuccess }) {
                     <span style={{ color: t.danger, fontSize: '0.7rem' }}>{form.errors.password}</span>
                 )}
             </div>
-            <div style={{ minWidth: 130 }}>
+            <div style={{ minWidth: isMobile ? '100%' : 130 }}>
                 <label style={{ color: t.textMuted, fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem' }}>
                     Rôle
                 </label>

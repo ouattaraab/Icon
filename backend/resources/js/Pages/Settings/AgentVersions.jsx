@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
 import { useTheme } from '../../Contexts/ThemeContext';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 const statBox = (color) => ({
     background: `${color}15`,
@@ -83,11 +84,12 @@ export default function AgentVersions({
     outdatedMachines,
 }) {
     const { theme: t } = useTheme();
+    const isMobile = useIsMobile();
 
     const cardStyle = {
         background: t.surface,
         borderRadius: 12,
-        padding: '1.5rem',
+        padding: isMobile ? '1rem' : '1.5rem',
         border: `1px solid ${t.border}`,
         marginBottom: '1.5rem',
     };
@@ -111,7 +113,7 @@ export default function AgentVersions({
             </Link>
 
             {/* Summary stats */}
-            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+            <div className="icon-stat-grid" style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
                 <StatCard label="Total machines" value={totalMachines} color={t.accent} />
                 <StatCard label="À jour" value={upToDate} color={t.success} />
                 <StatCard label="Obsolètes" value={outdated} color={t.warning} />
@@ -162,11 +164,11 @@ export default function AgentVersions({
                     <h3 style={{ color: t.text, fontSize: '1.1rem', fontWeight: 600, margin: '0 0 1.25rem' }}>
                         Machines obsolètes ({outdated})
                     </h3>
-                    <div style={{ overflowX: 'auto' }}>
+                    <div className="icon-table-wrap" style={{ overflowX: 'auto' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
                             <thead>
                                 <tr style={{ borderBottom: `1px solid ${t.border}` }}>
-                                    {['Machine', 'OS', 'Version agent', 'Département', 'Statut', 'Dernier heartbeat'].map((h) => (
+                                    {['Machine', 'OS', 'Version agent', !isMobile && 'Département', 'Statut', !isMobile && 'Dernier heartbeat'].filter(Boolean).map((h) => (
                                         <th key={h} style={{
                                             padding: '0.6rem 0.75rem',
                                             textAlign: 'left',
@@ -204,18 +206,22 @@ export default function AgentVersions({
                                                 {m.agent_version || 'Inconnue'}
                                             </span>
                                         </td>
-                                        <td style={{ padding: '0.6rem 0.75rem', color: t.textMuted }}>
-                                            {m.department || '—'}
-                                        </td>
+                                        {!isMobile && (
+                                            <td style={{ padding: '0.6rem 0.75rem', color: t.textMuted }}>
+                                                {m.department || '—'}
+                                            </td>
+                                        )}
                                         <td style={{ padding: '0.6rem 0.75rem' }}>
                                             <span style={statusDot(statusColors[m.status] || t.textFaint)} />
                                             <span style={{ color: t.textSecondary, fontSize: '0.8rem' }}>
                                                 {statusLabels[m.status] || m.status}
                                             </span>
                                         </td>
-                                        <td style={{ padding: '0.6rem 0.75rem', color: t.textMuted }}>
-                                            {m.last_heartbeat || '—'}
-                                        </td>
+                                        {!isMobile && (
+                                            <td style={{ padding: '0.6rem 0.75rem', color: t.textMuted }}>
+                                                {m.last_heartbeat || '—'}
+                                            </td>
+                                        )}
                                     </tr>
                                 ))}
                             </tbody>

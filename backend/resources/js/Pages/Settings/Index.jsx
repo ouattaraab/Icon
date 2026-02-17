@@ -1,6 +1,7 @@
 import { useForm, Link } from '@inertiajs/react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
 import { useTheme } from '../../Contexts/ThemeContext';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 function Field({ label, help, error, children }) {
     const { theme: t } = useTheme();
@@ -94,11 +95,12 @@ function Toggle({ label, help, checked, onChange, error }) {
 
 export default function SettingsIndex({ settings }) {
     const { theme: t } = useTheme();
+    const isMobile = useIsMobile();
 
     const cardStyle = {
         background: t.surface,
         borderRadius: 12,
-        padding: '1.5rem',
+        padding: isMobile ? '1rem' : '1.5rem',
         border: `1px solid ${t.border}`,
         marginBottom: '1.5rem',
     };
@@ -157,7 +159,7 @@ export default function SettingsIndex({ settings }) {
                     <h3 style={{ color: t.text, fontSize: '1.1rem', fontWeight: 600, margin: '0 0 1.25rem' }}>
                         Rétention des données
                     </h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1rem' }}>
                         <Field
                             label="Rétention des événements (jours)"
                             help="Durée de conservation des événements dans la base (7 - 3650)"
@@ -194,7 +196,7 @@ export default function SettingsIndex({ settings }) {
                     <h3 style={{ color: t.text, fontSize: '1.1rem', fontWeight: 600, margin: '0 0 1.25rem' }}>
                         Configuration des agents
                     </h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1rem' }}>
                         <Field
                             label="Seuil hors-ligne (secondes)"
                             help="Délai sans heartbeat avant de marquer un agent comme hors-ligne (60 - 3600)"
@@ -257,7 +259,7 @@ export default function SettingsIndex({ settings }) {
                             Voir les versions →
                         </Link>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1rem' }}>
                         <Field
                             label="Version courante de l'agent"
                             help="Version attendue sur les postes (ex: 1.2.0)"

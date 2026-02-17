@@ -2,9 +2,11 @@ import { useForm } from '@inertiajs/react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
 import RulePreview from '../../Components/RulePreview';
 import { useTheme } from '../../Contexts/ThemeContext';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 export default function RulesCreate() {
     const { theme: t } = useTheme();
+    const isMobile = useIsMobile();
     const { data, setData, post, processing, errors } = useForm({
         name: '',
         description: '',
@@ -47,7 +49,7 @@ export default function RulesCreate() {
                     background: t.surface,
                     borderRadius: 12,
                     border: `1px solid ${t.border}`,
-                    padding: '2rem',
+                    padding: isMobile ? '1rem' : '2rem',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '1.25rem',
@@ -78,7 +80,7 @@ export default function RulesCreate() {
                     </div>
 
                     {/* Category + Target row */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1rem' }}>
                         <div>
                             <label style={labelStyle}>Catégorie (action)</label>
                             <select value={data.category} onChange={(e) => setData('category', e.target.value)} style={inputStyle}>
@@ -161,7 +163,7 @@ export default function RulesCreate() {
                             onChange={(e) => setData('priority', parseInt(e.target.value))}
                             min={0}
                             max={1000}
-                            style={{ ...inputStyle, width: 150 }}
+                            style={{ ...inputStyle, width: isMobile ? '100%' : 150 }}
                         />
                     </div>
 
@@ -186,7 +188,7 @@ export default function RulesCreate() {
                     <RulePreview conditionType={data.condition_type} conditionValue={data.condition_value} />
 
                     {/* Submit */}
-                    <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                    <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
                         <button
                             type="submit"
                             disabled={processing}

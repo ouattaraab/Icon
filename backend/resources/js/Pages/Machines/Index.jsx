@@ -2,6 +2,7 @@ import { Link, router, usePage } from '@inertiajs/react';
 import { useState, useCallback } from 'react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
 import { useTheme } from '../../Contexts/ThemeContext';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 const statusColors = {
     online: '#22c55e',
@@ -17,6 +18,7 @@ const osIcons = {
 
 export default function MachinesIndex({ machines, filters, tags = [] }) {
     const { theme: t } = useTheme();
+    const isMobile = useIsMobile();
     const { auth, flash } = usePage().props;
     const isManager = auth?.user?.role === 'admin' || auth?.user?.role === 'manager';
     const [search, setSearch] = useState(filters?.search || '');
@@ -144,13 +146,13 @@ export default function MachinesIndex({ machines, filters, tags = [] }) {
                     <span style={{ color: '#93c5fd', fontSize: '0.85rem', fontWeight: 600 }}>
                         {selected.length} machine(s) sélectionnée(s)
                     </span>
-                    <div style={{ display: 'flex', gap: '0.5rem', marginLeft: 'auto' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', marginLeft: 'auto', flexWrap: 'wrap' }}>
                         <button
                             onClick={() => handleBulkAction('force_sync')}
                             disabled={bulkProcessing}
                             style={{
                                 background: t.accent, color: '#fff', border: 'none',
-                                borderRadius: 6, padding: '0.4rem 0.85rem', fontSize: '0.8rem',
+                                borderRadius: 6, padding: isMobile ? '0.35rem 0.6rem' : '0.4rem 0.85rem', fontSize: isMobile ? '0.7rem' : '0.8rem',
                                 fontWeight: 600, cursor: bulkProcessing ? 'not-allowed' : 'pointer',
                                 opacity: bulkProcessing ? 0.6 : 1,
                             }}
@@ -162,7 +164,7 @@ export default function MachinesIndex({ machines, filters, tags = [] }) {
                             disabled={bulkProcessing}
                             style={{
                                 background: t.warning, color: '#fff', border: 'none',
-                                borderRadius: 6, padding: '0.4rem 0.85rem', fontSize: '0.8rem',
+                                borderRadius: 6, padding: isMobile ? '0.35rem 0.6rem' : '0.4rem 0.85rem', fontSize: isMobile ? '0.7rem' : '0.8rem',
                                 fontWeight: 600, cursor: bulkProcessing ? 'not-allowed' : 'pointer',
                                 opacity: bulkProcessing ? 0.6 : 1,
                             }}
@@ -174,7 +176,7 @@ export default function MachinesIndex({ machines, filters, tags = [] }) {
                             disabled={bulkProcessing}
                             style={{
                                 background: t.danger, color: '#fff', border: 'none',
-                                borderRadius: 6, padding: '0.4rem 0.85rem', fontSize: '0.8rem',
+                                borderRadius: 6, padding: isMobile ? '0.35rem 0.6rem' : '0.4rem 0.85rem', fontSize: isMobile ? '0.7rem' : '0.8rem',
                                 fontWeight: 600, cursor: bulkProcessing ? 'not-allowed' : 'pointer',
                                 opacity: bulkProcessing ? 0.6 : 1,
                             }}
@@ -185,7 +187,7 @@ export default function MachinesIndex({ machines, filters, tags = [] }) {
                             onClick={() => setSelected([])}
                             style={{
                                 background: 'transparent', color: t.textMuted, border: `1px solid ${t.textSubtle}`,
-                                borderRadius: 6, padding: '0.4rem 0.85rem', fontSize: '0.8rem',
+                                borderRadius: 6, padding: isMobile ? '0.35rem 0.6rem' : '0.4rem 0.85rem', fontSize: isMobile ? '0.7rem' : '0.8rem',
                                 cursor: 'pointer',
                             }}
                         >
@@ -197,7 +199,7 @@ export default function MachinesIndex({ machines, filters, tags = [] }) {
 
             {/* Filters */}
             <div style={{
-                display: 'flex', gap: '0.75rem', marginBottom: '1.5rem',
+                display: 'flex', gap: isMobile ? '0.5rem' : '0.75rem', marginBottom: '1.5rem',
                 flexWrap: 'wrap', alignItems: 'center',
             }}>
                 <input
@@ -206,7 +208,7 @@ export default function MachinesIndex({ machines, filters, tags = [] }) {
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     onKeyDown={handleSearchKeyDown}
-                    style={{ ...inputStyle, width: 300 }}
+                    style={{ ...inputStyle, width: isMobile ? '100%' : 300 }}
                 />
                 <select
                     value={filters?.os || ''}
@@ -270,11 +272,10 @@ export default function MachinesIndex({ machines, filters, tags = [] }) {
             </div>
 
             {/* Table */}
-            <div style={{
+            <div className="icon-table-wrap" style={{
                 background: t.surface,
                 borderRadius: 12,
                 border: `1px solid ${t.border}`,
-                overflowX: 'auto',
             }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
@@ -289,7 +290,10 @@ export default function MachinesIndex({ machines, filters, tags = [] }) {
                                     />
                                 </th>
                             )}
-                            {['Hostname', 'OS', 'Agent', 'Statut', 'Tags', 'Dernier contact', 'Département'].map((h) => (
+                            {(isMobile
+                                ? ['Hostname', 'OS', 'Statut', 'Dernier contact']
+                                : ['Hostname', 'OS', 'Agent', 'Statut', 'Tags', 'Dernier contact', 'Département']
+                            ).map((h) => (
                                 <th key={h} style={{
                                     padding: '0.75rem 1rem', textAlign: 'left',
                                     color: t.textMuted, fontSize: '0.75rem',
@@ -303,7 +307,7 @@ export default function MachinesIndex({ machines, filters, tags = [] }) {
                     <tbody>
                         {machines?.data?.length === 0 && (
                             <tr>
-                                <td colSpan={isManager ? 9 : 8} style={{ padding: '2rem', textAlign: 'center', color: t.textFaint }}>
+                                <td colSpan={isManager ? (isMobile ? 5 : 8) : (isMobile ? 4 : 7)} style={{ padding: '2rem', textAlign: 'center', color: t.textFaint }}>
                                     {hasFilters ? 'Aucune machine ne correspond aux filtres.' : 'Aucune machine enregistrée.'}
                                 </td>
                             </tr>
@@ -349,14 +353,16 @@ export default function MachinesIndex({ machines, filters, tags = [] }) {
                                     }}>
                                         {osIcons[machine.os] || '?'}
                                     </span>
-                                    {machine.os} {machine.os_version}
+                                    {!isMobile && <>{machine.os} {machine.os_version}</>}
                                 </td>
-                                <td
-                                    style={{ padding: '0.75rem 1rem', color: t.textMuted, fontSize: '0.875rem' }}
-                                    onClick={() => router.visit(`/machines/${machine.id}`)}
-                                >
-                                    v{machine.agent_version}
-                                </td>
+                                {!isMobile && (
+                                    <td
+                                        style={{ padding: '0.75rem 1rem', color: t.textMuted, fontSize: '0.875rem' }}
+                                        onClick={() => router.visit(`/machines/${machine.id}`)}
+                                    >
+                                        v{machine.agent_version}
+                                    </td>
+                                )}
                                 <td
                                     style={{ padding: '0.75rem 1rem' }}
                                     onClick={() => router.visit(`/machines/${machine.id}`)}
@@ -373,42 +379,46 @@ export default function MachinesIndex({ machines, filters, tags = [] }) {
                                         {machine.status}
                                     </span>
                                 </td>
-                                <td
-                                    style={{ padding: '0.75rem 1rem' }}
-                                    onClick={() => router.visit(`/machines/${machine.id}`)}
-                                >
-                                    <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
-                                        {(machine.tags || []).map((tag) => (
-                                            <span key={tag.id} style={{
-                                                display: 'inline-block',
-                                                padding: '0.1rem 0.45rem',
-                                                borderRadius: 4,
-                                                fontSize: '0.65rem',
-                                                fontWeight: 600,
-                                                background: `${tag.color}20`,
-                                                color: tag.color,
-                                                whiteSpace: 'nowrap',
-                                            }}>
-                                                {tag.name}
-                                            </span>
-                                        ))}
-                                        {(!machine.tags || machine.tags.length === 0) && (
-                                            <span style={{ color: t.textSubtle, fontSize: '0.75rem' }}>{'\u2014'}</span>
-                                        )}
-                                    </div>
-                                </td>
+                                {!isMobile && (
+                                    <td
+                                        style={{ padding: '0.75rem 1rem' }}
+                                        onClick={() => router.visit(`/machines/${machine.id}`)}
+                                    >
+                                        <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
+                                            {(machine.tags || []).map((tag) => (
+                                                <span key={tag.id} style={{
+                                                    display: 'inline-block',
+                                                    padding: '0.1rem 0.45rem',
+                                                    borderRadius: 4,
+                                                    fontSize: '0.65rem',
+                                                    fontWeight: 600,
+                                                    background: `${tag.color}20`,
+                                                    color: tag.color,
+                                                    whiteSpace: 'nowrap',
+                                                }}>
+                                                    {tag.name}
+                                                </span>
+                                            ))}
+                                            {(!machine.tags || machine.tags.length === 0) && (
+                                                <span style={{ color: t.textSubtle, fontSize: '0.75rem' }}>{'\u2014'}</span>
+                                            )}
+                                        </div>
+                                    </td>
+                                )}
                                 <td
                                     style={{ padding: '0.75rem 1rem', color: t.textMuted, fontSize: '0.875rem' }}
                                     onClick={() => router.visit(`/machines/${machine.id}`)}
                                 >
                                     {machine.last_heartbeat || '\u2014'}
                                 </td>
-                                <td
-                                    style={{ padding: '0.75rem 1rem', color: t.textMuted, fontSize: '0.875rem' }}
-                                    onClick={() => router.visit(`/machines/${machine.id}`)}
-                                >
-                                    {machine.department || '\u2014'}
-                                </td>
+                                {!isMobile && (
+                                    <td
+                                        style={{ padding: '0.75rem 1rem', color: t.textMuted, fontSize: '0.875rem' }}
+                                        onClick={() => router.visit(`/machines/${machine.id}`)}
+                                    >
+                                        {machine.department || '\u2014'}
+                                    </td>
+                                )}
                             </tr>
                         ))}
                     </tbody>
