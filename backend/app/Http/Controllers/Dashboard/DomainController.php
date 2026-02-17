@@ -11,14 +11,41 @@ use Inertia\Response;
 
 class DomainController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
-        $domains = MonitoredDomain::orderBy('platform_name')
+        $query = MonitoredDomain::query();
+
+        if ($request->filled('search')) {
+            $search = $request->query('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('domain', 'ilike', "%{$search}%")
+                  ->orWhere('platform_name', 'ilike', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('status')) {
+            $query->where('is_blocked', $request->query('status') === 'blocked');
+        }
+
+        if ($request->filled('platform')) {
+            $query->where('platform_name', 'ilike', "%{$request->query('platform')}%");
+        }
+
+        $domains = $query->orderBy('platform_name')
             ->orderBy('domain')
-            ->get();
+            ->paginate(25)
+            ->withQueryString();
+
+        // Distinct platforms for filter dropdown
+        $platforms = MonitoredDomain::select('platform_name')
+            ->distinct()
+            ->orderBy('platform_name')
+            ->pluck('platform_name');
 
         return Inertia::render('Domains/Index', [
             'domains' => $domains,
+            'platforms' => $platforms,
+            'filters' => $request->only(['search', 'status', 'platform']),
         ]);
     }
 

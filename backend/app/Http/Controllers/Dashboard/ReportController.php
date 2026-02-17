@@ -49,6 +49,32 @@ class ReportController extends Controller
             ->with('machine:id,hostname,assigned_user,department')
             ->get();
 
+        // Events by type breakdown
+        $eventTypes = Event::whereBetween('occurred_at', [$dateFrom, $dateTo])
+            ->select('event_type', DB::raw('COUNT(*) as count'))
+            ->groupBy('event_type')
+            ->orderByDesc('count')
+            ->get();
+
+        // Daily events timeline
+        $dailyEvents = Event::whereBetween('occurred_at', [$dateFrom, $dateTo])
+            ->select(
+                DB::raw("DATE(occurred_at) as date"),
+                DB::raw('COUNT(*) as total'),
+                DB::raw("COUNT(CASE WHEN event_type = 'block' THEN 1 END) as blocked"),
+                DB::raw("COUNT(CASE WHEN severity = 'critical' THEN 1 END) as critical")
+            )
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get();
+
+        // Severity distribution
+        $severityDistribution = Event::whereBetween('occurred_at', [$dateFrom, $dateTo])
+            ->select('severity', DB::raw('COUNT(*) as count'))
+            ->groupBy('severity')
+            ->orderByDesc('count')
+            ->get();
+
         // Summary stats
         $stats = [
             'total_machines' => Machine::where('status', 'active')->count(),
@@ -65,6 +91,9 @@ class ReportController extends Controller
             'platformUsage' => $platformUsage,
             'alertsTrend' => $alertsTrend,
             'topMachines' => $topMachines,
+            'eventTypes' => $eventTypes,
+            'dailyEvents' => $dailyEvents,
+            'severityDistribution' => $severityDistribution,
             'filters' => [
                 'date_from' => $dateFrom,
                 'date_to' => $dateTo,

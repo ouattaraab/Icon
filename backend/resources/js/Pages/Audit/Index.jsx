@@ -1,4 +1,5 @@
 import { router } from '@inertiajs/react';
+import { useState, useCallback } from 'react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
 
 const actionLabels = {
@@ -9,19 +10,43 @@ const actionLabels = {
     'rule.deleted': 'Règle supprimée',
     'rule.enabled': 'Règle activée',
     'rule.disabled': 'Règle désactivée',
+    'rules.exported': 'Export règles',
+    'rules.imported': 'Import règles',
     'alert.acknowledged': 'Alerte acquittée',
     'alert.resolved': 'Alerte résolue',
     'machine.registered': 'Machine enregistrée',
+    'domain.created': 'Domaine ajouté',
+    'domain.updated': 'Domaine modifié',
+    'domain.deleted': 'Domaine supprimé',
+    'domain.blocked': 'Domaine bloqué',
+    'domain.unblocked': 'Domaine débloqué',
     'report.export_csv': 'Export CSV',
     'report.export_pdf': 'Export PDF',
+    'user.created': 'Utilisateur créé',
+    'user.updated': 'Utilisateur modifié',
+    'user.deleted': 'Utilisateur supprimé',
+};
+
+const categoryLabels = {
+    auth: 'Authentification',
+    rule: 'Règles',
+    rules: 'Règles (bulk)',
+    alert: 'Alertes',
+    machine: 'Machines',
+    domain: 'Domaines',
+    report: 'Rapports',
+    user: 'Utilisateurs',
 };
 
 const actionColors = {
-    'auth': '#3b82f6',
-    'rule': '#8b5cf6',
-    'alert': '#f59e0b',
-    'machine': '#22c55e',
-    'report': '#06b6d4',
+    auth: '#3b82f6',
+    rule: '#8b5cf6',
+    rules: '#8b5cf6',
+    alert: '#f59e0b',
+    machine: '#22c55e',
+    domain: '#06b6d4',
+    report: '#f97316',
+    user: '#ec4899',
 };
 
 function getActionColor(action) {
@@ -29,32 +54,85 @@ function getActionColor(action) {
     return actionColors[prefix] || '#64748b';
 }
 
-export default function AuditIndex({ logs, actionTypes, filters }) {
-    const handleFilter = (key, value) => {
-        router.get('/audit', { ...filters, [key]: value }, { preserveState: true, replace: true });
+const filterInputStyle = {
+    background: '#1e293b', border: '1px solid #334155', borderRadius: 8,
+    padding: '0.4rem 0.75rem', color: '#f8fafc', fontSize: '0.8rem',
+};
+
+export default function AuditIndex({ logs, actionTypes, users, filters }) {
+    const [search, setSearch] = useState(filters?.search || '');
+
+    const applyFilter = useCallback((key, value) => {
+        const params = { ...filters, [key]: value };
+        Object.keys(params).forEach((k) => { if (!params[k]) delete params[k]; });
+        delete params.page;
+        router.get('/audit', params, { preserveState: true, replace: true });
+    }, [filters]);
+
+    const applySearch = useCallback(() => {
+        applyFilter('search', search);
+    }, [search, applyFilter]);
+
+    const hasFilters = filters?.action || filters?.category || filters?.user_id || filters?.search || filters?.date_from || filters?.date_to;
+
+    // Build category list from action types
+    const categories = [...new Set((actionTypes || []).map((a) => a.split('.')[0]))].sort();
+
+    // Pagination
+    const currentPage = logs?.current_page ?? 1;
+    const lastPage = logs?.last_page ?? 1;
+    const total = logs?.total ?? 0;
+
+    const goToPage = (page) => {
+        if (page < 1 || page > lastPage || page === currentPage) return;
+        router.get('/audit', { ...filters, page }, { preserveState: true, replace: true });
+    };
+
+    const generatePageNumbers = () => {
+        const pages = [];
+        if (lastPage <= 7) {
+            for (let i = 1; i <= lastPage; i++) pages.push(i);
+        } else {
+            pages.push(1);
+            if (currentPage > 3) pages.push('...');
+            for (let i = Math.max(2, currentPage - 1); i <= Math.min(lastPage - 1, currentPage + 1); i++) pages.push(i);
+            if (currentPage < lastPage - 2) pages.push('...');
+            pages.push(lastPage);
+        }
+        return pages;
     };
 
     return (
         <DashboardLayout title="Journal d'audit">
-            {/* Filters */}
+            {/* Filters row 1 */}
             <div style={{
-                display: 'flex',
-                gap: '0.75rem',
-                alignItems: 'center',
-                marginBottom: '1.5rem',
-                flexWrap: 'wrap',
+                display: 'flex', gap: '0.5rem', alignItems: 'center',
+                marginBottom: '0.75rem', flexWrap: 'wrap',
             }}>
+                <input
+                    type="text"
+                    placeholder="Rechercher (cible, détails)..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && applySearch()}
+                    style={{ ...filterInputStyle, width: 220 }}
+                />
+                <select
+                    value={filters?.category || ''}
+                    onChange={(e) => applyFilter('category', e.target.value)}
+                    style={filterInputStyle}
+                >
+                    <option value="">Toutes les catégories</option>
+                    {categories.map((cat) => (
+                        <option key={cat} value={cat}>
+                            {categoryLabels[cat] || cat}
+                        </option>
+                    ))}
+                </select>
                 <select
                     value={filters?.action || ''}
-                    onChange={(e) => handleFilter('action', e.target.value)}
-                    style={{
-                        background: '#1e293b',
-                        border: '1px solid #334155',
-                        borderRadius: 8,
-                        padding: '0.4rem 0.75rem',
-                        color: '#f8fafc',
-                        fontSize: '0.8rem',
-                    }}
+                    onChange={(e) => applyFilter('action', e.target.value)}
+                    style={filterInputStyle}
                 >
                     <option value="">Toutes les actions</option>
                     {actionTypes?.map((action) => (
@@ -63,75 +141,74 @@ export default function AuditIndex({ logs, actionTypes, filters }) {
                         </option>
                     ))}
                 </select>
+                <select
+                    value={filters?.user_id || ''}
+                    onChange={(e) => applyFilter('user_id', e.target.value)}
+                    style={filterInputStyle}
+                >
+                    <option value="">Tous les utilisateurs</option>
+                    {users?.map((user) => (
+                        <option key={user.id} value={user.id}>
+                            {user.name} ({user.email})
+                        </option>
+                    ))}
+                </select>
+            </div>
 
+            {/* Filters row 2: dates + actions */}
+            <div style={{
+                display: 'flex', gap: '0.5rem', alignItems: 'center',
+                marginBottom: '1.5rem', flexWrap: 'wrap',
+            }}>
+                <span style={{ color: '#64748b', fontSize: '0.75rem' }}>Période :</span>
                 <input
                     type="date"
-                    defaultValue={filters?.date_from}
-                    onChange={(e) => handleFilter('date_from', e.target.value)}
-                    style={{
-                        background: '#1e293b',
-                        border: '1px solid #334155',
-                        borderRadius: 8,
-                        padding: '0.4rem 0.75rem',
-                        color: '#f8fafc',
-                        fontSize: '0.8rem',
-                    }}
+                    value={filters?.date_from || ''}
+                    onChange={(e) => applyFilter('date_from', e.target.value)}
+                    style={filterInputStyle}
                 />
                 <span style={{ color: '#64748b' }}>&mdash;</span>
                 <input
                     type="date"
-                    defaultValue={filters?.date_to}
-                    onChange={(e) => handleFilter('date_to', e.target.value)}
-                    style={{
-                        background: '#1e293b',
-                        border: '1px solid #334155',
-                        borderRadius: 8,
-                        padding: '0.4rem 0.75rem',
-                        color: '#f8fafc',
-                        fontSize: '0.8rem',
-                    }}
+                    value={filters?.date_to || ''}
+                    onChange={(e) => applyFilter('date_to', e.target.value)}
+                    style={filterInputStyle}
                 />
-
-                {(filters?.action || filters?.date_from || filters?.date_to) && (
+                <button onClick={applySearch} style={{
+                    background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 6,
+                    padding: '0.4rem 0.75rem', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600,
+                }}>
+                    Rechercher
+                </button>
+                {hasFilters && (
                     <button
-                        onClick={() => router.get('/audit')}
+                        onClick={() => { setSearch(''); router.get('/audit', {}, { preserveState: true, replace: true }); }}
                         style={{
-                            background: 'transparent',
-                            border: '1px solid #475569',
-                            borderRadius: 6,
-                            padding: '0.4rem 0.75rem',
-                            color: '#94a3b8',
-                            fontSize: '0.75rem',
-                            cursor: 'pointer',
+                            background: 'transparent', color: '#94a3b8', border: '1px solid #475569',
+                            borderRadius: 6, padding: '0.4rem 0.75rem', fontSize: '0.75rem', cursor: 'pointer',
                         }}
                     >
                         Effacer filtres
                     </button>
                 )}
+                <span style={{ color: '#64748b', fontSize: '0.8rem', marginLeft: 'auto' }}>
+                    {total} entrée(s)
+                </span>
             </div>
 
             {/* Audit log table */}
             <div style={{
-                background: '#1e293b',
-                borderRadius: 12,
-                border: '1px solid #334155',
-                overflow: 'hidden',
+                background: '#1e293b', borderRadius: 12,
+                border: '1px solid #334155', overflow: 'hidden',
             }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                         <tr style={{ borderBottom: '1px solid #334155' }}>
                             {['Date', 'Utilisateur', 'Action', 'Cible', 'Détails', 'IP'].map((h) => (
                                 <th key={h} style={{
-                                    padding: '0.75rem',
-                                    textAlign: 'left',
-                                    color: '#94a3b8',
-                                    fontSize: '0.7rem',
-                                    textTransform: 'uppercase',
-                                    letterSpacing: 1,
-                                    fontWeight: 600,
-                                }}>
-                                    {h}
-                                </th>
+                                    padding: '0.75rem', textAlign: 'left', color: '#94a3b8',
+                                    fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600,
+                                }}>{h}</th>
                             ))}
                         </tr>
                     </thead>
@@ -141,23 +218,28 @@ export default function AuditIndex({ logs, actionTypes, filters }) {
                                 <tr key={log.id} style={{ borderBottom: '1px solid #0f172a' }}>
                                     <td style={{ padding: '0.6rem 0.75rem', color: '#94a3b8', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
                                         {new Date(log.created_at).toLocaleString('fr-FR', {
-                                            day: '2-digit',
-                                            month: '2-digit',
-                                            year: 'numeric',
-                                            hour: '2-digit',
-                                            minute: '2-digit',
+                                            day: '2-digit', month: '2-digit', year: 'numeric',
+                                            hour: '2-digit', minute: '2-digit',
                                         })}
                                     </td>
-                                    <td style={{ padding: '0.6rem 0.75rem', color: '#e2e8f0', fontSize: '0.8rem' }}>
-                                        {log.user?.name || log.user?.email || 'Système'}
+                                    <td style={{ padding: '0.6rem 0.75rem' }}>
+                                        {log.user ? (
+                                            <div>
+                                                <span style={{ color: '#e2e8f0', fontSize: '0.8rem', fontWeight: 500 }}>
+                                                    {log.user.name}
+                                                </span>
+                                                <span style={{ color: '#64748b', fontSize: '0.7rem', display: 'block' }}>
+                                                    {log.user.email}
+                                                </span>
+                                            </div>
+                                        ) : (
+                                            <span style={{ color: '#64748b', fontSize: '0.8rem' }}>Système</span>
+                                        )}
                                     </td>
                                     <td style={{ padding: '0.6rem 0.75rem' }}>
                                         <span style={{
-                                            display: 'inline-block',
-                                            padding: '0.2rem 0.5rem',
-                                            borderRadius: 4,
-                                            fontSize: '0.7rem',
-                                            fontWeight: 600,
+                                            display: 'inline-block', padding: '0.2rem 0.5rem', borderRadius: 4,
+                                            fontSize: '0.7rem', fontWeight: 600,
                                             background: `${getActionColor(log.action)}20`,
                                             color: getActionColor(log.action),
                                         }}>
@@ -165,17 +247,18 @@ export default function AuditIndex({ logs, actionTypes, filters }) {
                                         </span>
                                     </td>
                                     <td style={{ padding: '0.6rem 0.75rem', color: '#94a3b8', fontSize: '0.8rem' }}>
-                                        {log.target_type ? `${log.target_type}` : '\u2014'}
-                                        {log.target_id ? ` #${log.target_id.slice(0, 8)}` : ''}
+                                        {log.target_type || '\u2014'}
+                                        {log.target_id ? (
+                                            <span style={{ color: '#475569', fontSize: '0.7rem', fontFamily: 'monospace' }}>
+                                                {' #'}{log.target_id.slice(0, 8)}
+                                            </span>
+                                        ) : ''}
                                     </td>
                                     <td style={{ padding: '0.6rem 0.75rem', color: '#64748b', fontSize: '0.75rem', maxWidth: 300 }}>
                                         {log.details ? (
                                             <span style={{
-                                                display: 'block',
-                                                overflow: 'hidden',
-                                                textOverflow: 'ellipsis',
-                                                whiteSpace: 'nowrap',
-                                                maxWidth: 300,
+                                                display: 'block', overflow: 'hidden',
+                                                textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 300,
                                             }}>
                                                 {formatDetails(log.details)}
                                             </span>
@@ -189,7 +272,7 @@ export default function AuditIndex({ logs, actionTypes, filters }) {
                         ) : (
                             <tr>
                                 <td colSpan={6} style={{ padding: '2rem', textAlign: 'center', color: '#64748b', fontSize: '0.85rem' }}>
-                                    Aucune entrée dans le journal d'audit.
+                                    {hasFilters ? 'Aucun résultat pour ces filtres.' : "Aucune entrée dans le journal d'audit."}
                                 </td>
                             </tr>
                         )}
@@ -198,39 +281,45 @@ export default function AuditIndex({ logs, actionTypes, filters }) {
             </div>
 
             {/* Pagination */}
-            {logs?.last_page > 1 && (
-                <div style={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    gap: '0.5rem',
-                    marginTop: '1.5rem',
-                }}>
-                    {logs.links?.map((link, idx) => (
-                        <button
-                            key={idx}
-                            disabled={!link.url}
-                            onClick={() => link.url && router.get(link.url, {}, { preserveState: true })}
-                            style={{
-                                padding: '0.4rem 0.75rem',
-                                borderRadius: 6,
-                                border: '1px solid #334155',
-                                background: link.active ? '#3b82f6' : '#1e293b',
-                                color: link.active ? '#fff' : link.url ? '#e2e8f0' : '#475569',
-                                fontSize: '0.8rem',
-                                cursor: link.url ? 'pointer' : 'default',
-                            }}
-                            dangerouslySetInnerHTML={{ __html: link.label }}
-                        />
-                    ))}
+            {lastPage > 1 && (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.35rem', marginTop: '1.5rem' }}>
+                    <PagBtn label="Préc." onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1} />
+                    {generatePageNumbers().map((p, i) =>
+                        p === '...' ? (
+                            <span key={`e${i}`} style={{ color: '#64748b', padding: '0 0.25rem' }}>...</span>
+                        ) : (
+                            <PagBtn key={p} label={p} onClick={() => goToPage(p)} active={p === currentPage} />
+                        )
+                    )}
+                    <PagBtn label="Suiv." onClick={() => goToPage(currentPage + 1)} disabled={currentPage === lastPage} />
                 </div>
             )}
         </DashboardLayout>
     );
 }
 
+function PagBtn({ label, onClick, disabled, active }) {
+    return (
+        <button
+            onClick={onClick}
+            disabled={disabled}
+            style={{
+                background: active ? '#3b82f6' : '#1e293b',
+                border: '1px solid ' + (active ? '#3b82f6' : '#334155'),
+                borderRadius: 6, padding: '0.4rem 0.7rem',
+                color: active ? '#fff' : disabled ? '#475569' : '#e2e8f0',
+                cursor: disabled ? 'default' : 'pointer',
+                fontSize: '0.8rem', fontWeight: active ? 700 : 400,
+            }}
+        >
+            {label}
+        </button>
+    );
+}
+
 function formatDetails(details) {
     if (!details || typeof details !== 'object') return String(details);
     return Object.entries(details)
-        .map(([k, v]) => `${k}: ${v}`)
+        .map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`)
         .join(', ');
 }
