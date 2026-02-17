@@ -25,7 +25,7 @@ const cardStyle = {
     marginBottom: '1rem',
 };
 
-export default function ExchangesShow({ exchange }) {
+export default function ExchangesShow({ exchange, machine }) {
     return (
         <DashboardLayout title="Détail de l'échange">
             {/* Back button */}
@@ -94,7 +94,27 @@ export default function ExchangesShow({ exchange }) {
                     paddingTop: '1rem',
                     borderTop: '1px solid #334155',
                 }}>
-                    <MetaItem label="Machine" value={exchange.machine_id?.slice(0, 12) + '...'} />
+                    <MetaItem
+                        label="Machine"
+                        value={
+                            machine ? (
+                                <span
+                                    onClick={(e) => { e.stopPropagation(); router.visit(`/machines/${machine.id}`); }}
+                                    style={{ color: '#3b82f6', cursor: 'pointer', textDecoration: 'none' }}
+                                >
+                                    {machine.hostname}
+                                </span>
+                            ) : (
+                                exchange.machine_id?.slice(0, 12) + '...'
+                            )
+                        }
+                    />
+                    {machine?.assigned_user && (
+                        <MetaItem label="Utilisateur" value={machine.assigned_user} />
+                    )}
+                    {machine?.department && (
+                        <MetaItem label="Département" value={machine.department} />
+                    )}
                     <MetaItem label="Taille contenu" value={`${exchange.content_length || 0} car.`} />
                     <MetaItem label="Hash" value={exchange.content_hash?.slice(0, 16) + '...'} mono />
                     <MetaItem label="ID Elasticsearch" value={exchange.id?.slice(0, 16) + '...'} mono />

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Models\Machine;
 use App\Services\ElasticsearchService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -35,12 +36,36 @@ class ExchangeController extends Controller
             size: $perPage,
         );
 
+        // Resolve machine hostnames for display
+        $machineIds = array_unique(array_filter(array_column($results['hits'], 'machine_id')));
+        $machineNames = [];
+        if (!empty($machineIds)) {
+            $machineNames = Machine::whereIn('id', $machineIds)
+                ->pluck('hostname', 'id')
+                ->toArray();
+        }
+
+        $exchanges = array_map(function ($hit) use ($machineNames) {
+            $hit['machine_hostname'] = $machineNames[$hit['machine_id'] ?? ''] ?? null;
+            return $hit;
+        }, $results['hits']);
+
+        // Machine list for filter dropdown
+        $machines = Machine::orderBy('hostname')
+            ->select('id', 'hostname')
+            ->get()
+            ->map(fn ($m) => ['id' => $m->id, 'hostname' => $m->hostname]);
+
+        $totalPages = max(1, (int) ceil($results['total'] / $perPage));
+
         return Inertia::render('Exchanges/Index', [
-            'exchanges' => $results['hits'],
+            'exchanges' => $exchanges,
             'total' => $results['total'],
             'page' => $page,
             'perPage' => $perPage,
+            'totalPages' => $totalPages,
             'filters' => array_merge(['q' => $query], $filters),
+            'machines' => $machines,
         ]);
     }
 
@@ -52,8 +77,16 @@ class ExchangeController extends Controller
             abort(404);
         }
 
+        // Resolve machine hostname
+        $machine = null;
+        if (!empty($exchange['machine_id'])) {
+            $machine = Machine::select('id', 'hostname', 'os', 'department', 'assigned_user')
+                ->find($exchange['machine_id']);
+        }
+
         return Inertia::render('Exchanges/Show', [
             'exchange' => array_merge($exchange, ['id' => $id]),
+            'machine' => $machine,
         ]);
     }
 }

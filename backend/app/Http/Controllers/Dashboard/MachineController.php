@@ -54,9 +54,27 @@ class MachineController extends Controller
                 ->pluck('platform'),
         ];
 
+        // Recent alerts for this machine
+        $alerts = $machine->alerts()
+            ->with('rule:id,name')
+            ->latest('created_at')
+            ->limit(20)
+            ->get()
+            ->map(fn ($a) => [
+                'id' => $a->id,
+                'severity' => $a->severity,
+                'title' => $a->title,
+                'description' => $a->description,
+                'status' => $a->status,
+                'rule_name' => $a->rule?->name,
+                'created_at' => $a->created_at?->diffForHumans(),
+                'acknowledged_at' => $a->acknowledged_at?->diffForHumans(),
+            ]);
+
         return Inertia::render('Machines/Show', [
             'machine' => $machine,
             'stats' => $stats,
+            'alerts' => $alerts,
         ]);
     }
 }
