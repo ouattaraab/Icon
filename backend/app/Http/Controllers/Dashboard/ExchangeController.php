@@ -8,8 +8,10 @@ use App\Models\Machine;
 use App\Models\Rule;
 use App\Services\ElasticsearchService;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ExchangeController extends Controller
 {
@@ -118,6 +120,75 @@ class ExchangeController extends Controller
                 'occurred_at' => $event->occurred_at?->toIso8601String(),
             ] : null,
             'matchedRuleNames' => $matchedRuleNames,
+        ]);
+    }
+
+    public function exportCsv(Request $request): StreamedResponse
+    {
+        $query = $request->query('q', '');
+
+        $filters = array_filter([
+            'platform' => $request->query('platform'),
+            'machine_id' => $request->query('machine_id'),
+            'severity' => $request->query('severity'),
+            'date_from' => $request->query('date_from'),
+            'date_to' => $request->query('date_to'),
+        ]);
+
+        // Fetch up to 1000 results for export
+        $results = $this->elasticsearch->searchExchanges(
+            query: $query,
+            filters: $filters,
+            from: 0,
+            size: 1000,
+        );
+
+        $machineIds = array_unique(array_filter(array_column($results['hits'], 'machine_id')));
+        $machineNames = [];
+        if (!empty($machineIds)) {
+            $machineNames = Machine::whereIn('id', $machineIds)
+                ->pluck('hostname', 'id')
+                ->toArray();
+        }
+
+        \App\Models\AuditLog::log('exchanges.exported', 'Exchange', null, [
+            'count' => count($results['hits']),
+            'filters' => $filters,
+        ]);
+
+        $filename = 'icon-echanges-' . now()->format('Y-m-d') . '.csv';
+
+        return response()->streamDownload(function () use ($results, $machineNames) {
+            $out = fopen('php://output', 'w');
+            fprintf($out, chr(0xEF) . chr(0xBB) . chr(0xBF)); // UTF-8 BOM
+
+            fputcsv($out, [
+                'Date',
+                'Plateforme',
+                'Machine',
+                'Severite',
+                'Type',
+                'Domaine',
+                'Prompt (extrait)',
+                'Reponse (extrait)',
+            ], ';');
+
+            foreach ($results['hits'] as $hit) {
+                fputcsv($out, [
+                    $hit['occurred_at'] ?? '',
+                    $hit['platform'] ?? '',
+                    $machineNames[$hit['machine_id'] ?? ''] ?? '',
+                    $hit['severity'] ?? 'info',
+                    $hit['event_type'] ?? '',
+                    $hit['domain'] ?? '',
+                    mb_substr($hit['prompt'] ?? '', 0, 500),
+                    mb_substr($hit['response'] ?? '', 0, 500),
+                ], ';');
+            }
+
+            fclose($out);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
     }
 }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Machine;
+use App\Models\Tag;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -15,8 +16,12 @@ class MachineController extends Controller
     public function index(Request $request): Response
     {
         $machines = Machine::query()
+            ->with('tags:id,name,color')
             ->when($request->query('status'), fn ($q, $status) => $q->where('status', $status))
             ->when($request->query('os'), fn ($q, $os) => $q->where('os', $os))
+            ->when($request->query('tag'), fn ($q, $tagId) =>
+                $q->whereHas('tags', fn ($tq) => $tq->where('tags.id', $tagId))
+            )
             ->when($request->query('search'), fn ($q, $search) =>
                 $q->where('hostname', 'ilike', "%{$search}%")
                   ->orWhere('assigned_user', 'ilike', "%{$search}%")
@@ -34,17 +39,25 @@ class MachineController extends Controller
                 'department' => $m->department,
                 'assigned_user' => $m->assigned_user,
                 'ip_address' => $m->ip_address,
+                'tags' => $m->tags->map(fn ($t) => [
+                    'id' => $t->id,
+                    'name' => $t->name,
+                    'color' => $t->color,
+                ])->toArray(),
             ]);
+
+        $tags = Tag::orderBy('name')->get(['id', 'name', 'color']);
 
         return Inertia::render('Machines/Index', [
             'machines' => $machines,
-            'filters' => $request->only(['status', 'os', 'search']),
+            'filters' => $request->only(['status', 'os', 'search', 'tag']),
+            'tags' => $tags,
         ]);
     }
 
     public function show(Machine $machine): Response
     {
-        $machine->load(['events' => fn ($q) => $q->latest('occurred_at')->limit(50)]);
+        $machine->load(['events' => fn ($q) => $q->latest('occurred_at')->limit(50), 'tags:id,name,color']);
 
         $stats = [
             'total_events' => $machine->events()->count(),

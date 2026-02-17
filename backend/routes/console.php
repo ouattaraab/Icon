@@ -22,3 +22,8 @@ Schedule::command('icon:detect-offline')
 Schedule::job(new PurgeOldEventsJob())
     ->dailyAt('03:00')
     ->withoutOverlapping();
+
+// Clean up old read notifications and audit logs (daily at 4:00 AM)
+Schedule::command('icon:cleanup')
+    ->dailyAt('04:00')
+    ->withoutOverlapping();

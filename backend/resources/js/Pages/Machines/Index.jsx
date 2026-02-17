@@ -23,7 +23,7 @@ const inputStyle = {
     fontSize: '0.875rem',
 };
 
-export default function MachinesIndex({ machines, filters }) {
+export default function MachinesIndex({ machines, filters, tags = [] }) {
     const { auth, flash } = usePage().props;
     const isManager = auth?.user?.role === 'admin' || auth?.user?.role === 'manager';
     const [search, setSearch] = useState(filters?.search || '');
@@ -107,7 +107,7 @@ export default function MachinesIndex({ machines, filters }) {
         router.get('/machines', { ...filters, page }, { preserveState: true, replace: true });
     };
 
-    const hasFilters = filters?.search || filters?.os || filters?.status;
+    const hasFilters = filters?.search || filters?.os || filters?.status || filters?.tag;
 
     return (
         <DashboardLayout title="Parc machines">
@@ -225,6 +225,18 @@ export default function MachinesIndex({ machines, filters }) {
                     <option value="offline">Hors ligne</option>
                     <option value="inactive">Inactif</option>
                 </select>
+                {tags.length > 0 && (
+                    <select
+                        value={filters?.tag || ''}
+                        onChange={(e) => applyFilters({ tag: e.target.value })}
+                        style={inputStyle}
+                    >
+                        <option value="">Tous les tags</option>
+                        {tags.map((t) => (
+                            <option key={t.id} value={t.id}>{t.name}</option>
+                        ))}
+                    </select>
+                )}
                 <button
                     onClick={() => applyFilters()}
                     style={{
@@ -275,7 +287,7 @@ export default function MachinesIndex({ machines, filters }) {
                                     />
                                 </th>
                             )}
-                            {['Hostname', 'OS', 'Agent', 'Statut', 'Dernier contact', 'Département', 'Utilisateur'].map((h) => (
+                            {['Hostname', 'OS', 'Agent', 'Statut', 'Tags', 'Dernier contact', 'Département'].map((h) => (
                                 <th key={h} style={{
                                     padding: '0.75rem 1rem', textAlign: 'left',
                                     color: '#94a3b8', fontSize: '0.75rem',
@@ -289,7 +301,7 @@ export default function MachinesIndex({ machines, filters }) {
                     <tbody>
                         {machines?.data?.length === 0 && (
                             <tr>
-                                <td colSpan={isManager ? 8 : 7} style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
+                                <td colSpan={isManager ? 9 : 8} style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
                                     {hasFilters ? 'Aucune machine ne correspond aux filtres.' : 'Aucune machine enregistrée.'}
                                 </td>
                             </tr>
@@ -360,6 +372,30 @@ export default function MachinesIndex({ machines, filters }) {
                                     </span>
                                 </td>
                                 <td
+                                    style={{ padding: '0.75rem 1rem' }}
+                                    onClick={() => router.visit(`/machines/${machine.id}`)}
+                                >
+                                    <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
+                                        {(machine.tags || []).map((tag) => (
+                                            <span key={tag.id} style={{
+                                                display: 'inline-block',
+                                                padding: '0.1rem 0.45rem',
+                                                borderRadius: 4,
+                                                fontSize: '0.65rem',
+                                                fontWeight: 600,
+                                                background: `${tag.color}20`,
+                                                color: tag.color,
+                                                whiteSpace: 'nowrap',
+                                            }}>
+                                                {tag.name}
+                                            </span>
+                                        ))}
+                                        {(!machine.tags || machine.tags.length === 0) && (
+                                            <span style={{ color: '#475569', fontSize: '0.75rem' }}>{'\u2014'}</span>
+                                        )}
+                                    </div>
+                                </td>
+                                <td
                                     style={{ padding: '0.75rem 1rem', color: '#94a3b8', fontSize: '0.875rem' }}
                                     onClick={() => router.visit(`/machines/${machine.id}`)}
                                 >
@@ -370,12 +406,6 @@ export default function MachinesIndex({ machines, filters }) {
                                     onClick={() => router.visit(`/machines/${machine.id}`)}
                                 >
                                     {machine.department || '\u2014'}
-                                </td>
-                                <td
-                                    style={{ padding: '0.75rem 1rem', color: '#94a3b8', fontSize: '0.875rem' }}
-                                    onClick={() => router.visit(`/machines/${machine.id}`)}
-                                >
-                                    {machine.assigned_user || '\u2014'}
                                 </td>
                             </tr>
                         ))}

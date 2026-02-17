@@ -12,6 +12,7 @@ use App\Http\Controllers\Dashboard\ReportController;
 use App\Http\Controllers\Dashboard\RuleController;
 use App\Http\Controllers\Dashboard\SearchController;
 use App\Http\Controllers\Dashboard\SettingController;
+use App\Http\Controllers\Dashboard\TagController;
 use App\Http\Controllers\Dashboard\TwoFactorController;
 use App\Http\Controllers\Dashboard\UserController;
 use App\Models\AuditLog;
@@ -88,11 +89,15 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/machines', [MachineController::class, 'index'])->name('machines.index');
     Route::get('/machines/{machine}', [MachineController::class, 'show'])->name('machines.show');
 
+    // Tags (read-only list for all roles)
+    Route::get('/tags', [TagController::class, 'index'])->name('tags.index');
+
     // Alerts (view)
     Route::get('/alerts', [AlertController::class, 'index'])->name('alerts.index');
 
     // Exchanges (Elasticsearch full-text search)
     Route::get('/exchanges', [ExchangeController::class, 'index'])->name('exchanges.index');
+    Route::get('/exchanges/export', [ExchangeController::class, 'exportCsv'])->name('exchanges.export');
     Route::get('/exchanges/{id}', [ExchangeController::class, 'show'])->name('exchanges.show');
 
     // Rules (view only)
@@ -139,7 +144,14 @@ Route::middleware(['auth'])->group(function () {
 
         // Machine actions
         Route::post('/machines/bulk-action', [MachineController::class, 'bulkAction'])->name('machines.bulkAction');
+        Route::post('/machines/{machine}/tags', [TagController::class, 'assignToMachine'])->name('machines.tags');
+        Route::post('/machines/bulk-tags', [TagController::class, 'bulkAssign'])->name('machines.bulkTags');
         Route::post('/machines/{machine}/force-sync', [MachineController::class, 'forceSyncRules'])->name('machines.forceSync');
+
+        // Tags CRUD
+        Route::post('/tags', [TagController::class, 'store'])->name('tags.store');
+        Route::put('/tags/{tag}', [TagController::class, 'update'])->name('tags.update');
+        Route::delete('/tags/{tag}', [TagController::class, 'destroy'])->name('tags.destroy');
         Route::post('/machines/{machine}/restart', [MachineController::class, 'restartAgent'])->name('machines.restart');
         Route::post('/machines/{machine}/toggle-status', [MachineController::class, 'toggleStatus'])->name('machines.toggleStatus');
 

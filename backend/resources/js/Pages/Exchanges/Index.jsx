@@ -184,6 +184,24 @@ export default function ExchangesIndex({ exchanges = [], total = 0, page = 1, pe
                         Effacer les filtres
                     </button>
                 )}
+
+                <a
+                    href={`/exchanges/export?${new URLSearchParams(Object.entries(filters).filter(([, v]) => v)).toString()}`}
+                    style={{
+                        background: '#065f46',
+                        color: '#6ee7b7',
+                        border: 'none',
+                        borderRadius: 8,
+                        padding: '0.5rem 0.75rem',
+                        cursor: 'pointer',
+                        fontSize: '0.8rem',
+                        fontWeight: 600,
+                        textDecoration: 'none',
+                        whiteSpace: 'nowrap',
+                    }}
+                >
+                    Exporter CSV
+                </a>
             </div>
 
             {/* Results count */}
