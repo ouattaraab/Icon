@@ -21,6 +21,9 @@ return [
         // Days to retain events in PostgreSQL before archiving
         'event_retention_days' => env('ICON_EVENT_RETENTION_DAYS', 90),
 
+        // Days to retain resolved/acknowledged alerts before purging
+        'alert_retention_days' => env('ICON_ALERT_RETENTION_DAYS', 180),
+
         // Pre-registration key required for initial agent registration
         'registration_key' => env('ICON_REGISTRATION_KEY', ''),
 

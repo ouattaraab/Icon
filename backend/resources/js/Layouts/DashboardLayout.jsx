@@ -7,6 +7,7 @@ const navigation = [
     { name: 'Alertes', href: '/alerts', icon: '\u{1f514}' },
     { name: 'Échanges', href: '/exchanges', icon: '\u{1f4ac}' },
     { name: 'Règles', href: '/rules', icon: '\u{2699}\u{fe0f}' },
+    { name: 'Domaines', href: '/domains', icon: '\u{1f310}' },
     { name: 'Rapports', href: '/reports', icon: '\u{1f4c8}' },
     { name: 'Audit', href: '/audit', icon: '\u{1f4dc}' },
 ];

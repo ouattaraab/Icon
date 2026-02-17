@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Events\MachineStatusChanged;
 use App\Models\Alert;
+use App\Models\AuditLog;
 use App\Models\Machine;
 use Illuminate\Console\Command;
 
@@ -39,6 +40,11 @@ class DetectOfflineMachinesCommand extends Command
                 'description' => "Dernier contact : {$machine->last_heartbeat->diffForHumans()}. "
                     . "Seuil : {$thresholdSeconds}s.",
                 'status' => 'open',
+            ]);
+
+            AuditLog::log('machine.offline', 'Machine', $machine->id, [
+                'hostname' => $machine->hostname,
+                'last_heartbeat' => $machine->last_heartbeat?->toIso8601String(),
             ]);
 
             $this->warn("Machine {$machine->hostname} marked offline");

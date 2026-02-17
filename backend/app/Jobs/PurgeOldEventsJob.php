@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Alert;
+use App\Models\AuditLog;
 use App\Models\Event;
 use App\Services\ElasticsearchService;
 use Illuminate\Bus\Queueable;
@@ -25,24 +26,26 @@ class PurgeOldEventsJob implements ShouldQueue
 
     public function handle(ElasticsearchService $elasticsearch): void
     {
-        $retentionDays = config('icon.agent.event_retention_days', 90);
-        $cutoffDate = now()->subDays($retentionDays);
+        $eventRetentionDays = config('icon.agent.event_retention_days', 90);
+        $alertRetentionDays = config('icon.agent.alert_retention_days', 180);
+        $eventCutoff = now()->subDays($eventRetentionDays);
+        $alertCutoff = now()->subDays($alertRetentionDays);
 
-        Log::info("Purging events older than {$retentionDays} days (before {$cutoffDate})");
+        Log::info("Purging events older than {$eventRetentionDays}d, alerts older than {$alertRetentionDays}d");
 
         // 1. Collect ES IDs for events to be purged
-        $esIdsToDelete = Event::where('occurred_at', '<', $cutoffDate)
+        $esIdsToDelete = Event::where('occurred_at', '<', $eventCutoff)
             ->whereNotNull('elasticsearch_id')
             ->pluck('elasticsearch_id')
             ->toArray();
 
-        // 2. Delete resolved alerts linked to old events
-        $deletedAlerts = Alert::where('status', 'resolved')
-            ->where('created_at', '<', $cutoffDate)
+        // 2. Delete old resolved/acknowledged alerts
+        $deletedAlerts = Alert::whereIn('status', ['resolved', 'acknowledged'])
+            ->where('created_at', '<', $alertCutoff)
             ->delete();
 
         // 3. Delete old events from PostgreSQL
-        $deletedEvents = Event::where('occurred_at', '<', $cutoffDate)->delete();
+        $deletedEvents = Event::where('occurred_at', '<', $eventCutoff)->delete();
 
         // 4. Delete from Elasticsearch (in batches of 500)
         $deletedEs = 0;
@@ -50,11 +53,19 @@ class PurgeOldEventsJob implements ShouldQueue
             $deletedEs += $elasticsearch->bulkDelete($batch);
         }
 
-        Log::info("Purge completed", [
+        // 5. Also purge old ES documents by date range
+        $deletedEs += $elasticsearch->deleteByDateRange('occurred_at', $eventCutoff->toIso8601String());
+
+        $summary = [
             'deleted_events' => $deletedEvents,
             'deleted_alerts' => $deletedAlerts,
             'deleted_es_docs' => $deletedEs,
-            'retention_days' => $retentionDays,
-        ]);
+            'event_retention_days' => $eventRetentionDays,
+            'alert_retention_days' => $alertRetentionDays,
+        ];
+
+        Log::info("Purge completed", $summary);
+
+        AuditLog::log('system.purge', 'System', null, $summary);
     }
 }
