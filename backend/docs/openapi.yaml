@@ -1,0 +1,616 @@
+openapi: 3.1.0
+info:
+  title: Icon Agent API
+  version: 0.2.0
+  description: |
+    API consommée par l'agent Icon installé sur chaque poste de travail.
+    L'agent s'enregistre, envoie des heartbeats, remonte les événements,
+    synchronise les règles et les domaines, et signale les alertes watchdog.
+
+    ## Authentification
+
+    - **Enregistrement** : requiert un header `X-Enrollment-Key` avec la clé
+      de pré-enregistrement configurée côté serveur.
+    - **Endpoints authentifiés** : requièrent un header `X-Api-Key` contenant
+      la clé API retournée lors de l'enregistrement.
+    - **Signature HMAC** : les requêtes POST doivent inclure un header
+      `X-Signature` contenant la signature HMAC-SHA256 du body, calculée
+      avec le `hmac_secret` retourné lors de l'enregistrement.
+  contact:
+    name: GS2E - Équipe Icon
+    email: icon@gs2e.ci
+
+servers:
+  - url: /api
+    description: Serveur Icon
+
+tags:
+  - name: Registration
+    description: Enregistrement initial de l'agent
+  - name: Heartbeat
+    description: Signalement de vie et récupération des commandes
+  - name: Events
+    description: Ingestion des événements capturés par l'agent
+  - name: Rules
+    description: Synchronisation des règles de monitoring/blocage
+  - name: Domains
+    description: Synchronisation des domaines IA surveillés
+  - name: Update
+    description: Vérification des mises à jour de l'agent
+  - name: Watchdog
+    description: Alertes du processus watchdog
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+      description: Clé API unique par machine, retournée à l'enregistrement.
+    HmacSignature:
+      type: apiKey
+      in: header
+      name: X-Signature
+      description: |
+        Signature HMAC-SHA256 du body de la requête.
+        Calculée avec le `hmac_secret` retourné à l'enregistrement.
+        Obligatoire pour les requêtes POST uniquement.
+    EnrollmentKey:
+      type: apiKey
+      in: header
+      name: X-Enrollment-Key
+      description: Clé de pré-enregistrement configurée côté serveur.
+
+  schemas:
+    Machine:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        hostname:
+          type: string
+          example: "PC-DSI-01"
+        os:
+          type: string
+          enum: [windows, macos]
+        os_version:
+          type: string
+          nullable: true
+          example: "11 Pro"
+        agent_version:
+          type: string
+          example: "0.2.0"
+        status:
+          type: string
+          enum: [active, inactive, offline]
+        last_heartbeat:
+          type: string
+          format: date-time
+        ip_address:
+          type: string
+          example: "192.168.1.50"
+
+    Event:
+      type: object
+      required:
+        - event_type
+        - occurred_at
+      properties:
+        event_type:
+          type: string
+          maxLength: 50
+          example: "prompt"
+          description: "Type d'événement : prompt, response, clipboard, block, alert"
+        platform:
+          type: string
+          nullable: true
+          maxLength: 100
+          example: "chatgpt"
+        domain:
+          type: string
+          nullable: true
+          maxLength: 255
+          example: "api.openai.com"
+        content_hash:
+          type: string
+          nullable: true
+          maxLength: 64
+          description: Hash SHA-256 du contenu intercepté
+        prompt_excerpt:
+          type: string
+          nullable: true
+          maxLength: 5000
+          description: Extrait du prompt (tronqué à 5000 caractères)
+        response_excerpt:
+          type: string
+          nullable: true
+          maxLength: 5000
+          description: Extrait de la réponse (tronqué à 5000 caractères)
+        rule_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: ID de la règle déclenchée (si applicable)
+        severity:
+          type: string
+          nullable: true
+          maxLength: 20
+          enum: [info, warning, critical]
+        metadata:
+          type: string
+          nullable: true
+          description: Métadonnées JSON encodées en string
+        occurred_at:
+          type: string
+          format: date-time
+          description: Timestamp de l'événement côté agent
+
+    Rule:
+      type: object
+      description: Règle de monitoring/blocage au format agent
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: "Blocage données sensibles"
+        category:
+          type: string
+          enum: [block, alert, log]
+        target:
+          type: string
+          enum: [prompt, response, clipboard, domain]
+        condition_type:
+          type: string
+          enum: [regex, keyword, domain_list, content_length]
+        condition_value:
+          type: object
+          description: |
+            Format variable selon condition_type :
+            - regex : `{"pattern": "...", "flags": "i"}`
+            - keyword : `{"keywords": ["mot1", "mot2"]}`
+            - domain_list : `{"domains": ["dom1", "dom2"]}`
+            - content_length : `{"min": 0, "max": 10000}`
+        action_config:
+          type: object
+          nullable: true
+          description: "Configuration de l'action : message de blocage, sévérité..."
+        priority:
+          type: integer
+          example: 10
+        version:
+          type: integer
+          format: int64
+          example: 3
+
+    Domain:
+      type: object
+      properties:
+        domain:
+          type: string
+          example: "api.openai.com"
+        platform_name:
+          type: string
+          nullable: true
+          example: "ChatGPT"
+        is_blocked:
+          type: boolean
+          description: Si true, le domaine est bloqué totalement par l'agent
+
+    UpdateInfo:
+      type: object
+      properties:
+        update_available:
+          type: boolean
+        version:
+          type: string
+          example: "0.3.0"
+        download_url:
+          type: string
+          format: uri
+          nullable: true
+        verify_signature:
+          type: boolean
+        changelog:
+          type: string
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      description: |
+        Endpoint de vérification de connectivité. Utilisé par les agents pour
+        détecter si le serveur est joignable.
+      operationId: healthCheck
+      tags: [Registration]
+      responses:
+        "200":
+          description: Serveur opérationnel
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+
+  /agents/register:
+    post:
+      summary: Enregistrer un nouvel agent
+      description: |
+        Enregistre une nouvelle machine auprès du serveur Icon.
+        Retourne une clé API et un secret HMAC à conserver par l'agent.
+        Le throttle est de 5 requêtes/minute.
+      operationId: registerAgent
+      tags: [Registration]
+      security:
+        - EnrollmentKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - hostname
+                - os
+                - agent_version
+              properties:
+                hostname:
+                  type: string
+                  maxLength: 255
+                  example: "PC-DSI-01"
+                os:
+                  type: string
+                  enum: [windows, macos]
+                os_version:
+                  type: string
+                  maxLength: 100
+                  example: "11 Pro"
+                agent_version:
+                  type: string
+                  maxLength: 50
+                  example: "0.2.0"
+      responses:
+        "201":
+          description: Machine enregistrée avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  machine_id:
+                    type: string
+                    format: uuid
+                    description: Identifiant unique de la machine
+                  api_key:
+                    type: string
+                    description: |
+                      Clé API à utiliser dans le header X-Api-Key
+                      pour les requêtes suivantes. À stocker de manière sécurisée.
+                  hmac_secret:
+                    type: string
+                    description: |
+                      Secret pour signer les requêtes POST via HMAC-SHA256.
+                      À stocker de manière sécurisée.
+        "403":
+          description: Clé d'enregistrement invalide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Données invalides
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /agents/heartbeat:
+    post:
+      summary: Envoyer un heartbeat
+      description: |
+        Signale que l'agent est actif. Met à jour le statut de la machine
+        et retourne les commandes en attente (force sync, redémarrage, mise à jour).
+        Fréquence recommandée : toutes les 60 secondes.
+        Throttle : 5 requêtes/minute.
+      operationId: sendHeartbeat
+      tags: [Heartbeat]
+      security:
+        - ApiKeyAuth: []
+          HmacSignature: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - machine_id
+                - status
+                - agent_version
+                - queue_size
+                - uptime_secs
+              properties:
+                machine_id:
+                  type: string
+                  format: uuid
+                status:
+                  type: string
+                  example: "running"
+                agent_version:
+                  type: string
+                  example: "0.2.0"
+                queue_size:
+                  type: integer
+                  description: Nombre d'événements en file d'attente locale
+                  example: 0
+                uptime_secs:
+                  type: integer
+                  description: Uptime de l'agent en secondes
+                  example: 86400
+      responses:
+        "200":
+          description: Heartbeat reçu, commandes retournées
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  force_sync_rules:
+                    type: boolean
+                    description: Si true, l'agent doit re-synchroniser les règles
+                  restart_requested:
+                    type: boolean
+                    description: Si true, l'agent doit se redémarrer
+                  update_available:
+                    type: object
+                    nullable: true
+                    description: Informations de mise à jour disponible
+                    properties:
+                      version:
+                        type: string
+                      download_url:
+                        type: string
+                        format: uri
+                      verify_signature:
+                        type: boolean
+        "401":
+          description: Clé API invalide
+        "422":
+          description: Données invalides
+
+  /events:
+    post:
+      summary: Envoyer un lot d'événements
+      description: |
+        Ingestion batch des événements capturés par l'agent.
+        Maximum 100 événements par requête.
+        Les événements sont traités de manière asynchrone (queue job).
+        Throttle : 30 requêtes/minute.
+      operationId: ingestEvents
+      tags: [Events]
+      security:
+        - ApiKeyAuth: []
+          HmacSignature: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - machine_id
+                - events
+              properties:
+                machine_id:
+                  type: string
+                  format: uuid
+                events:
+                  type: array
+                  maxItems: 100
+                  items:
+                    $ref: "#/components/schemas/Event"
+      responses:
+        "202":
+          description: Événements acceptés pour traitement
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accepted:
+                    type: integer
+                    description: Nombre d'événements acceptés
+                    example: 50
+        "401":
+          description: Clé API invalide
+        "422":
+          description: Données invalides (batch > 100 ou champs manquants)
+
+  /rules/sync:
+    get:
+      summary: Synchroniser les règles
+      description: |
+        Retourne les règles mises à jour depuis la version spécifiée
+        (synchronisation incrémentale). Inclut aussi les IDs des règles
+        supprimées depuis cette version.
+        Throttle : 10 requêtes/minute.
+      operationId: syncRules
+      tags: [Rules]
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: version
+          in: query
+          description: |
+            Version des règles actuellement en cache côté agent.
+            Le serveur ne retourne que les règles avec une version supérieure.
+            Mettre 0 pour un sync complet.
+          schema:
+            type: integer
+            default: 0
+          example: 5
+      responses:
+        "200":
+          description: Règles synchronisées
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rules:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Rule"
+                  deleted_ids:
+                    type: array
+                    items:
+                      type: string
+                      format: uuid
+                    description: IDs des règles supprimées depuis la version demandée
+        "401":
+          description: Clé API invalide
+
+  /domains/sync:
+    get:
+      summary: Synchroniser les domaines surveillés
+      description: |
+        Retourne la liste complète des domaines IA surveillés
+        avec leur statut de blocage.
+        Throttle : 10 requêtes/minute.
+      operationId: syncDomains
+      tags: [Domains]
+      security:
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          description: Liste des domaines
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  domains:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Domain"
+        "401":
+          description: Clé API invalide
+
+  /agents/update:
+    get:
+      summary: Vérifier les mises à jour
+      description: |
+        Vérifie si une mise à jour de l'agent est disponible.
+        Compare la version courante avec la version configurée sur le serveur.
+        Throttle : 5 requêtes/minute.
+      operationId: checkUpdate
+      tags: [Update]
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: current_version
+          in: query
+          required: true
+          description: Version actuelle de l'agent
+          schema:
+            type: string
+          example: "0.1.0"
+        - name: os
+          in: query
+          description: Système d'exploitation de la machine
+          schema:
+            type: string
+            enum: [windows, macos]
+      responses:
+        "200":
+          description: Résultat de la vérification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UpdateInfo"
+        "401":
+          description: Clé API invalide
+
+  /agents/watchdog-alert:
+    post:
+      summary: Signaler une alerte watchdog
+      description: |
+        Reçoit les alertes du processus watchdog de l'agent.
+        Ces alertes signalent des tentatives de contournement,
+        des crashes ou des modifications non autorisées.
+        Throttle : 10 requêtes/minute.
+      operationId: watchdogAlert
+      tags: [Watchdog]
+      security:
+        - ApiKeyAuth: []
+          HmacSignature: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - alert_type
+                - message
+                - source
+              properties:
+                alert_type:
+                  type: string
+                  maxLength: 100
+                  description: |
+                    Type d'alerte watchdog :
+                    - `agent_restarted` : Agent redémarré automatiquement
+                    - `agent_crash_loop` : Agent en boucle de crash (critique)
+                    - `proxy_tampered` : Configuration proxy modifiée
+                    - `binary_tampered` : Intégrité du binaire compromise (critique)
+                  enum:
+                    - agent_restarted
+                    - agent_crash_loop
+                    - proxy_tampered
+                    - binary_tampered
+                  example: "proxy_tampered"
+                message:
+                  type: string
+                  maxLength: 2000
+                  description: Description détaillée de l'alerte
+                  example: "Proxy system settings modified by user"
+                source:
+                  type: string
+                  maxLength: 50
+                  description: Composant source de l'alerte
+                  example: "watchdog"
+                agent_version:
+                  type: string
+                  nullable: true
+                  maxLength: 50
+                  example: "0.2.0"
+      responses:
+        "200":
+          description: Alerte reçue et enregistrée
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received:
+                    type: boolean
+                    example: true
+        "401":
+          description: Clé API invalide
+        "422":
+          description: Données invalides

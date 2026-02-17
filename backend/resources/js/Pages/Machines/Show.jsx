@@ -50,6 +50,18 @@ const eventTypeLabels = {
     alert: 'Alertes',
 };
 
+const platformColors = {
+    chatgpt: '#10a37f',
+    openai: '#10a37f',
+    claude: '#d97706',
+    anthropic: '#d97706',
+    copilot: '#3b82f6',
+    gemini: '#8b5cf6',
+    huggingface: '#fbbf24',
+    perplexity: '#22d3ee',
+    mistral: '#f97316',
+};
+
 const cardStyle = {
     background: '#1e293b', borderRadius: 12,
     border: '1px solid #334155', padding: '1.5rem',
@@ -71,7 +83,7 @@ function formatShortDate(dateStr) {
     return `${d.getDate()}/${d.getMonth() + 1}`;
 }
 
-export default function MachinesShow({ machine, stats, dailyActivity = [], eventTypes = {}, alerts = [], pendingCommands = [] }) {
+export default function MachinesShow({ machine, stats, dailyActivity = [], eventTypes = {}, alerts = [], platformBreakdown = [], hourlyActivity = {}, pendingCommands = [] }) {
     const [activeTab, setActiveTab] = useState('events');
     const [confirmAction, setConfirmAction] = useState(null);
     const { auth, flash } = usePage().props;
@@ -88,6 +100,9 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
 
     // Event types total for percentages
     const eventTypesTotal = Object.values(eventTypes).reduce((s, v) => s + v, 0);
+
+    // Hourly heatmap max
+    const hourlyMax = Math.max(...Object.values(hourlyActivity), 1);
 
     return (
         <DashboardLayout title={machine.hostname}>
@@ -149,6 +164,22 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
                 </div>
             )}
 
+            {/* Pending commands banner */}
+            {pendingCommands.length > 0 && (
+                <div style={{
+                    background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)',
+                    borderRadius: 8, padding: '0.75rem 1rem', marginBottom: '1rem',
+                    display: 'flex', alignItems: 'center', gap: '0.5rem',
+                }}>
+                    <span style={{ color: '#f59e0b', fontSize: '0.85rem', fontWeight: 600 }}>
+                        {pendingCommands.length} commande{pendingCommands.length > 1 ? 's' : ''} en attente
+                    </span>
+                    <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>
+                        ({pendingCommands.map(c => c.type === 'force_sync_rules' ? 'sync' : c.type).join(', ')})
+                    </span>
+                </div>
+            )}
+
             {/* Back button */}
             <button
                 onClick={() => router.visit('/machines')}
@@ -182,6 +213,24 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
                                 </p>
                             </div>
                         </div>
+                        {/* Tags */}
+                        {machine.tags?.length > 0 && (
+                            <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginTop: '0.6rem', marginLeft: '3rem' }}>
+                                {machine.tags.map((tag) => (
+                                    <span
+                                        key={tag.id}
+                                        style={{
+                                            padding: '0.15rem 0.5rem', borderRadius: 12,
+                                            fontSize: '0.65rem', fontWeight: 600,
+                                            color: '#fff',
+                                            background: tag.color || '#475569',
+                                        }}
+                                    >
+                                        {tag.name}
+                                    </span>
+                                ))}
+                            </div>
+                        )}
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
                         <button
@@ -279,7 +328,6 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
                         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 120 }}>
                             {dailyActivity.map((day) => {
                                 const totalH = (day.total / maxDaily) * 100;
-                                const blockedH = (day.blocked / maxDaily) * 100;
                                 return (
                                     <div key={day.date} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                                         <div style={{ width: '100%', height: 100, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', position: 'relative' }}>
@@ -353,30 +401,102 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
                 </div>
             </div>
 
-            {/* Platforms used */}
-            {stats.platforms_used?.length > 0 && (
-                <div style={{ ...cardStyle, marginBottom: '1.5rem' }}>
-                    <h3 style={{ color: '#f8fafc', margin: '0 0 0.75rem', fontSize: '0.95rem', fontWeight: 600 }}>
-                        Plateformes IA detectees
+            {/* Platform Breakdown + Hourly Activity (side by side) */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+                {/* Platform breakdown */}
+                <div style={cardStyle}>
+                    <h3 style={{ color: '#f8fafc', margin: '0 0 1rem', fontSize: '0.95rem', fontWeight: 600 }}>
+                        Usage par plateforme
                     </h3>
-                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                        {stats.platforms_used.map((platform) => (
-                            <span
-                                key={platform}
-                                onClick={() => router.visit(`/exchanges?machine_id=${machine.id}&platform=${platform}`)}
-                                style={{
-                                    padding: '0.3rem 0.8rem', borderRadius: 20,
-                                    fontSize: '0.75rem', fontWeight: 500,
-                                    color: '#e2e8f0', background: '#334155',
-                                    cursor: 'pointer',
-                                }}
-                            >
-                                {platform}
-                            </span>
-                        ))}
-                    </div>
+                    {platformBreakdown.length > 0 ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                            {platformBreakdown.map((p) => {
+                                const maxP = platformBreakdown[0]?.total || 1;
+                                const pct = Math.max(2, Math.round((p.total / maxP) * 100));
+                                const color = platformColors[p.platform] || '#64748b';
+                                return (
+                                    <div key={p.platform}
+                                        onClick={() => router.visit(`/exchanges?machine_id=${machine.id}&platform=${p.platform}`)}
+                                        style={{ cursor: 'pointer' }}
+                                    >
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
+                                            <span style={{ color: '#e2e8f0', fontSize: '0.8rem', fontWeight: 500, textTransform: 'capitalize' }}>
+                                                {p.platform}
+                                            </span>
+                                            <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>
+                                                {p.total} evts{p.blocked > 0 ? ` (${p.blocked} bloq.)` : ''}
+                                            </span>
+                                        </div>
+                                        <div style={{ display: 'flex', gap: 2, height: 8 }}>
+                                            <div style={{
+                                                width: `${pct}%`, height: '100%', borderRadius: 4,
+                                                background: color, transition: 'width 0.3s ease',
+                                            }} />
+                                            {p.blocked > 0 && (
+                                                <div style={{
+                                                    width: `${Math.max(2, Math.round((p.blocked / maxP) * 100))}%`,
+                                                    height: '100%', borderRadius: 4, background: '#ef4444',
+                                                }} />
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <p style={{ color: '#64748b', fontSize: '0.8rem', margin: 0 }}>Aucune donnee de plateforme.</p>
+                    )}
                 </div>
-            )}
+
+                {/* Hourly activity heatmap */}
+                <div style={cardStyle}>
+                    <h3 style={{ color: '#f8fafc', margin: '0 0 1rem', fontSize: '0.95rem', fontWeight: 600 }}>
+                        Activite par heure (7j)
+                    </h3>
+                    {Object.keys(hourlyActivity).length > 0 ? (
+                        <div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: 3 }}>
+                                {Array.from({ length: 24 }, (_, h) => {
+                                    const count = hourlyActivity[h] || 0;
+                                    const intensity = count > 0 ? Math.max(0.15, count / hourlyMax) : 0;
+                                    return (
+                                        <div key={h} title={`${h}h: ${count} evenements`} style={{
+                                            aspectRatio: '1', borderRadius: 4,
+                                            background: count > 0
+                                                ? `rgba(59, 130, 246, ${intensity})`
+                                                : '#0f172a',
+                                            border: '1px solid #33415520',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        }}>
+                                            <span style={{
+                                                fontSize: '0.55rem',
+                                                color: count > 0 ? '#e2e8f0' : '#475569',
+                                                fontWeight: count > 0 ? 600 : 400,
+                                            }}>
+                                                {h}h
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem' }}>
+                                <span style={{ color: '#475569', fontSize: '0.6rem' }}>Faible</span>
+                                <div style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                                    {[0.15, 0.3, 0.5, 0.7, 1].map((v, i) => (
+                                        <div key={i} style={{
+                                            width: 12, height: 12, borderRadius: 2,
+                                            background: `rgba(59, 130, 246, ${v})`,
+                                        }} />
+                                    ))}
+                                </div>
+                                <span style={{ color: '#475569', fontSize: '0.6rem' }}>Forte</span>
+                            </div>
+                        </div>
+                    ) : (
+                        <p style={{ color: '#64748b', fontSize: '0.8rem', margin: 0 }}>Aucune donnee horaire.</p>
+                    )}
+                </div>
+            </div>
 
             {/* Tabs: Events / Alerts */}
             <div style={{ display: 'flex', gap: 0 }}>

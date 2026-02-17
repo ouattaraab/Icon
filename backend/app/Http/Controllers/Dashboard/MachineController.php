@@ -107,6 +107,28 @@ class MachineController extends Controller
                 'acknowledged_at' => $a->acknowledged_at?->diffForHumans(),
             ]);
 
+        // Platform usage breakdown with counts
+        $platformBreakdown = $machine->events()
+            ->whereNotNull('platform')
+            ->selectRaw('platform, COUNT(*) as total, SUM(CASE WHEN event_type = \'block\' THEN 1 ELSE 0 END) as blocked')
+            ->groupBy('platform')
+            ->orderByDesc('total')
+            ->get()
+            ->map(fn ($row) => [
+                'platform' => $row->platform,
+                'total' => (int) $row->total,
+                'blocked' => (int) $row->blocked,
+            ]);
+
+        // Hourly activity heatmap (last 7 days, grouped by hour of day)
+        $hourlyActivity = $machine->events()
+            ->where('occurred_at', '>=', now()->subDays(7))
+            ->selectRaw("EXTRACT(HOUR FROM occurred_at)::integer as hour, COUNT(*) as count")
+            ->groupByRaw('EXTRACT(HOUR FROM occurred_at)')
+            ->orderBy('hour')
+            ->pluck('count', 'hour')
+            ->toArray();
+
         // Pending commands for this machine
         $pendingCommands = cache()->get("machine:{$machine->id}:commands", []);
 
@@ -116,6 +138,8 @@ class MachineController extends Controller
             'dailyActivity' => $dailyActivity,
             'eventTypes' => $eventTypes,
             'alerts' => $alerts,
+            'platformBreakdown' => $platformBreakdown,
+            'hourlyActivity' => $hourlyActivity,
             'pendingCommands' => $pendingCommands,
         ]);
     }
