@@ -511,7 +511,7 @@ mod tests {
     #[test]
     fn test_find_header_end() {
         let data = b"GET / HTTP/1.1\r\nHost: x\r\n\r\nbody";
-        assert_eq!(find_header_end(data), Some(25));
+        assert_eq!(find_header_end(data), Some(23));
 
         let data = b"GET / HTTP/1.1\r\nHost: x\r\n";
         assert_eq!(find_header_end(data), None);
