@@ -130,6 +130,13 @@ export default function DashboardLayout({ children, title }) {
     }, []);
 
     const unreadCount = notifications.length;
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const handleSearch = (e) => {
+        if (e.key === 'Enter' && searchQuery.trim().length >= 2) {
+            router.get('/search', { q: searchQuery.trim() });
+        }
+    };
 
     return (
         <div style={{ display: 'flex', minHeight: '100vh', background: '#0f172a' }}>
@@ -270,6 +277,26 @@ export default function DashboardLayout({ children, title }) {
                         </h2>
                     ) : <div />}
 
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    {/* Search bar */}
+                    <input
+                        type="text"
+                        placeholder="Rechercher..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyDown={handleSearch}
+                        style={{
+                            background: '#1e293b',
+                            border: '1px solid #334155',
+                            borderRadius: 8,
+                            padding: '0.5rem 0.75rem',
+                            color: '#f8fafc',
+                            fontSize: '0.85rem',
+                            width: 220,
+                            outline: 'none',
+                        }}
+                    />
+
                     {/* Notification bell */}
                     <button
                         onClick={() => setShowNotifications(!showNotifications)}
@@ -305,6 +332,7 @@ export default function DashboardLayout({ children, title }) {
                             </span>
                         )}
                     </button>
+                    </div>
                 </div>
 
                 {/* Notification dropdown */}

@@ -9,6 +9,7 @@ use App\Http\Controllers\Dashboard\MachineController;
 use App\Http\Controllers\Dashboard\ProfileController;
 use App\Http\Controllers\Dashboard\ReportController;
 use App\Http\Controllers\Dashboard\RuleController;
+use App\Http\Controllers\Dashboard\SearchController;
 use App\Http\Controllers\Dashboard\SettingController;
 use App\Http\Controllers\Dashboard\UserController;
 use App\Models\AuditLog;
@@ -86,6 +87,9 @@ Route::middleware(['auth'])->group(function () {
 
     // Audit Logs (view)
     Route::get('/audit', [AuditLogController::class, 'index'])->name('audit.index');
+
+    // Global search
+    Route::get('/search', SearchController::class)->name('search');
 
     // Profile & Notification Preferences
     Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
