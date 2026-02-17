@@ -1,13 +1,16 @@
 services:
-  # Laravel Application
+  # Laravel Application (PHP-FPM)
   app:
     build:
       context: ../backend
       dockerfile: ../docker/Dockerfile
     container_name: icon-app
     restart: unless-stopped
+    entrypoint: ["/usr/local/bin/entrypoint.sh"]
+    command: ["php-fpm"]
     volumes:
       - ../backend:/var/www/html
+      - ./entrypoint.sh:/usr/local/bin/entrypoint.sh:ro
       - app-storage:/var/www/html/storage
     env_file:
       - .env
@@ -31,6 +34,10 @@ services:
       - REVERB_HOST=reverb
       - REVERB_PORT=8080
       - REVERB_SCHEME=http
+      - VITE_REVERB_APP_KEY=${REVERB_APP_KEY}
+      - VITE_REVERB_HOST=
+      - VITE_REVERB_PORT=
+      - VITE_REVERB_SCHEME=
     depends_on:
       postgres:
         condition: service_healthy
@@ -100,6 +107,33 @@ services:
       start_period: 30s
     networks:
       - icon-network
+
+  # Elasticsearch Index Initialization
+  es-init:
+    image: curlimages/curl:latest
+    container_name: icon-es-init
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    volumes:
+      - ./elasticsearch:/mappings:ro
+    entrypoint: >
+      sh -c '
+        echo "Creating Elasticsearch index icon-exchanges..."
+        STATUS=$$(curl -s -o /dev/null -w "%%{http_code}" http://elasticsearch:9200/icon-exchanges)
+        if [ "$$STATUS" = "200" ]; then
+          echo "Index already exists, skipping."
+        else
+          curl -s -X PUT http://elasticsearch:9200/icon-exchanges \
+            -H "Content-Type: application/json" \
+            -d @/mappings/icon-exchanges-mapping.json
+          echo ""
+          echo "Index created successfully."
+        fi
+      '
+    networks:
+      - icon-network
+    restart: "no"
 
   # Redis 7.x
   redis:

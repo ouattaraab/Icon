@@ -68,6 +68,15 @@ ps: ## Voir l'état des services
 build: ## Rebuilder les images Docker
 	cd $(DOCKER_DIR) && docker compose build --no-cache
 
+restart: ## Redémarrer tous les services Docker
+	cd $(DOCKER_DIR) && docker compose restart
+
+shell: ## Ouvrir un shell dans le conteneur app
+	cd $(DOCKER_DIR) && docker compose exec app sh
+
+tinker: ## Ouvrir Laravel Tinker
+	cd $(DOCKER_DIR) && docker compose exec app php artisan tinker
+
 # ── Setup initial ───────────────────────────────────────────
 .PHONY: setup setup-env
 
@@ -88,15 +97,19 @@ setup-env: ## Générer le fichier .env à partir du template
 setup: setup-env up ## Setup complet: env + démarrage Docker
 	@echo ""
 	@echo "En attente que les services soient prêts..."
-	@sleep 10
-	cd $(DOCKER_DIR) && docker compose exec app php artisan key:generate
-	cd $(DOCKER_DIR) && docker compose exec app php artisan migrate --force
-	cd $(DOCKER_DIR) && docker compose exec app php artisan db:seed
-	cd $(DOCKER_DIR) && docker compose exec app php artisan icon:create-es-index
+	@sleep 15
+	cd $(DOCKER_DIR) && docker compose exec app php artisan db:seed --force
 	@echo ""
 	@echo "=== Icon est prêt ==="
-	@echo "  Dashboard: https://localhost"
+	@echo "  Dashboard: http://localhost:$${NGINX_PORT:-8888}"
 	@echo "  Admin:     admin@gs2e.ci / changeme"
+	@echo ""
+	@echo "  Services:"
+	@echo "    Nginx:         http://localhost:$${NGINX_PORT:-8888}"
+	@echo "    PostgreSQL:    localhost:$${POSTGRES_PORT:-5433}"
+	@echo "    Elasticsearch: http://localhost:$${ES_PORT:-9201}"
+	@echo "    Redis:         localhost:$${REDIS_PORT:-6380}"
+	@echo "    Reverb (WS):   ws://localhost:$${REVERB_PORT:-6001}"
 
 # ── Installeurs ─────────────────────────────────────────────
 .PHONY: pkg-macos msi-windows
@@ -115,7 +128,7 @@ es-create-index: ## Créer l'index Elasticsearch
 
 es-reset-index: ## Supprimer et recréer l'index Elasticsearch
 	@echo "Suppression de l'index..."
-	curl -s -X DELETE http://localhost:9200/icon-exchanges 2>/dev/null || true
+	curl -s -X DELETE http://localhost:$${ES_PORT:-9201}/icon-exchanges 2>/dev/null || true
 	$(MAKE) es-create-index
 
 # ── Maintenance ─────────────────────────────────────────────
@@ -135,10 +148,10 @@ pilot-status: ## Vérifier l'état du déploiement pilote
 	@cd $(DOCKER_DIR) && docker compose ps
 	@echo ""
 	@echo "=== Santé du backend ==="
-	@curl -sf http://localhost/api/health 2>/dev/null && echo " OK" || echo " ERREUR"
+	@curl -sf http://localhost:$${NGINX_PORT:-8888}/api/health 2>/dev/null && echo " OK" || echo " ERREUR"
 	@echo ""
 	@echo "=== Elasticsearch ==="
-	@curl -sf http://localhost:9200/_cluster/health 2>/dev/null | python3 -m json.tool 2>/dev/null || echo " Non accessible"
+	@curl -sf http://localhost:$${ES_PORT:-9201}/_cluster/health 2>/dev/null | python3 -m json.tool 2>/dev/null || echo " Non accessible"
 	@echo ""
-	@echo "=== Machines enregistrées ==="
-	@curl -sf http://localhost:9200/icon-exchanges/_count 2>/dev/null | python3 -m json.tool 2>/dev/null || echo " Aucun échange indexé"
+	@echo "=== Index des échanges ==="
+	@curl -sf http://localhost:$${ES_PORT:-9201}/icon-exchanges/_count 2>/dev/null | python3 -m json.tool 2>/dev/null || echo " Aucun échange indexé"
