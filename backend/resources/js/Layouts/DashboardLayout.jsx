@@ -1,5 +1,6 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useTheme } from '../Contexts/ThemeContext';
 
 const navigation = [
     { name: 'Tableau de bord', href: '/', icon: '\u{1f4ca}' },
@@ -39,15 +40,42 @@ function useIsMobile() {
     return isMobile;
 }
 
+function ThemeToggle({ isDark, onToggle, t }) {
+    return (
+        <button
+            onClick={onToggle}
+            title={isDark ? 'Passer au thème clair' : 'Passer au thème sombre'}
+            aria-label={isDark ? 'Thème clair' : 'Thème sombre'}
+            style={{
+                background: 'transparent',
+                border: `1px solid ${t.border}`,
+                borderRadius: 8,
+                padding: '0.5rem 0.75rem',
+                cursor: 'pointer',
+                color: t.textMuted,
+                fontSize: '1.1rem',
+                flexShrink: 0,
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+            }}
+        >
+            {isDark ? '\u2600\ufe0f' : '\u{1f319}'}
+        </button>
+    );
+}
+
 export default function DashboardLayout({ children, title }) {
     const { url, props } = usePage();
     const { auth, unreadNotificationCount } = props;
     const isAdmin = auth?.is_admin ?? false;
     const isMobile = useIsMobile();
+    const { theme: t, toggle: toggleTheme, isDark } = useTheme();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [notifications, setNotifications] = useState([]);
     const [showNotifications, setShowNotifications] = useState(false);
-    const [notifTab, setNotifTab] = useState('live'); // 'live' | 'inbox'
+    const [notifTab, setNotifTab] = useState('live');
     const [dbNotifications, setDbNotifications] = useState([]);
     const [dbLoading, setDbLoading] = useState(false);
     const [dbLoaded, setDbLoaded] = useState(false);
@@ -279,17 +307,17 @@ export default function DashboardLayout({ children, title }) {
         <>
             <div style={{
                 padding: '0 1.5rem 1.5rem',
-                borderBottom: '1px solid #334155',
+                borderBottom: `1px solid ${t.border}`,
                 marginBottom: '1rem',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
             }}>
                 <div>
-                    <h1 style={{ color: '#f8fafc', fontSize: '1.5rem', fontWeight: 700, margin: 0 }}>
+                    <h1 style={{ color: t.text, fontSize: '1.5rem', fontWeight: 700, margin: 0 }}>
                         {'\u{1f6e1}\u{fe0f}'} Icon
                     </h1>
-                    <p style={{ color: '#94a3b8', fontSize: '0.75rem', margin: '0.25rem 0 0' }}>
+                    <p style={{ color: t.textMuted, fontSize: '0.75rem', margin: '0.25rem 0 0' }}>
                         Monitoring IA — GS2E
                     </p>
                 </div>
@@ -297,7 +325,7 @@ export default function DashboardLayout({ children, title }) {
                     <button
                         onClick={() => setSidebarOpen(false)}
                         style={{
-                            background: 'transparent', border: 'none', color: '#94a3b8',
+                            background: 'transparent', border: 'none', color: t.textMuted,
                             fontSize: '1.5rem', cursor: 'pointer', padding: '0.25rem',
                         }}
                     >
@@ -320,12 +348,12 @@ export default function DashboardLayout({ children, title }) {
                                 alignItems: 'center',
                                 gap: '0.75rem',
                                 padding: '0.75rem 1.5rem',
-                                color: isActive ? '#f8fafc' : '#94a3b8',
+                                color: isActive ? t.text : t.textMuted,
                                 textDecoration: 'none',
                                 fontSize: '0.875rem',
                                 fontWeight: isActive ? 600 : 400,
-                                background: isActive ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
-                                borderLeft: isActive ? '3px solid #3b82f6' : '3px solid transparent',
+                                background: isActive ? `${t.accent}15` : 'transparent',
+                                borderLeft: isActive ? `3px solid ${t.accent}` : '3px solid transparent',
                                 transition: 'all 0.15s',
                             }}
                         >
@@ -337,9 +365,9 @@ export default function DashboardLayout({ children, title }) {
             </nav>
 
             {auth?.user && (
-                <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid #334155' }}>
+                <div style={{ padding: '1rem 1.5rem', borderTop: `1px solid ${t.border}` }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                        <span style={{ color: '#e2e8f0', fontSize: '0.8rem', fontWeight: 500 }}>
+                        <span style={{ color: t.textSecondary, fontSize: '0.8rem', fontWeight: 500 }}>
                             {auth.user.name}
                         </span>
                         <span style={{
@@ -354,8 +382,8 @@ export default function DashboardLayout({ children, title }) {
                         <Link
                             href="/profile"
                             style={{
-                                flex: 1, background: 'transparent', border: '1px solid #334155',
-                                borderRadius: 6, padding: '0.35rem 0.75rem', color: '#94a3b8',
+                                flex: 1, background: 'transparent', border: `1px solid ${t.border}`,
+                                borderRadius: 6, padding: '0.35rem 0.75rem', color: t.textMuted,
                                 fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'none', textAlign: 'center',
                             }}
                         >
@@ -364,8 +392,8 @@ export default function DashboardLayout({ children, title }) {
                         <button
                             onClick={() => router.post('/logout')}
                             style={{
-                                flex: 1, background: 'transparent', border: '1px solid #334155',
-                                borderRadius: 6, padding: '0.35rem 0.75rem', color: '#94a3b8',
+                                flex: 1, background: 'transparent', border: `1px solid ${t.border}`,
+                                borderRadius: 6, padding: '0.35rem 0.75rem', color: t.textMuted,
                                 fontSize: '0.75rem', cursor: 'pointer',
                             }}
                         >
@@ -378,13 +406,13 @@ export default function DashboardLayout({ children, title }) {
     );
 
     return (
-        <div style={{ display: 'flex', minHeight: '100vh', background: '#0f172a' }}>
+        <div style={{ display: 'flex', minHeight: '100vh', background: t.bg }}>
             {/* Mobile backdrop */}
             {isMobile && sidebarOpen && (
                 <div
                     onClick={() => setSidebarOpen(false)}
                     style={{
-                        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+                        position: 'fixed', inset: 0, background: t.backdropBg,
                         zIndex: 998, transition: 'opacity 0.2s',
                     }}
                 />
@@ -393,8 +421,8 @@ export default function DashboardLayout({ children, title }) {
             {/* Sidebar */}
             <aside style={{
                 width: 260,
-                background: '#1e293b',
-                borderRight: '1px solid #334155',
+                background: t.sidebarBg,
+                borderRight: `1px solid ${t.border}`,
                 padding: '1.5rem 0',
                 display: 'flex',
                 flexDirection: 'column',
@@ -407,7 +435,7 @@ export default function DashboardLayout({ children, title }) {
                     zIndex: 999,
                     transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
                     transition: 'transform 0.25s ease',
-                    boxShadow: sidebarOpen ? '4px 0 24px rgba(0,0,0,0.5)' : 'none',
+                    boxShadow: sidebarOpen ? `4px 0 24px ${t.shadow}` : 'none',
                 } : {}),
             }}>
                 {sidebarContent}
@@ -436,9 +464,9 @@ export default function DashboardLayout({ children, title }) {
                             <button
                                 onClick={() => setSidebarOpen(true)}
                                 style={{
-                                    background: 'transparent', border: '1px solid #334155',
+                                    background: 'transparent', border: `1px solid ${t.border}`,
                                     borderRadius: 8, padding: '0.4rem 0.6rem', cursor: 'pointer',
-                                    color: '#e2e8f0', fontSize: '1.2rem', flexShrink: 0,
+                                    color: t.textSecondary, fontSize: '1.2rem', flexShrink: 0,
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 }}
                                 aria-label="Ouvrir le menu"
@@ -448,7 +476,7 @@ export default function DashboardLayout({ children, title }) {
                         )}
                         {title ? (
                             <h2 style={{
-                                color: '#f8fafc',
+                                color: t.text,
                                 fontSize: isMobile ? '1.15rem' : '1.5rem',
                                 fontWeight: 700,
                                 margin: 0,
@@ -475,11 +503,11 @@ export default function DashboardLayout({ children, title }) {
                                 onKeyDown={handleSearch}
                                 onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
                                 style={{
-                                    background: '#1e293b',
-                                    border: '1px solid #334155',
+                                    background: t.surface,
+                                    border: `1px solid ${t.border}`,
                                     borderRadius: 8,
                                     padding: '0.5rem 0.75rem',
-                                    color: '#f8fafc',
+                                    color: t.text,
                                     fontSize: '0.85rem',
                                     width: isMobile ? '100%' : 260,
                                     outline: 'none',
@@ -493,10 +521,10 @@ export default function DashboardLayout({ children, title }) {
                                     left: 0,
                                     right: 0,
                                     marginTop: 4,
-                                    background: '#1e293b',
-                                    border: '1px solid #334155',
+                                    background: t.surface,
+                                    border: `1px solid ${t.border}`,
                                     borderRadius: 10,
-                                    boxShadow: '0 12px 30px rgba(0,0,0,0.4)',
+                                    boxShadow: `0 12px 30px ${t.shadow}`,
                                     zIndex: 200,
                                     overflow: 'hidden',
                                 }}>
@@ -511,26 +539,26 @@ export default function DashboardLayout({ children, title }) {
                                             style={{
                                                 display: 'flex', alignItems: 'center', gap: '0.6rem',
                                                 padding: '0.55rem 0.75rem', cursor: 'pointer',
-                                                background: idx === activeSuggestion ? 'rgba(59,130,246,0.15)' : 'transparent',
-                                                borderBottom: idx < suggestions.length - 1 ? '1px solid #0f172a' : 'none',
+                                                background: idx === activeSuggestion ? `${t.accent}15` : 'transparent',
+                                                borderBottom: idx < suggestions.length - 1 ? `1px solid ${t.bg}` : 'none',
                                             }}
                                         >
                                             <span style={{ fontSize: '0.8rem', flexShrink: 0 }}>{typeIcons[s.type] || ''}</span>
                                             <div style={{ flex: 1, minWidth: 0 }}>
                                                 <p style={{
-                                                    color: '#e2e8f0', fontSize: '0.8rem', fontWeight: 500,
+                                                    color: t.textSecondary, fontSize: '0.8rem', fontWeight: 500,
                                                     margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                                                 }}>
                                                     {s.label}
                                                 </p>
                                                 {s.sub && (
-                                                    <p style={{ color: '#64748b', fontSize: '0.65rem', margin: '0.1rem 0 0' }}>
+                                                    <p style={{ color: t.textFaint, fontSize: '0.65rem', margin: '0.1rem 0 0' }}>
                                                         {s.sub}
                                                     </p>
                                                 )}
                                             </div>
                                             <span style={{
-                                                fontSize: '0.6rem', color: '#475569', fontWeight: 600,
+                                                fontSize: '0.6rem', color: t.textSubtle, fontWeight: 600,
                                                 textTransform: 'uppercase', flexShrink: 0,
                                             }}>
                                                 {typeLabels[s.type] || ''}
@@ -545,9 +573,9 @@ export default function DashboardLayout({ children, title }) {
                                             }
                                         }}
                                         style={{
-                                            padding: '0.5rem 0.75rem', borderTop: '1px solid #334155',
+                                            padding: '0.5rem 0.75rem', borderTop: `1px solid ${t.border}`,
                                             textAlign: 'center', cursor: 'pointer',
-                                            color: '#3b82f6', fontSize: '0.75rem', fontWeight: 600,
+                                            color: t.accent, fontSize: '0.75rem', fontWeight: 600,
                                         }}
                                     >
                                         Voir tous les résultats
@@ -556,13 +584,16 @@ export default function DashboardLayout({ children, title }) {
                             )}
                         </div>
 
+                        {/* Theme toggle */}
+                        <ThemeToggle isDark={isDark} onToggle={toggleTheme} t={t} />
+
                         {/* Notification bell */}
                         <button
                             onClick={() => setShowNotifications(!showNotifications)}
                             style={{
-                                background: 'transparent', border: '1px solid #334155',
+                                background: 'transparent', border: `1px solid ${t.border}`,
                                 borderRadius: 8, padding: '0.5rem 0.75rem', cursor: 'pointer',
-                                position: 'relative', color: '#94a3b8', fontSize: '1.1rem', flexShrink: 0,
+                                position: 'relative', color: t.textMuted, fontSize: '1.1rem', flexShrink: 0,
                             }}
                         >
                             {'\u{1f514}'}
@@ -588,10 +619,10 @@ export default function DashboardLayout({ children, title }) {
                         top: isMobile ? 110 : 60,
                         right: isMobile ? 16 : 32,
                         width: isMobile ? 'calc(100% - 32px)' : 380,
-                        background: '#1e293b',
-                        border: '1px solid #334155',
+                        background: t.surface,
+                        border: `1px solid ${t.border}`,
                         borderRadius: 12,
-                        boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
+                        boxShadow: `0 20px 40px ${t.shadow}`,
                         zIndex: 100,
                         maxHeight: 450,
                         display: 'flex',
@@ -599,7 +630,7 @@ export default function DashboardLayout({ children, title }) {
                     }}>
                         {/* Tabs */}
                         <div style={{
-                            display: 'flex', borderBottom: '1px solid #334155',
+                            display: 'flex', borderBottom: `1px solid ${t.border}`,
                         }}>
                             {[
                                 { key: 'live', label: 'En direct', count: notifications.length },
@@ -611,8 +642,8 @@ export default function DashboardLayout({ children, title }) {
                                     style={{
                                         flex: 1, padding: '0.65rem 0.75rem',
                                         background: 'transparent', border: 'none',
-                                        borderBottom: notifTab === tab.key ? '2px solid #3b82f6' : '2px solid transparent',
-                                        color: notifTab === tab.key ? '#f8fafc' : '#64748b',
+                                        borderBottom: notifTab === tab.key ? `2px solid ${t.accent}` : '2px solid transparent',
+                                        color: notifTab === tab.key ? t.text : t.textFaint,
                                         fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer',
                                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
                                     }}
@@ -620,7 +651,7 @@ export default function DashboardLayout({ children, title }) {
                                     {tab.label}
                                     {tab.count > 0 && (
                                         <span style={{
-                                            background: tab.key === 'inbox' ? '#3b82f6' : '#64748b',
+                                            background: tab.key === 'inbox' ? t.accent : t.textFaint,
                                             color: '#fff', fontSize: '0.6rem', fontWeight: 700,
                                             borderRadius: 8, padding: '0.1rem 0.4rem', minWidth: 16, textAlign: 'center',
                                         }}>
@@ -643,7 +674,7 @@ export default function DashboardLayout({ children, title }) {
                                                 onClick={() => setNotifications([])}
                                                 style={{
                                                     background: 'transparent', border: 'none',
-                                                    color: '#64748b', fontSize: '0.7rem', cursor: 'pointer',
+                                                    color: t.textFaint, fontSize: '0.7rem', cursor: 'pointer',
                                                 }}
                                             >
                                                 Tout effacer
@@ -652,7 +683,7 @@ export default function DashboardLayout({ children, title }) {
                                     )}
                                     {notifications.length === 0 ? (
                                         <div style={{ padding: '2rem 1rem', textAlign: 'center' }}>
-                                            <p style={{ color: '#64748b', fontSize: '0.8rem' }}>
+                                            <p style={{ color: t.textFaint, fontSize: '0.8rem' }}>
                                                 Aucune notification en direct
                                             </p>
                                         </div>
@@ -661,26 +692,26 @@ export default function DashboardLayout({ children, title }) {
                                             <div
                                                 key={notif.id}
                                                 style={{
-                                                    padding: '0.65rem 1rem', borderBottom: '1px solid #0f172a',
+                                                    padding: '0.65rem 1rem', borderBottom: `1px solid ${t.bg}`,
                                                     display: 'flex', gap: '0.75rem', alignItems: 'flex-start',
                                                 }}
                                             >
                                                 <div style={{
                                                     width: 8, height: 8, borderRadius: '50%',
-                                                    background: severityColors[notif.severity] || '#64748b',
+                                                    background: severityColors[notif.severity] || t.textFaint,
                                                     marginTop: 5, flexShrink: 0,
                                                 }} />
                                                 <div style={{ flex: 1 }}>
-                                                    <p style={{ color: '#e2e8f0', fontSize: '0.8rem', margin: 0, fontWeight: 500 }}>
+                                                    <p style={{ color: t.textSecondary, fontSize: '0.8rem', margin: 0, fontWeight: 500 }}>
                                                         {notif.title}
                                                     </p>
                                                     {notif.subtitle && (
-                                                        <p style={{ color: '#64748b', fontSize: '0.7rem', margin: '0.15rem 0 0' }}>
+                                                        <p style={{ color: t.textFaint, fontSize: '0.7rem', margin: '0.15rem 0 0' }}>
                                                             {notif.subtitle}
                                                         </p>
                                                     )}
                                                 </div>
-                                                <span style={{ color: '#475569', fontSize: '0.65rem', flexShrink: 0 }}>
+                                                <span style={{ color: t.textSubtle, fontSize: '0.65rem', flexShrink: 0 }}>
                                                     {notif.time}
                                                 </span>
                                             </div>
@@ -697,7 +728,7 @@ export default function DashboardLayout({ children, title }) {
                                                 onClick={markAllRead}
                                                 style={{
                                                     background: 'transparent', border: 'none',
-                                                    color: '#3b82f6', fontSize: '0.7rem', cursor: 'pointer', fontWeight: 600,
+                                                    color: t.accent, fontSize: '0.7rem', cursor: 'pointer', fontWeight: 600,
                                                 }}
                                             >
                                                 Tout marquer comme lu
@@ -706,11 +737,11 @@ export default function DashboardLayout({ children, title }) {
                                     )}
                                     {dbLoading && !dbLoaded ? (
                                         <div style={{ padding: '2rem 1rem', textAlign: 'center' }}>
-                                            <p style={{ color: '#64748b', fontSize: '0.8rem' }}>Chargement...</p>
+                                            <p style={{ color: t.textFaint, fontSize: '0.8rem' }}>Chargement...</p>
                                         </div>
                                     ) : dbNotifications.length === 0 ? (
                                         <div style={{ padding: '2rem 1rem', textAlign: 'center' }}>
-                                            <p style={{ color: '#64748b', fontSize: '0.8rem' }}>
+                                            <p style={{ color: t.textFaint, fontSize: '0.8rem' }}>
                                                 Aucune notification
                                             </p>
                                         </div>
@@ -720,34 +751,34 @@ export default function DashboardLayout({ children, title }) {
                                                 key={notif.id}
                                                 onClick={() => !notif.read && markAsRead(notif.id)}
                                                 style={{
-                                                    padding: '0.65rem 1rem', borderBottom: '1px solid #0f172a',
+                                                    padding: '0.65rem 1rem', borderBottom: `1px solid ${t.bg}`,
                                                     display: 'flex', gap: '0.75rem', alignItems: 'flex-start',
                                                     cursor: notif.read ? 'default' : 'pointer',
-                                                    background: notif.read ? 'transparent' : 'rgba(59, 130, 246, 0.05)',
+                                                    background: notif.read ? 'transparent' : `${t.accent}08`,
                                                 }}
                                             >
                                                 <div style={{
                                                     width: 8, height: 8, borderRadius: '50%',
                                                     background: notif.read
-                                                        ? '#334155'
-                                                        : severityColors[notif.data?.severity] || '#3b82f6',
+                                                        ? t.border
+                                                        : severityColors[notif.data?.severity] || t.accent,
                                                     marginTop: 5, flexShrink: 0,
                                                 }} />
                                                 <div style={{ flex: 1 }}>
                                                     <p style={{
-                                                        color: notif.read ? '#94a3b8' : '#e2e8f0',
+                                                        color: notif.read ? t.textMuted : t.textSecondary,
                                                         fontSize: '0.8rem', margin: 0,
                                                         fontWeight: notif.read ? 400 : 500,
                                                     }}>
                                                         {notif.data?.title || 'Notification'}
                                                     </p>
                                                     {notif.data?.machine && (
-                                                        <p style={{ color: '#64748b', fontSize: '0.7rem', margin: '0.15rem 0 0' }}>
+                                                        <p style={{ color: t.textFaint, fontSize: '0.7rem', margin: '0.15rem 0 0' }}>
                                                             Machine : {notif.data.machine}
                                                         </p>
                                                     )}
                                                 </div>
-                                                <span style={{ color: '#475569', fontSize: '0.65rem', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                                                <span style={{ color: t.textSubtle, fontSize: '0.65rem', flexShrink: 0, whiteSpace: 'nowrap' }}>
                                                     {notif.time_ago}
                                                 </span>
                                             </div>

@@ -30,3 +30,22 @@ vi.mock('../Layouts/DashboardLayout', () => {
         default: ({ children, title }) => React.createElement('div', { 'data-testid': 'layout', 'data-title': title }, children),
     };
 });
+
+// Mock ThemeContext globally
+vi.mock('../Contexts/ThemeContext', () => {
+    const React = require('react');
+    const darkTheme = {
+        key: 'dark', bg: '#0f172a', surface: '#1e293b', surfaceHover: '#253349',
+        border: '#334155', text: '#f8fafc', textSecondary: '#e2e8f0', textMuted: '#94a3b8',
+        textFaint: '#64748b', textSubtle: '#475569', inputBg: '#0f172a', accent: '#3b82f6',
+        accentHover: '#2563eb', success: '#22c55e', warning: '#f59e0b', danger: '#ef4444',
+        cardBg: '#1e293b', sidebarBg: '#1e293b', backdropBg: 'rgba(0,0,0,0.6)',
+        shadow: 'rgba(0,0,0,0.4)', badgeBg: (c) => `${c}15`, badgeBorder: (c) => `${c}40`,
+    };
+    return {
+        ThemeProvider: ({ children }) => React.createElement(React.Fragment, null, children),
+        useTheme: () => ({ theme: darkTheme, toggle: () => {}, isDark: true }),
+        darkTheme,
+        lightTheme: darkTheme,
+    };
+});
