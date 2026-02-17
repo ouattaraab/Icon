@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportController extends Controller
@@ -183,5 +184,63 @@ class ReportController extends Controller
                     ], ';');
                 }
             });
+    }
+
+    /**
+     * Export a PDF report summary.
+     */
+    public function exportPdf(Request $request)
+    {
+        $dateFrom = $request->query('date_from', now()->subDays(30)->toDateString());
+        $dateTo = $request->query('date_to', now()->toDateString());
+
+        $platformUsage = Event::whereBetween('occurred_at', [$dateFrom, $dateTo])
+            ->whereNotNull('platform')
+            ->select('platform', DB::raw('COUNT(*) as count'))
+            ->groupBy('platform')
+            ->orderByDesc('count')
+            ->get();
+
+        $topMachines = Event::whereBetween('occurred_at', [$dateFrom, $dateTo])
+            ->select('machine_id', DB::raw('COUNT(*) as event_count'))
+            ->groupBy('machine_id')
+            ->orderByDesc('event_count')
+            ->limit(10)
+            ->get()
+            ->map(function ($item) {
+                $machine = Machine::find($item->machine_id);
+                $item->hostname = $machine?->hostname ?? 'Inconnu';
+                $item->assigned_user = $machine?->assigned_user ?? '';
+                $item->department = $machine?->department ?? '';
+                return $item;
+            });
+
+        $stats = [
+            'total_machines' => Machine::where('status', 'active')->count(),
+            'online_machines' => Machine::where('last_heartbeat', '>', now()->subMinutes(5))->count(),
+            'total_events' => Event::whereBetween('occurred_at', [$dateFrom, $dateTo])->count(),
+            'blocked_events' => Event::whereBetween('occurred_at', [$dateFrom, $dateTo])
+                ->where('event_type', 'block')->count(),
+            'open_alerts' => Alert::where('status', 'open')->count(),
+            'critical_alerts' => Alert::where('status', 'open')->where('severity', 'critical')->count(),
+        ];
+
+        $recentAlerts = Alert::with('machine:id,hostname')
+            ->whereBetween('created_at', [$dateFrom, $dateTo])
+            ->orderByDesc('created_at')
+            ->limit(20)
+            ->get();
+
+        $pdf = Pdf::loadView('reports.pdf', [
+            'stats' => $stats,
+            'platformUsage' => $platformUsage,
+            'topMachines' => $topMachines,
+            'recentAlerts' => $recentAlerts,
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
+            'generatedAt' => now()->format('d/m/Y H:i'),
+        ])->setPaper('a4', 'portrait');
+
+        return $pdf->download("icon-rapport-{$dateFrom}-{$dateTo}.pdf");
     }
 }

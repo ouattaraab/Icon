@@ -64,6 +64,7 @@ export default function ReportsIndex({ stats, platformUsage, alertsTrend, topMac
                     <ExportButton label="Export événements" type="events" filters={filters} />
                     <ExportButton label="Export alertes" type="alerts" filters={filters} />
                     <ExportButton label="Export machines" type="machines" filters={filters} />
+                    <PdfExportButton filters={filters} />
                 </div>
             </div>
 
@@ -312,6 +313,37 @@ function ExportButton({ label, type, filters }) {
             }}
         >
             {'\u{2b07}\u{fe0f}'} {label}
+        </button>
+    );
+}
+
+function PdfExportButton({ filters }) {
+    const handleExport = () => {
+        const params = new URLSearchParams({
+            date_from: filters?.date_from || '',
+            date_to: filters?.date_to || '',
+        });
+        window.location.href = `/reports/export-pdf?${params.toString()}`;
+    };
+
+    return (
+        <button
+            onClick={handleExport}
+            style={{
+                background: '#7c3aed',
+                color: '#fff',
+                border: 'none',
+                borderRadius: 6,
+                padding: '0.4rem 0.75rem',
+                cursor: 'pointer',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.3rem',
+            }}
+        >
+            PDF Rapport
         </button>
     );
 }

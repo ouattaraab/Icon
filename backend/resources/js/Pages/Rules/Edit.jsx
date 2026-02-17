@@ -1,5 +1,6 @@
 import { useForm, router } from '@inertiajs/react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
+import RulePreview from '../../Components/RulePreview';
 
 const inputStyle = {
     background: '#0f172a',
@@ -248,6 +249,9 @@ export default function RulesEdit({ rule }) {
                             />
                         </div>
                     )}
+
+                    {/* Rule Preview / Tester */}
+                    <RulePreview conditionType={data.condition_type} conditionValue={data.condition_value} />
 
                     {/* Enabled toggle */}
                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#f8fafc', fontSize: '0.875rem' }}>

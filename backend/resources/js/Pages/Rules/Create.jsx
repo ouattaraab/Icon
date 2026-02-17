@@ -1,5 +1,6 @@
 import { useForm } from '@inertiajs/react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
+import RulePreview from '../../Components/RulePreview';
 
 const inputStyle = {
     background: '#0f172a',
@@ -178,6 +179,9 @@ export default function RulesCreate() {
                             />
                         </div>
                     )}
+
+                    {/* Rule Preview / Tester */}
+                    <RulePreview conditionType={data.condition_type} conditionValue={data.condition_value} />
 
                     {/* Submit */}
                     <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
