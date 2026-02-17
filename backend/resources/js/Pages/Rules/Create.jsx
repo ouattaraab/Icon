@@ -1,26 +1,10 @@
 import { useForm } from '@inertiajs/react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
 import RulePreview from '../../Components/RulePreview';
-
-const inputStyle = {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: 8,
-    padding: '0.6rem 1rem',
-    color: '#f8fafc',
-    fontSize: '0.875rem',
-    width: '100%',
-};
-
-const labelStyle = {
-    color: '#94a3b8',
-    fontSize: '0.8rem',
-    fontWeight: 600,
-    display: 'block',
-    marginBottom: '0.4rem',
-};
+import { useTheme } from '../../Contexts/ThemeContext';
 
 export default function RulesCreate() {
+    const { theme: t } = useTheme();
     const { data, setData, post, processing, errors } = useForm({
         name: '',
         description: '',
@@ -33,6 +17,24 @@ export default function RulesCreate() {
         enabled: true,
     });
 
+    const inputStyle = {
+        background: t.bg,
+        border: `1px solid ${t.border}`,
+        borderRadius: 8,
+        padding: '0.6rem 1rem',
+        color: t.text,
+        fontSize: '0.875rem',
+        width: '100%',
+    };
+
+    const labelStyle = {
+        color: t.textMuted,
+        fontSize: '0.8rem',
+        fontWeight: 600,
+        display: 'block',
+        marginBottom: '0.4rem',
+    };
+
     const handleSubmit = (e) => {
         e.preventDefault();
         post('/rules');
@@ -42,9 +44,9 @@ export default function RulesCreate() {
         <DashboardLayout title="Nouvelle règle">
             <form onSubmit={handleSubmit} style={{ maxWidth: 700 }}>
                 <div style={{
-                    background: '#1e293b',
+                    background: t.surface,
                     borderRadius: 12,
-                    border: '1px solid #334155',
+                    border: `1px solid ${t.border}`,
                     padding: '2rem',
                     display: 'flex',
                     flexDirection: 'column',
@@ -60,7 +62,7 @@ export default function RulesCreate() {
                             placeholder="Ex: Bloquer génération cahier des charges"
                             style={inputStyle}
                         />
-                        {errors.name && <p style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem' }}>{errors.name}</p>}
+                        {errors.name && <p style={{ color: t.danger, fontSize: '0.75rem', marginTop: '0.25rem' }}>{errors.name}</p>}
                     </div>
 
                     {/* Description */}
@@ -120,7 +122,7 @@ export default function RulesCreate() {
                                 })}
                                 style={inputStyle}
                             />
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem', color: '#94a3b8', fontSize: '0.8rem' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem', color: t.textMuted, fontSize: '0.8rem' }}>
                                 <input
                                     type="checkbox"
                                     checked={data.condition_value?.match_all || false}
@@ -189,7 +191,7 @@ export default function RulesCreate() {
                             type="submit"
                             disabled={processing}
                             style={{
-                                background: '#3b82f6', color: '#fff', border: 'none',
+                                background: t.accent, color: '#fff', border: 'none',
                                 borderRadius: 8, padding: '0.7rem 2rem', cursor: 'pointer',
                                 fontSize: '0.875rem', fontWeight: 600,
                                 opacity: processing ? 0.5 : 1,

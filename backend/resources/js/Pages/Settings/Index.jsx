@@ -1,47 +1,30 @@
 import { useForm, Link } from '@inertiajs/react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
-
-const cardStyle = {
-    background: '#1e293b',
-    borderRadius: 12,
-    padding: '1.5rem',
-    border: '1px solid #334155',
-    marginBottom: '1.5rem',
-};
-
-const labelStyle = {
-    color: '#e2e8f0',
-    fontSize: '0.85rem',
-    fontWeight: 500,
-    display: 'block',
-    marginBottom: '0.35rem',
-};
-
-const helpStyle = {
-    color: '#64748b',
-    fontSize: '0.7rem',
-    margin: '0.25rem 0 0',
-};
-
-const inputStyle = {
-    width: '100%',
-    padding: '0.6rem 0.75rem',
-    borderRadius: 8,
-    border: '1px solid #334155',
-    background: '#0f172a',
-    color: '#f8fafc',
-    fontSize: '0.85rem',
-    outline: 'none',
-    boxSizing: 'border-box',
-};
-
-const errorStyle = {
-    color: '#ef4444',
-    fontSize: '0.7rem',
-    margin: '0.25rem 0 0',
-};
+import { useTheme } from '../../Contexts/ThemeContext';
 
 function Field({ label, help, error, children }) {
+    const { theme: t } = useTheme();
+
+    const labelStyle = {
+        color: t.textSecondary,
+        fontSize: '0.85rem',
+        fontWeight: 500,
+        display: 'block',
+        marginBottom: '0.35rem',
+    };
+
+    const helpStyle = {
+        color: t.textFaint,
+        fontSize: '0.7rem',
+        margin: '0.25rem 0 0',
+    };
+
+    const errorStyle = {
+        color: t.danger,
+        fontSize: '0.7rem',
+        margin: '0.25rem 0 0',
+    };
+
     return (
         <div style={{ marginBottom: '1.25rem' }}>
             <label style={labelStyle}>{label}</label>
@@ -53,6 +36,28 @@ function Field({ label, help, error, children }) {
 }
 
 function Toggle({ label, help, checked, onChange, error }) {
+    const { theme: t } = useTheme();
+
+    const labelStyle = {
+        color: t.textSecondary,
+        fontSize: '0.85rem',
+        fontWeight: 500,
+        display: 'block',
+        marginBottom: '0.35rem',
+    };
+
+    const helpStyle = {
+        color: t.textFaint,
+        fontSize: '0.7rem',
+        margin: '0.25rem 0 0',
+    };
+
+    const errorStyle = {
+        color: t.danger,
+        fontSize: '0.7rem',
+        margin: '0.25rem 0 0',
+    };
+
     return (
         <div style={{ marginBottom: '1.25rem' }}>
             <div
@@ -63,7 +68,7 @@ function Toggle({ label, help, checked, onChange, error }) {
                     width: 40,
                     height: 22,
                     borderRadius: 11,
-                    background: checked ? '#3b82f6' : '#334155',
+                    background: checked ? t.accent : t.border,
                     position: 'relative',
                     transition: 'background 0.2s',
                     flexShrink: 0,
@@ -72,7 +77,7 @@ function Toggle({ label, help, checked, onChange, error }) {
                         width: 16,
                         height: 16,
                         borderRadius: '50%',
-                        background: '#f8fafc',
+                        background: t.text,
                         position: 'absolute',
                         top: 3,
                         left: checked ? 21 : 3,
@@ -88,6 +93,28 @@ function Toggle({ label, help, checked, onChange, error }) {
 }
 
 export default function SettingsIndex({ settings }) {
+    const { theme: t } = useTheme();
+
+    const cardStyle = {
+        background: t.surface,
+        borderRadius: 12,
+        padding: '1.5rem',
+        border: `1px solid ${t.border}`,
+        marginBottom: '1.5rem',
+    };
+
+    const inputStyle = {
+        width: '100%',
+        padding: '0.6rem 0.75rem',
+        borderRadius: 8,
+        border: `1px solid ${t.border}`,
+        background: t.bg,
+        color: t.text,
+        fontSize: '0.85rem',
+        outline: 'none',
+        boxSizing: 'border-box',
+    };
+
     const { data, setData, put, processing, errors, recentlySuccessful } = useForm({
         event_retention_days: settings.event_retention_days || '90',
         alert_retention_days: settings.alert_retention_days || '180',
@@ -117,7 +144,7 @@ export default function SettingsIndex({ settings }) {
                         borderRadius: 8,
                         padding: '0.75rem 1rem',
                         marginBottom: '1.5rem',
-                        color: '#22c55e',
+                        color: t.success,
                         fontSize: '0.85rem',
                         fontWeight: 500,
                     }}>
@@ -127,7 +154,7 @@ export default function SettingsIndex({ settings }) {
 
                 {/* Rétention des données */}
                 <div style={cardStyle}>
-                    <h3 style={{ color: '#f8fafc', fontSize: '1.1rem', fontWeight: 600, margin: '0 0 1.25rem' }}>
+                    <h3 style={{ color: t.text, fontSize: '1.1rem', fontWeight: 600, margin: '0 0 1.25rem' }}>
                         Rétention des données
                     </h3>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -164,7 +191,7 @@ export default function SettingsIndex({ settings }) {
 
                 {/* Agent */}
                 <div style={cardStyle}>
-                    <h3 style={{ color: '#f8fafc', fontSize: '1.1rem', fontWeight: 600, margin: '0 0 1.25rem' }}>
+                    <h3 style={{ color: t.text, fontSize: '1.1rem', fontWeight: 600, margin: '0 0 1.25rem' }}>
                         Configuration des agents
                     </h3>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -215,13 +242,13 @@ export default function SettingsIndex({ settings }) {
                 {/* Mise à jour agent */}
                 <div style={cardStyle}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                        <h3 style={{ color: '#f8fafc', fontSize: '1.1rem', fontWeight: 600, margin: 0 }}>
+                        <h3 style={{ color: t.text, fontSize: '1.1rem', fontWeight: 600, margin: 0 }}>
                             Mise à jour des agents
                         </h3>
                         <Link
                             href="/settings/agent-versions"
                             style={{
-                                color: '#3b82f6',
+                                color: t.accent,
                                 textDecoration: 'none',
                                 fontSize: '0.8rem',
                                 fontWeight: 500,
@@ -268,7 +295,7 @@ export default function SettingsIndex({ settings }) {
 
                 {/* DLP */}
                 <div style={cardStyle}>
-                    <h3 style={{ color: '#f8fafc', fontSize: '1.1rem', fontWeight: 600, margin: '0 0 1.25rem' }}>
+                    <h3 style={{ color: t.text, fontSize: '1.1rem', fontWeight: 600, margin: '0 0 1.25rem' }}>
                         DLP (Prévention de fuite de données)
                     </h3>
                     <Toggle
@@ -307,7 +334,7 @@ export default function SettingsIndex({ settings }) {
                         type="submit"
                         disabled={processing}
                         style={{
-                            background: processing ? '#1e40af' : '#3b82f6',
+                            background: processing ? '#1e40af' : t.accent,
                             color: '#fff',
                             border: 'none',
                             borderRadius: 8,

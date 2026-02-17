@@ -1,5 +1,6 @@
 import { router } from '@inertiajs/react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
+import { useTheme } from '../../Contexts/ThemeContext';
 
 const severityStyles = {
     critical: { bg: '#7f1d1d', color: '#fca5a5', label: 'Critique' },
@@ -13,29 +14,31 @@ const statusLabels = {
 };
 
 export default function AlertsIndex({ alerts, openCount, criticalCount, filters }) {
+    const { theme: t } = useTheme();
+
     return (
         <DashboardLayout title="Centre d'alertes">
             {/* Summary */}
             <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
                 <div style={{
-                    background: '#1e293b',
+                    background: t.surface,
                     borderRadius: 8,
                     padding: '1rem 1.5rem',
-                    border: '1px solid #334155',
+                    border: `1px solid ${t.border}`,
                 }}>
-                    <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>Alertes ouvertes</span>
-                    <p style={{ color: '#f59e0b', fontSize: '1.5rem', fontWeight: 700, margin: '0.25rem 0 0' }}>
+                    <span style={{ color: t.textMuted, fontSize: '0.8rem' }}>Alertes ouvertes</span>
+                    <p style={{ color: t.warning, fontSize: '1.5rem', fontWeight: 700, margin: '0.25rem 0 0' }}>
                         {openCount}
                     </p>
                 </div>
                 <div style={{
-                    background: '#1e293b',
+                    background: t.surface,
                     borderRadius: 8,
                     padding: '1rem 1.5rem',
-                    border: criticalCount > 0 ? '1px solid #ef4444' : '1px solid #334155',
+                    border: criticalCount > 0 ? `1px solid ${t.danger}` : `1px solid ${t.border}`,
                 }}>
-                    <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>Critiques</span>
-                    <p style={{ color: '#ef4444', fontSize: '1.5rem', fontWeight: 700, margin: '0.25rem 0 0' }}>
+                    <span style={{ color: t.textMuted, fontSize: '0.8rem' }}>Critiques</span>
+                    <p style={{ color: t.danger, fontSize: '1.5rem', fontWeight: 700, margin: '0.25rem 0 0' }}>
                         {criticalCount}
                     </p>
                 </div>
@@ -47,8 +50,8 @@ export default function AlertsIndex({ alerts, openCount, criticalCount, filters 
                     defaultValue={filters?.status || ''}
                     onChange={(e) => router.get('/alerts', { ...filters, status: e.target.value }, { preserveState: true, replace: true })}
                     style={{
-                        background: '#1e293b', border: '1px solid #334155',
-                        borderRadius: 8, padding: '0.5rem 1rem', color: '#f8fafc', fontSize: '0.875rem',
+                        background: t.surface, border: `1px solid ${t.border}`,
+                        borderRadius: 8, padding: '0.5rem 1rem', color: t.text, fontSize: '0.875rem',
                     }}
                 >
                     <option value="">Tous les statuts</option>
@@ -60,8 +63,8 @@ export default function AlertsIndex({ alerts, openCount, criticalCount, filters 
                     defaultValue={filters?.severity || ''}
                     onChange={(e) => router.get('/alerts', { ...filters, severity: e.target.value }, { preserveState: true, replace: true })}
                     style={{
-                        background: '#1e293b', border: '1px solid #334155',
-                        borderRadius: 8, padding: '0.5rem 1rem', color: '#f8fafc', fontSize: '0.875rem',
+                        background: t.surface, border: `1px solid ${t.border}`,
+                        borderRadius: 8, padding: '0.5rem 1rem', color: t.text, fontSize: '0.875rem',
                     }}
                 >
                     <option value="">Toutes les sévérités</option>
@@ -89,18 +92,18 @@ export default function AlertsIndex({ alerts, openCount, criticalCount, filters 
                     const sev = severityStyles[alert.severity] || severityStyles.warning;
                     return (
                         <div key={alert.id} onClick={() => router.visit(`/alerts/${alert.id}`)} style={{
-                            background: '#1e293b',
+                            background: t.surface,
                             borderRadius: 8,
                             padding: '1rem 1.25rem',
-                            border: '1px solid #334155',
+                            border: `1px solid ${t.border}`,
                             display: 'flex',
                             alignItems: 'center',
                             gap: '1rem',
                             cursor: 'pointer',
                             transition: 'border-color 0.15s',
                         }}
-                        onMouseEnter={(e) => e.currentTarget.style.borderColor = '#475569'}
-                        onMouseLeave={(e) => e.currentTarget.style.borderColor = '#334155'}>
+                        onMouseEnter={(e) => e.currentTarget.style.borderColor = t.textSubtle}
+                        onMouseLeave={(e) => e.currentTarget.style.borderColor = t.border}>
                             <span style={{
                                 padding: '0.2rem 0.5rem',
                                 borderRadius: 6,
@@ -113,14 +116,14 @@ export default function AlertsIndex({ alerts, openCount, criticalCount, filters 
                                 {sev.label}
                             </span>
                             <div style={{ flex: 1 }}>
-                                <p style={{ color: '#f8fafc', fontSize: '0.875rem', margin: 0, fontWeight: 500 }}>
+                                <p style={{ color: t.text, fontSize: '0.875rem', margin: 0, fontWeight: 500 }}>
                                     {alert.title}
                                 </p>
-                                <p style={{ color: '#64748b', fontSize: '0.75rem', margin: '0.25rem 0 0' }}>
+                                <p style={{ color: t.textFaint, fontSize: '0.75rem', margin: '0.25rem 0 0' }}>
                                     {alert.machine?.hostname} — {alert.rule?.name || 'N/A'}
                                 </p>
                             </div>
-                            <span style={{ color: '#64748b', fontSize: '0.75rem' }}>
+                            <span style={{ color: t.textFaint, fontSize: '0.75rem' }}>
                                 {statusLabels[alert.status]}
                             </span>
                             {alert.status === 'open' && (
@@ -131,7 +134,7 @@ export default function AlertsIndex({ alerts, openCount, criticalCount, filters 
                                             router.post(`/alerts/${alert.id}/acknowledge`);
                                         }}
                                         style={{
-                                            background: '#3b82f6', color: '#fff', border: 'none',
+                                            background: t.accent, color: '#fff', border: 'none',
                                             borderRadius: 6, padding: '0.4rem 0.8rem', cursor: 'pointer',
                                             fontSize: '0.75rem', fontWeight: 600,
                                         }}
@@ -144,7 +147,7 @@ export default function AlertsIndex({ alerts, openCount, criticalCount, filters 
                                             router.post(`/alerts/${alert.id}/resolve`);
                                         }}
                                         style={{
-                                            background: '#22c55e', color: '#fff', border: 'none',
+                                            background: t.success, color: '#fff', border: 'none',
                                             borderRadius: 6, padding: '0.4rem 0.8rem', cursor: 'pointer',
                                             fontSize: '0.75rem', fontWeight: 600,
                                         }}

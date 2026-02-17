@@ -1,6 +1,7 @@
 import { router, useForm, usePage } from '@inertiajs/react';
 import { useState, useCallback } from 'react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
+import { useTheme } from '../../Contexts/ThemeContext';
 
 const platformColors = {
     chatgpt: '#10a37f', openai: '#10a37f',
@@ -18,21 +19,22 @@ function getPlatformColor(name) {
     return '#64748b';
 }
 
-const inputStyle = {
-    background: '#0f172a', border: '1px solid #334155', borderRadius: 6,
-    padding: '0.5rem 0.75rem', color: '#f8fafc', fontSize: '0.85rem', width: '100%',
-};
-
-const filterInputStyle = {
-    background: '#1e293b', border: '1px solid #334155', borderRadius: 8,
-    padding: '0.5rem 0.75rem', color: '#f8fafc', fontSize: '0.85rem',
-};
-
 export default function DomainsIndex({ domains, platforms, filters }) {
+    const { theme: t } = useTheme();
     const { flash } = usePage().props;
     const [showForm, setShowForm] = useState(false);
     const [editingId, setEditingId] = useState(null);
     const [search, setSearch] = useState(filters?.search || '');
+
+    const inputStyle = {
+        background: t.bg, border: `1px solid ${t.border}`, borderRadius: 6,
+        padding: '0.5rem 0.75rem', color: t.text, fontSize: '0.85rem', width: '100%',
+    };
+
+    const filterInputStyle = {
+        background: t.surface, border: `1px solid ${t.border}`, borderRadius: 8,
+        padding: '0.5rem 0.75rem', color: t.text, fontSize: '0.85rem',
+    };
 
     const applyFilters = useCallback((overrides = {}) => {
         const params = { ...filters, search, ...overrides };
@@ -107,7 +109,7 @@ export default function DomainsIndex({ domains, platforms, filters }) {
                     ))}
                 </select>
                 <button onClick={() => applyFilters()} style={{
-                    background: '#3b82f6', color: '#fff', border: 'none',
+                    background: t.accent, color: '#fff', border: 'none',
                     borderRadius: 8, padding: '0.5rem 1rem', cursor: 'pointer',
                     fontSize: '0.85rem', fontWeight: 600,
                 }}>
@@ -117,20 +119,20 @@ export default function DomainsIndex({ domains, platforms, filters }) {
                     <button
                         onClick={() => { setSearch(''); router.get('/domains', {}, { preserveState: true, replace: true }); }}
                         style={{
-                            background: 'transparent', color: '#94a3b8', border: '1px solid #334155',
+                            background: 'transparent', color: t.textMuted, border: `1px solid ${t.border}`,
                             borderRadius: 8, padding: '0.5rem 0.75rem', cursor: 'pointer', fontSize: '0.8rem',
                         }}
                     >
                         Effacer les filtres
                     </button>
                 )}
-                <span style={{ color: '#64748b', fontSize: '0.8rem', marginLeft: 'auto' }}>
+                <span style={{ color: t.textFaint, fontSize: '0.8rem', marginLeft: 'auto' }}>
                     {total} domaine(s)
                 </span>
                 <button
                     onClick={() => { setShowForm(!showForm); setEditingId(null); }}
                     style={{
-                        background: '#3b82f6', color: '#fff', border: 'none',
+                        background: t.accent, color: '#fff', border: 'none',
                         borderRadius: 8, padding: '0.5rem 1rem', cursor: 'pointer',
                         fontSize: '0.85rem', fontWeight: 600,
                     }}
@@ -146,15 +148,15 @@ export default function DomainsIndex({ domains, platforms, filters }) {
 
             {/* Domains table */}
             <div style={{
-                background: '#1e293b', borderRadius: 12,
-                border: '1px solid #334155', overflow: 'hidden',
+                background: t.surface, borderRadius: 12,
+                border: `1px solid ${t.border}`, overflow: 'hidden',
             }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
-                        <tr style={{ borderBottom: '1px solid #334155' }}>
+                        <tr style={{ borderBottom: `1px solid ${t.border}` }}>
                             {['Domaine', 'Plateforme', 'Statut', 'Ajouté le', 'Actions'].map((h) => (
                                 <th key={h} style={{
-                                    padding: '0.75rem', textAlign: 'left', color: '#94a3b8',
+                                    padding: '0.75rem', textAlign: 'left', color: t.textMuted,
                                     fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600,
                                 }}>{h}</th>
                             ))}
@@ -173,9 +175,9 @@ export default function DomainsIndex({ domains, platforms, filters }) {
                                     </td>
                                 </tr>
                             ) : (
-                                <tr key={domain.id} style={{ borderBottom: '1px solid #0f172a' }}>
+                                <tr key={domain.id} style={{ borderBottom: `1px solid ${t.bg}` }}>
                                     <td style={{ padding: '0.6rem 0.75rem' }}>
-                                        <span style={{ color: '#f8fafc', fontSize: '0.85rem', fontWeight: 500, fontFamily: 'monospace' }}>
+                                        <span style={{ color: t.text, fontSize: '0.85rem', fontWeight: 500, fontFamily: 'monospace' }}>
                                             {domain.domain}
                                         </span>
                                     </td>
@@ -207,7 +209,7 @@ export default function DomainsIndex({ domains, platforms, filters }) {
                                             {domain.is_blocked ? 'Bloqué' : 'Surveillé'}
                                         </button>
                                     </td>
-                                    <td style={{ padding: '0.6rem 0.75rem', color: '#64748b', fontSize: '0.8rem' }}>
+                                    <td style={{ padding: '0.6rem 0.75rem', color: t.textFaint, fontSize: '0.8rem' }}>
                                         {new Date(domain.created_at).toLocaleDateString('fr-FR')}
                                     </td>
                                     <td style={{ padding: '0.6rem 0.75rem' }}>
@@ -215,7 +217,7 @@ export default function DomainsIndex({ domains, platforms, filters }) {
                                             <button
                                                 onClick={() => { setEditingId(domain.id); setShowForm(false); }}
                                                 style={{
-                                                    background: '#334155', color: '#e2e8f0', border: 'none',
+                                                    background: t.border, color: t.textSecondary, border: 'none',
                                                     borderRadius: 4, padding: '0.25rem 0.5rem',
                                                     fontSize: '0.75rem', cursor: 'pointer',
                                                 }}
@@ -242,7 +244,7 @@ export default function DomainsIndex({ domains, platforms, filters }) {
                             )
                         )) : (
                             <tr>
-                                <td colSpan={5} style={{ padding: '2rem', textAlign: 'center', color: '#64748b', fontSize: '0.85rem' }}>
+                                <td colSpan={5} style={{ padding: '2rem', textAlign: 'center', color: t.textFaint, fontSize: '0.85rem' }}>
                                     {hasFilters ? 'Aucun domaine ne correspond aux filtres.' : 'Aucun domaine configuré. Ajoutez des domaines IA à surveiller.'}
                                 </td>
                             </tr>
@@ -257,7 +259,7 @@ export default function DomainsIndex({ domains, platforms, filters }) {
                     <PagBtn label="Préc." onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1} />
                     {generatePageNumbers().map((p, i) =>
                         p === '...' ? (
-                            <span key={`e${i}`} style={{ color: '#64748b', padding: '0 0.25rem' }}>...</span>
+                            <span key={`e${i}`} style={{ color: t.textFaint, padding: '0 0.25rem' }}>...</span>
                         ) : (
                             <PagBtn key={p} label={p} onClick={() => goToPage(p)} active={p === currentPage} />
                         )
@@ -268,10 +270,10 @@ export default function DomainsIndex({ domains, platforms, filters }) {
 
             {/* Legend */}
             <div style={{
-                marginTop: '1rem', padding: '1rem', background: '#1e293b',
-                borderRadius: 8, border: '1px solid #334155',
+                marginTop: '1rem', padding: '1rem', background: t.surface,
+                borderRadius: 8, border: `1px solid ${t.border}`,
             }}>
-                <p style={{ color: '#94a3b8', fontSize: '0.75rem', margin: 0 }}>
+                <p style={{ color: t.textMuted, fontSize: '0.75rem', margin: 0 }}>
                     <strong style={{ color: '#22c55e' }}>Surveillé</strong> : le trafic est intercepté et loggé.{' '}
                     <strong style={{ color: '#ef4444' }}>Bloqué</strong> : l'accès est totalement interdit par l'agent.
                 </p>
@@ -281,15 +283,16 @@ export default function DomainsIndex({ domains, platforms, filters }) {
 }
 
 function PagBtn({ label, onClick, disabled, active }) {
+    const { theme: t } = useTheme();
     return (
         <button
             onClick={onClick}
             disabled={disabled}
             style={{
-                background: active ? '#3b82f6' : '#1e293b',
-                border: '1px solid ' + (active ? '#3b82f6' : '#334155'),
+                background: active ? t.accent : t.surface,
+                border: `1px solid ${active ? t.accent : t.border}`,
                 borderRadius: 6, padding: '0.4rem 0.7rem',
-                color: active ? '#fff' : disabled ? '#475569' : '#e2e8f0',
+                color: active ? '#fff' : disabled ? t.textSubtle : t.textSecondary,
                 cursor: disabled ? 'default' : 'pointer',
                 fontSize: '0.8rem', fontWeight: active ? 700 : 400,
             }}
@@ -300,12 +303,18 @@ function PagBtn({ label, onClick, disabled, active }) {
 }
 
 function DomainForm({ domain, onCancel, onSuccess }) {
+    const { theme: t } = useTheme();
     const isEdit = !!domain;
     const form = useForm({
         domain: domain?.domain || '',
         platform_name: domain?.platform_name || '',
         is_blocked: domain?.is_blocked || false,
     });
+
+    const inputStyle = {
+        background: t.bg, border: `1px solid ${t.border}`, borderRadius: 6,
+        padding: '0.5rem 0.75rem', color: t.text, fontSize: '0.85rem', width: '100%',
+    };
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -318,44 +327,44 @@ function DomainForm({ domain, onCancel, onSuccess }) {
 
     return (
         <form onSubmit={handleSubmit} style={{
-            background: '#0f172a', borderRadius: 8, border: '1px solid #334155',
+            background: t.bg, borderRadius: 8, border: `1px solid ${t.border}`,
             padding: '1rem', marginBottom: '1rem',
             display: 'flex', gap: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap',
         }}>
             <div style={{ flex: 2, minWidth: 200 }}>
-                <label style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem' }}>Domaine</label>
+                <label style={{ color: t.textMuted, fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem' }}>Domaine</label>
                 <input
                     type="text" value={form.data.domain}
                     onChange={(e) => form.setData('domain', e.target.value)}
                     placeholder="api.openai.com" style={inputStyle}
                 />
-                {form.errors.domain && <span style={{ color: '#ef4444', fontSize: '0.7rem' }}>{form.errors.domain}</span>}
+                {form.errors.domain && <span style={{ color: t.danger, fontSize: '0.7rem' }}>{form.errors.domain}</span>}
             </div>
             <div style={{ flex: 1, minWidth: 150 }}>
-                <label style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem' }}>Plateforme</label>
+                <label style={{ color: t.textMuted, fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem' }}>Plateforme</label>
                 <input
                     type="text" value={form.data.platform_name}
                     onChange={(e) => form.setData('platform_name', e.target.value)}
                     placeholder="ChatGPT" style={inputStyle}
                 />
-                {form.errors.platform_name && <span style={{ color: '#ef4444', fontSize: '0.7rem' }}>{form.errors.platform_name}</span>}
+                {form.errors.platform_name && <span style={{ color: t.danger, fontSize: '0.7rem' }}>{form.errors.platform_name}</span>}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', paddingBottom: '0.25rem' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer' }}>
                     <input type="checkbox" checked={form.data.is_blocked} onChange={(e) => form.setData('is_blocked', e.target.checked)} />
-                    <span style={{ color: '#ef4444', fontSize: '0.8rem', fontWeight: 500 }}>Bloquer</span>
+                    <span style={{ color: t.danger, fontSize: '0.8rem', fontWeight: 500 }}>Bloquer</span>
                 </label>
             </div>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <button type="submit" disabled={form.processing} style={{
-                    background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 6,
+                    background: t.accent, color: '#fff', border: 'none', borderRadius: 6,
                     padding: '0.5rem 1rem', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600,
                     opacity: form.processing ? 0.7 : 1,
                 }}>
                     {isEdit ? 'Enregistrer' : 'Ajouter'}
                 </button>
                 <button type="button" onClick={onCancel} style={{
-                    background: '#334155', color: '#94a3b8', border: 'none', borderRadius: 6,
+                    background: t.border, color: t.textMuted, border: 'none', borderRadius: 6,
                     padding: '0.5rem 0.75rem', cursor: 'pointer', fontSize: '0.85rem',
                 }}>
                     Annuler

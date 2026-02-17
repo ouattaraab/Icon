@@ -1,6 +1,7 @@
 import { router } from '@inertiajs/react';
 import { useState } from 'react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
+import { useTheme } from '../../Contexts/ThemeContext';
 
 const platformIcons = {
     chatgpt: '🤖',
@@ -22,22 +23,23 @@ const severityColors = {
     info: { bg: '#1e3a5f', color: '#93c5fd' },
 };
 
-const filterSelectStyle = {
-    background: '#1e293b',
-    border: '1px solid #334155',
-    borderRadius: 8,
-    padding: '0.5rem 1rem',
-    color: '#f8fafc',
-    fontSize: '0.875rem',
-};
-
-const filterInputStyle = {
-    ...filterSelectStyle,
-    width: 'auto',
-};
-
 export default function ExchangesIndex({ exchanges = [], total = 0, page = 1, perPage = 20, totalPages = 1, filters = {}, machines = [] }) {
+    const { theme: t } = useTheme();
     const [searchValue, setSearchValue] = useState(filters?.q || '');
+
+    const filterSelectStyle = {
+        background: t.surface,
+        border: `1px solid ${t.border}`,
+        borderRadius: 8,
+        padding: '0.5rem 1rem',
+        color: t.text,
+        fontSize: '0.875rem',
+    };
+
+    const filterInputStyle = {
+        ...filterSelectStyle,
+        width: 'auto',
+    };
 
     const applyFilter = (newFilters) => {
         router.get('/exchanges', { ...filters, ...newFilters, page: 1 }, {
@@ -82,11 +84,11 @@ export default function ExchangesIndex({ exchanges = [], total = 0, page = 1, pe
                             }
                         }}
                         style={{
-                            background: '#1e293b',
-                            border: '1px solid #334155',
+                            background: t.surface,
+                            border: `1px solid ${t.border}`,
                             borderRadius: 8,
                             padding: '0.6rem 1rem',
-                            color: '#f8fafc',
+                            color: t.text,
                             fontSize: '0.875rem',
                             flex: 1,
                         }}
@@ -94,7 +96,7 @@ export default function ExchangesIndex({ exchanges = [], total = 0, page = 1, pe
                     <button
                         onClick={() => applyFilter({ q: searchValue })}
                         style={{
-                            background: '#3b82f6',
+                            background: t.accent,
                             color: '#fff',
                             border: 'none',
                             borderRadius: 8,
@@ -172,8 +174,8 @@ export default function ExchangesIndex({ exchanges = [], total = 0, page = 1, pe
                     <button
                         onClick={clearFilters}
                         style={{
-                            background: '#334155',
-                            color: '#94a3b8',
+                            background: t.border,
+                            color: t.textMuted,
                             border: 'none',
                             borderRadius: 8,
                             padding: '0.5rem 0.75rem',
@@ -205,7 +207,7 @@ export default function ExchangesIndex({ exchanges = [], total = 0, page = 1, pe
             </div>
 
             {/* Results count */}
-            <p style={{ color: '#64748b', fontSize: '0.8rem', marginBottom: '1rem' }}>
+            <p style={{ color: t.textFaint, fontSize: '0.8rem', marginBottom: '1rem' }}>
                 {total} résultat{total !== 1 ? 's' : ''}
                 {page > 1 ? ` — page ${page}/${totalPages}` : ''}
             </p>
@@ -217,20 +219,20 @@ export default function ExchangesIndex({ exchanges = [], total = 0, page = 1, pe
                         key={exchange.id}
                         onClick={() => router.visit(`/exchanges/${exchange.id}`)}
                         style={{
-                            background: '#1e293b',
+                            background: t.surface,
                             borderRadius: 10,
                             padding: '1.25rem',
-                            border: '1px solid #334155',
+                            border: `1px solid ${t.border}`,
                             cursor: 'pointer',
                             transition: 'border-color 0.15s',
                         }}
-                        onMouseEnter={(e) => e.currentTarget.style.borderColor = '#475569'}
-                        onMouseLeave={(e) => e.currentTarget.style.borderColor = '#334155'}
+                        onMouseEnter={(e) => e.currentTarget.style.borderColor = t.textSubtle}
+                        onMouseLeave={(e) => e.currentTarget.style.borderColor = t.border}
                     >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                                 <span>{platformIcons[exchange.platform] || '🔗'}</span>
-                                <span style={{ color: '#94a3b8', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase' }}>
+                                <span style={{ color: t.textMuted, fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase' }}>
                                     {exchange.platform || 'inconnu'}
                                 </span>
                                 {exchange.severity && (
@@ -247,7 +249,7 @@ export default function ExchangesIndex({ exchanges = [], total = 0, page = 1, pe
                                 )}
                                 {exchange.machine_hostname && (
                                     <span style={{
-                                        color: '#64748b',
+                                        color: t.textFaint,
                                         fontSize: '0.75rem',
                                         fontFamily: 'monospace',
                                     }}>
@@ -255,7 +257,7 @@ export default function ExchangesIndex({ exchanges = [], total = 0, page = 1, pe
                                     </span>
                                 )}
                             </div>
-                            <span style={{ color: '#475569', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+                            <span style={{ color: t.textSubtle, fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
                                 {exchange.occurred_at}
                             </span>
                         </div>
@@ -263,9 +265,9 @@ export default function ExchangesIndex({ exchanges = [], total = 0, page = 1, pe
                         {/* Prompt excerpt */}
                         {exchange.prompt && (
                             <div style={{ marginBottom: '0.5rem' }}>
-                                <span style={{ color: '#64748b', fontSize: '0.7rem', fontWeight: 600 }}>PROMPT</span>
+                                <span style={{ color: t.textFaint, fontSize: '0.7rem', fontWeight: 600 }}>PROMPT</span>
                                 <p
-                                    style={{ color: '#e2e8f0', fontSize: '0.85rem', margin: '0.2rem 0 0', lineHeight: 1.5 }}
+                                    style={{ color: t.textSecondary, fontSize: '0.85rem', margin: '0.2rem 0 0', lineHeight: 1.5 }}
                                     dangerouslySetInnerHTML={{
                                         __html: exchange.highlights?.prompt?.[0] ||
                                             (exchange.prompt?.substring(0, 300) + (exchange.prompt?.length > 300 ? '...' : ''))
@@ -277,8 +279,8 @@ export default function ExchangesIndex({ exchanges = [], total = 0, page = 1, pe
                         {/* Response excerpt */}
                         {exchange.response && (
                             <div>
-                                <span style={{ color: '#64748b', fontSize: '0.7rem', fontWeight: 600 }}>RÉPONSE</span>
-                                <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0.2rem 0 0', lineHeight: 1.5 }}>
+                                <span style={{ color: t.textFaint, fontSize: '0.7rem', fontWeight: 600 }}>RÉPONSE</span>
+                                <p style={{ color: t.textMuted, fontSize: '0.8rem', margin: '0.2rem 0 0', lineHeight: 1.5 }}>
                                     {exchange.response?.substring(0, 200)}{exchange.response?.length > 200 ? '...' : ''}
                                 </p>
                             </div>
@@ -286,13 +288,13 @@ export default function ExchangesIndex({ exchanges = [], total = 0, page = 1, pe
                     </div>
                 )) : (
                     <div style={{
-                        background: '#1e293b',
+                        background: t.surface,
                         borderRadius: 10,
                         padding: '3rem',
-                        border: '1px solid #334155',
+                        border: `1px solid ${t.border}`,
                         textAlign: 'center',
                     }}>
-                        <p style={{ color: '#64748b', fontSize: '0.9rem', margin: 0 }}>
+                        <p style={{ color: t.textFaint, fontSize: '0.9rem', margin: 0 }}>
                             {hasActiveFilters ? 'Aucun résultat pour ces critères.' : 'Aucun échange enregistré.'}
                         </p>
                     </div>
@@ -312,8 +314,8 @@ export default function ExchangesIndex({ exchanges = [], total = 0, page = 1, pe
                         disabled={page <= 1}
                         onClick={() => goToPage(page - 1)}
                         style={{
-                            background: '#334155',
-                            color: page <= 1 ? '#475569' : '#e2e8f0',
+                            background: t.border,
+                            color: page <= 1 ? t.textSubtle : t.textSecondary,
                             border: 'none',
                             borderRadius: 6,
                             padding: '0.4rem 0.75rem',
@@ -327,14 +329,14 @@ export default function ExchangesIndex({ exchanges = [], total = 0, page = 1, pe
 
                     {generatePageNumbers(page, totalPages).map((p, i) => (
                         p === '...' ? (
-                            <span key={`dots-${i}`} style={{ color: '#64748b', fontSize: '0.85rem', padding: '0 0.25rem' }}>...</span>
+                            <span key={`dots-${i}`} style={{ color: t.textFaint, fontSize: '0.85rem', padding: '0 0.25rem' }}>...</span>
                         ) : (
                             <button
                                 key={p}
                                 onClick={() => goToPage(p)}
                                 style={{
-                                    background: p === page ? '#3b82f6' : '#334155',
-                                    color: p === page ? '#fff' : '#e2e8f0',
+                                    background: p === page ? t.accent : t.border,
+                                    color: p === page ? '#fff' : t.textSecondary,
                                     border: 'none',
                                     borderRadius: 6,
                                     padding: '0.4rem 0.65rem',
@@ -353,8 +355,8 @@ export default function ExchangesIndex({ exchanges = [], total = 0, page = 1, pe
                         disabled={page >= totalPages}
                         onClick={() => goToPage(page + 1)}
                         style={{
-                            background: '#334155',
-                            color: page >= totalPages ? '#475569' : '#e2e8f0',
+                            background: t.border,
+                            color: page >= totalPages ? t.textSubtle : t.textSecondary,
                             border: 'none',
                             borderRadius: 6,
                             padding: '0.4rem 0.75rem',

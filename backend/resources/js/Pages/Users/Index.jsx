@@ -1,6 +1,7 @@
 import { router, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
+import { useTheme } from '../../Contexts/ThemeContext';
 
 const roleLabels = {
     admin: 'Administrateur',
@@ -14,23 +15,8 @@ const roleColors = {
     viewer: '#3b82f6',
 };
 
-const inputStyle = {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: 6,
-    padding: '0.5rem 0.75rem',
-    color: '#f8fafc',
-    fontSize: '0.85rem',
-    width: '100%',
-};
-
-const selectStyle = {
-    ...inputStyle,
-    appearance: 'none',
-    cursor: 'pointer',
-};
-
 export default function UsersIndex({ users }) {
+    const { theme: t } = useTheme();
     const { auth } = usePage().props;
     const [showForm, setShowForm] = useState(false);
     const [editingId, setEditingId] = useState(null);
@@ -39,13 +25,13 @@ export default function UsersIndex({ users }) {
         <DashboardLayout title="Gestion des utilisateurs">
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: 0 }}>
+                <p style={{ color: t.textMuted, fontSize: '0.85rem', margin: 0 }}>
                     {users.length} utilisateur{users.length !== 1 ? 's' : ''}
                 </p>
                 <button
                     onClick={() => { setShowForm(!showForm); setEditingId(null); }}
                     style={{
-                        background: '#3b82f6',
+                        background: t.accent,
                         color: '#fff',
                         border: 'none',
                         borderRadius: 8,
@@ -69,19 +55,19 @@ export default function UsersIndex({ users }) {
 
             {/* Users table */}
             <div style={{
-                background: '#1e293b',
+                background: t.surface,
                 borderRadius: 12,
-                border: '1px solid #334155',
+                border: `1px solid ${t.border}`,
                 overflow: 'hidden',
             }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
-                        <tr style={{ borderBottom: '1px solid #334155' }}>
+                        <tr style={{ borderBottom: `1px solid ${t.border}` }}>
                             {['Nom', 'Email', 'Rôle', 'Notifs', 'Créé le', 'Actions'].map((h) => (
                                 <th key={h} style={{
                                     padding: '0.75rem',
                                     textAlign: 'left',
-                                    color: '#94a3b8',
+                                    color: t.textMuted,
                                     fontSize: '0.7rem',
                                     textTransform: 'uppercase',
                                     letterSpacing: 1,
@@ -105,14 +91,14 @@ export default function UsersIndex({ users }) {
                                     </td>
                                 </tr>
                             ) : (
-                                <tr key={user.id} style={{ borderBottom: '1px solid #0f172a' }}>
+                                <tr key={user.id} style={{ borderBottom: `1px solid ${t.bg}` }}>
                                     <td style={{ padding: '0.6rem 0.75rem' }}>
-                                        <span style={{ color: '#f8fafc', fontSize: '0.85rem', fontWeight: 500 }}>
+                                        <span style={{ color: t.text, fontSize: '0.85rem', fontWeight: 500 }}>
                                             {user.name}
                                         </span>
                                     </td>
                                     <td style={{ padding: '0.6rem 0.75rem' }}>
-                                        <span style={{ color: '#94a3b8', fontSize: '0.85rem', fontFamily: 'monospace' }}>
+                                        <span style={{ color: t.textMuted, fontSize: '0.85rem', fontFamily: 'monospace' }}>
                                             {user.email}
                                         </span>
                                     </td>
@@ -131,12 +117,12 @@ export default function UsersIndex({ users }) {
                                     </td>
                                     <td style={{ padding: '0.6rem 0.75rem', textAlign: 'center' }}>
                                         {user.notify_critical_alerts ? (
-                                            <span style={{ color: '#22c55e', fontSize: '0.8rem' }} title="Notifications activées">Oui</span>
+                                            <span style={{ color: t.success, fontSize: '0.8rem' }} title="Notifications activées">Oui</span>
                                         ) : (
-                                            <span style={{ color: '#64748b', fontSize: '0.8rem' }} title="Notifications désactivées">Non</span>
+                                            <span style={{ color: t.textFaint, fontSize: '0.8rem' }} title="Notifications désactivées">Non</span>
                                         )}
                                     </td>
-                                    <td style={{ padding: '0.6rem 0.75rem', color: '#64748b', fontSize: '0.8rem' }}>
+                                    <td style={{ padding: '0.6rem 0.75rem', color: t.textFaint, fontSize: '0.8rem' }}>
                                         {new Date(user.created_at).toLocaleDateString('fr-FR')}
                                     </td>
                                     <td style={{ padding: '0.6rem 0.75rem' }}>
@@ -144,8 +130,8 @@ export default function UsersIndex({ users }) {
                                             <button
                                                 onClick={() => { setEditingId(user.id); setShowForm(false); }}
                                                 style={{
-                                                    background: '#334155',
-                                                    color: '#e2e8f0',
+                                                    background: t.border,
+                                                    color: t.textSecondary,
                                                     border: 'none',
                                                     borderRadius: 4,
                                                     padding: '0.25rem 0.5rem',
@@ -181,7 +167,7 @@ export default function UsersIndex({ users }) {
                             )
                         )) : (
                             <tr>
-                                <td colSpan={6} style={{ padding: '2rem', textAlign: 'center', color: '#64748b', fontSize: '0.85rem' }}>
+                                <td colSpan={6} style={{ padding: '2rem', textAlign: 'center', color: t.textFaint, fontSize: '0.85rem' }}>
                                     Aucun utilisateur.
                                 </td>
                             </tr>
@@ -194,11 +180,11 @@ export default function UsersIndex({ users }) {
             <div style={{
                 marginTop: '1rem',
                 padding: '1rem',
-                background: '#1e293b',
+                background: t.surface,
                 borderRadius: 8,
-                border: '1px solid #334155',
+                border: `1px solid ${t.border}`,
             }}>
-                <p style={{ color: '#94a3b8', fontSize: '0.75rem', margin: 0 }}>
+                <p style={{ color: t.textMuted, fontSize: '0.75rem', margin: 0 }}>
                     <strong style={{ color: roleColors.admin }}>Administrateur</strong> : accès total (utilisateurs, règles, domaines).{' '}
                     <strong style={{ color: roleColors.manager }}>Manager</strong> : gestion règles, domaines, alertes.{' '}
                     <strong style={{ color: roleColors.viewer }}>Lecteur</strong> : consultation uniquement.
@@ -209,7 +195,24 @@ export default function UsersIndex({ users }) {
 }
 
 function UserForm({ user, onCancel, onSuccess }) {
+    const { theme: t } = useTheme();
     const isEdit = !!user;
+
+    const inputStyle = {
+        background: t.bg,
+        border: `1px solid ${t.border}`,
+        borderRadius: 6,
+        padding: '0.5rem 0.75rem',
+        color: t.text,
+        fontSize: '0.85rem',
+        width: '100%',
+    };
+
+    const selectStyle = {
+        ...inputStyle,
+        appearance: 'none',
+        cursor: 'pointer',
+    };
 
     const form = useForm({
         name: user?.name || '',
@@ -239,9 +242,9 @@ function UserForm({ user, onCancel, onSuccess }) {
 
     return (
         <form onSubmit={handleSubmit} style={{
-            background: '#0f172a',
+            background: t.bg,
             borderRadius: 8,
-            border: '1px solid #334155',
+            border: `1px solid ${t.border}`,
             padding: '1rem',
             marginBottom: '1rem',
             display: 'flex',
@@ -250,7 +253,7 @@ function UserForm({ user, onCancel, onSuccess }) {
             flexWrap: 'wrap',
         }}>
             <div style={{ flex: 1, minWidth: 150 }}>
-                <label style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem' }}>
+                <label style={{ color: t.textMuted, fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem' }}>
                     Nom
                 </label>
                 <input
@@ -261,11 +264,11 @@ function UserForm({ user, onCancel, onSuccess }) {
                     style={inputStyle}
                 />
                 {form.errors.name && (
-                    <span style={{ color: '#ef4444', fontSize: '0.7rem' }}>{form.errors.name}</span>
+                    <span style={{ color: t.danger, fontSize: '0.7rem' }}>{form.errors.name}</span>
                 )}
             </div>
             <div style={{ flex: 1, minWidth: 180 }}>
-                <label style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem' }}>
+                <label style={{ color: t.textMuted, fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem' }}>
                     Email
                 </label>
                 <input
@@ -276,12 +279,12 @@ function UserForm({ user, onCancel, onSuccess }) {
                     style={inputStyle}
                 />
                 {form.errors.email && (
-                    <span style={{ color: '#ef4444', fontSize: '0.7rem' }}>{form.errors.email}</span>
+                    <span style={{ color: t.danger, fontSize: '0.7rem' }}>{form.errors.email}</span>
                 )}
             </div>
             <div style={{ flex: 1, minWidth: 140 }}>
-                <label style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem' }}>
-                    Mot de passe {isEdit && <span style={{ color: '#64748b' }}>(laisser vide pour ne pas changer)</span>}
+                <label style={{ color: t.textMuted, fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem' }}>
+                    Mot de passe {isEdit && <span style={{ color: t.textFaint }}>(laisser vide pour ne pas changer)</span>}
                 </label>
                 <input
                     type="password"
@@ -291,11 +294,11 @@ function UserForm({ user, onCancel, onSuccess }) {
                     style={inputStyle}
                 />
                 {form.errors.password && (
-                    <span style={{ color: '#ef4444', fontSize: '0.7rem' }}>{form.errors.password}</span>
+                    <span style={{ color: t.danger, fontSize: '0.7rem' }}>{form.errors.password}</span>
                 )}
             </div>
             <div style={{ minWidth: 130 }}>
-                <label style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem' }}>
+                <label style={{ color: t.textMuted, fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem' }}>
                     Rôle
                 </label>
                 <select
@@ -308,7 +311,7 @@ function UserForm({ user, onCancel, onSuccess }) {
                     <option value="admin">Administrateur</option>
                 </select>
                 {form.errors.role && (
-                    <span style={{ color: '#ef4444', fontSize: '0.7rem' }}>{form.errors.role}</span>
+                    <span style={{ color: t.danger, fontSize: '0.7rem' }}>{form.errors.role}</span>
                 )}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 120 }}>
@@ -317,9 +320,9 @@ function UserForm({ user, onCancel, onSuccess }) {
                     id="notify_critical_alerts"
                     checked={form.data.notify_critical_alerts}
                     onChange={(e) => form.setData('notify_critical_alerts', e.target.checked)}
-                    style={{ accentColor: '#3b82f6', cursor: 'pointer' }}
+                    style={{ accentColor: t.accent, cursor: 'pointer' }}
                 />
-                <label htmlFor="notify_critical_alerts" style={{ color: '#94a3b8', fontSize: '0.75rem', cursor: 'pointer' }}>
+                <label htmlFor="notify_critical_alerts" style={{ color: t.textMuted, fontSize: '0.75rem', cursor: 'pointer' }}>
                     Notifs critiques
                 </label>
             </div>
@@ -328,7 +331,7 @@ function UserForm({ user, onCancel, onSuccess }) {
                     type="submit"
                     disabled={form.processing}
                     style={{
-                        background: '#3b82f6',
+                        background: t.accent,
                         color: '#fff',
                         border: 'none',
                         borderRadius: 6,
@@ -345,8 +348,8 @@ function UserForm({ user, onCancel, onSuccess }) {
                     type="button"
                     onClick={onCancel}
                     style={{
-                        background: '#334155',
-                        color: '#94a3b8',
+                        background: t.border,
+                        color: t.textMuted,
                         border: 'none',
                         borderRadius: 6,
                         padding: '0.5rem 0.75rem',

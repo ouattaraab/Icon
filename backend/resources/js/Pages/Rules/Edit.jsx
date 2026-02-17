@@ -1,26 +1,11 @@
 import { useForm, router } from '@inertiajs/react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
 import RulePreview from '../../Components/RulePreview';
-
-const inputStyle = {
-    background: '#0f172a',
-    border: '1px solid #334155',
-    borderRadius: 8,
-    padding: '0.6rem 1rem',
-    color: '#f8fafc',
-    fontSize: '0.875rem',
-    width: '100%',
-};
-
-const labelStyle = {
-    color: '#94a3b8',
-    fontSize: '0.8rem',
-    fontWeight: 600,
-    display: 'block',
-    marginBottom: '0.4rem',
-};
+import { useTheme } from '../../Contexts/ThemeContext';
 
 export default function RulesEdit({ rule }) {
+    const { theme: t } = useTheme();
+
     const { data, setData, put, processing, errors } = useForm({
         name: rule.name || '',
         description: rule.description || '',
@@ -33,13 +18,31 @@ export default function RulesEdit({ rule }) {
         enabled: rule.enabled ?? true,
     });
 
+    const inputStyle = {
+        background: t.bg,
+        border: `1px solid ${t.border}`,
+        borderRadius: 8,
+        padding: '0.6rem 1rem',
+        color: t.text,
+        fontSize: '0.875rem',
+        width: '100%',
+    };
+
+    const labelStyle = {
+        color: t.textMuted,
+        fontSize: '0.8rem',
+        fontWeight: 600,
+        display: 'block',
+        marginBottom: '0.4rem',
+    };
+
     const handleSubmit = (e) => {
         e.preventDefault();
         put(`/rules/${rule.id}`);
     };
 
     const handleDelete = () => {
-        if (confirm('Supprimer cette règle ? Cette action est irréversible.')) {
+        if (confirm('Supprimer cette r\u00e8gle ? Cette action est irr\u00e9versible.')) {
             router.delete(`/rules/${rule.id}`);
         }
     };
@@ -48,9 +51,9 @@ export default function RulesEdit({ rule }) {
         <DashboardLayout title={`Modifier : ${rule.name}`}>
             <form onSubmit={handleSubmit} style={{ maxWidth: 700 }}>
                 <div style={{
-                    background: '#1e293b',
+                    background: t.surface,
                     borderRadius: 12,
-                    border: '1px solid #334155',
+                    border: `1px solid ${t.border}`,
                     padding: '2rem',
                     display: 'flex',
                     flexDirection: 'column',
@@ -58,7 +61,7 @@ export default function RulesEdit({ rule }) {
                 }}>
                     {/* Header with version info */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>
+                        <span style={{ color: t.textMuted, fontSize: '0.75rem' }}>
                             Version : {rule.version} | ID : {rule.id?.slice(0, 8)}...
                         </span>
                         <span style={{
@@ -67,7 +70,7 @@ export default function RulesEdit({ rule }) {
                             fontSize: '0.7rem',
                             fontWeight: 600,
                             color: '#fff',
-                            background: data.enabled ? '#22c55e' : '#ef4444',
+                            background: data.enabled ? t.success : t.danger,
                         }}>
                             {data.enabled ? 'Active' : 'Inactive'}
                         </span>
@@ -75,14 +78,14 @@ export default function RulesEdit({ rule }) {
 
                     {/* Name */}
                     <div>
-                        <label style={labelStyle}>Nom de la règle</label>
+                        <label style={labelStyle}>Nom de la r\u00e8gle</label>
                         <input
                             type="text"
                             value={data.name}
                             onChange={(e) => setData('name', e.target.value)}
                             style={inputStyle}
                         />
-                        {errors.name && <p style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem' }}>{errors.name}</p>}
+                        {errors.name && <p style={{ color: t.danger, fontSize: '0.75rem', marginTop: '0.25rem' }}>{errors.name}</p>}
                     </div>
 
                     {/* Description */}
@@ -99,7 +102,7 @@ export default function RulesEdit({ rule }) {
                     {/* Category + Target row */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                         <div>
-                            <label style={labelStyle}>Catégorie (action)</label>
+                            <label style={labelStyle}>Cat\u00e9gorie (action)</label>
                             <select value={data.category} onChange={(e) => {
                                 setData('category', e.target.value);
                                 if (e.target.value === 'block') {
@@ -116,8 +119,8 @@ export default function RulesEdit({ rule }) {
                         <div>
                             <label style={labelStyle}>Cible</label>
                             <select value={data.target} onChange={(e) => setData('target', e.target.value)} style={inputStyle}>
-                                <option value="prompt">Prompt (requête utilisateur)</option>
-                                <option value="response">Réponse IA</option>
+                                <option value="prompt">Prompt (requ\u00eate utilisateur)</option>
+                                <option value="response">R\u00e9ponse IA</option>
                                 <option value="clipboard">Presse-papier</option>
                                 <option value="domain">Domaine</option>
                             </select>
@@ -128,8 +131,8 @@ export default function RulesEdit({ rule }) {
                     <div>
                         <label style={labelStyle}>Type de condition</label>
                         <select value={data.condition_type} onChange={(e) => setData('condition_type', e.target.value)} style={inputStyle}>
-                            <option value="keyword">Mots-clés</option>
-                            <option value="regex">Expression régulière</option>
+                            <option value="keyword">Mots-cl\u00e9s</option>
+                            <option value="regex">Expression r\u00e9guli\u00e8re</option>
                             <option value="domain_list">Liste de domaines</option>
                             <option value="content_length">Longueur du contenu</option>
                         </select>
@@ -138,7 +141,7 @@ export default function RulesEdit({ rule }) {
                     {/* Condition value - keyword mode */}
                     {data.condition_type === 'keyword' && (
                         <div>
-                            <label style={labelStyle}>Mots-clés (séparés par des virgules)</label>
+                            <label style={labelStyle}>Mots-cl\u00e9s (s\u00e9par\u00e9s par des virgules)</label>
                             <input
                                 type="text"
                                 value={(data.condition_value?.keywords || []).join(', ')}
@@ -148,7 +151,7 @@ export default function RulesEdit({ rule }) {
                                 })}
                                 style={inputStyle}
                             />
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem', color: '#94a3b8', fontSize: '0.8rem' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem', color: t.textMuted, fontSize: '0.8rem' }}>
                                 <input
                                     type="checkbox"
                                     checked={data.condition_value?.match_all || false}
@@ -157,7 +160,7 @@ export default function RulesEdit({ rule }) {
                                         match_all: e.target.checked,
                                     })}
                                 />
-                                Tous les mots-clés doivent être présents
+                                Tous les mots-cl\u00e9s doivent \u00eatre pr\u00e9sents
                             </label>
                         </div>
                     )}
@@ -165,7 +168,7 @@ export default function RulesEdit({ rule }) {
                     {/* Condition value - regex mode */}
                     {data.condition_type === 'regex' && (
                         <div>
-                            <label style={labelStyle}>Expression régulière</label>
+                            <label style={labelStyle}>Expression r\u00e9guli\u00e8re</label>
                             <input
                                 type="text"
                                 value={data.condition_value?.pattern || ''}
@@ -175,7 +178,7 @@ export default function RulesEdit({ rule }) {
                                 })}
                                 style={{ ...inputStyle, fontFamily: 'monospace' }}
                             />
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem', color: '#94a3b8', fontSize: '0.8rem' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem', color: t.textMuted, fontSize: '0.8rem' }}>
                                 <input
                                     type="checkbox"
                                     checked={data.condition_value?.case_insensitive ?? true}
@@ -184,7 +187,7 @@ export default function RulesEdit({ rule }) {
                                         case_insensitive: e.target.checked,
                                     })}
                                 />
-                                Insensible à la casse
+                                Insensible \u00e0 la casse
                             </label>
                         </div>
                     )}
@@ -199,7 +202,7 @@ export default function RulesEdit({ rule }) {
                                     domains: e.target.value.split('\n').map(d => d.trim()).filter(Boolean),
                                 })}
                                 rows={4}
-                                placeholder="api.openai.com&#10;claude.ai"
+                                placeholder={"api.openai.com\nclaude.ai"}
                                 style={{ ...inputStyle, fontFamily: 'monospace', resize: 'vertical' }}
                             />
                         </div>
@@ -208,7 +211,7 @@ export default function RulesEdit({ rule }) {
                     {/* Condition value - content_length mode */}
                     {data.condition_type === 'content_length' && (
                         <div>
-                            <label style={labelStyle}>Longueur maximale (caractères)</label>
+                            <label style={labelStyle}>Longueur maximale (caract\u00e8res)</label>
                             <input
                                 type="number"
                                 value={data.condition_value?.max_length || 10000}
@@ -223,7 +226,7 @@ export default function RulesEdit({ rule }) {
 
                     {/* Priority */}
                     <div>
-                        <label style={labelStyle}>Priorité (0-1000, plus élevé = évalué en premier)</label>
+                        <label style={labelStyle}>Priorit\u00e9 (0-1000, plus \u00e9lev\u00e9 = \u00e9valu\u00e9 en premier)</label>
                         <input
                             type="number"
                             value={data.priority}
@@ -237,7 +240,7 @@ export default function RulesEdit({ rule }) {
                     {/* Block message */}
                     {data.category === 'block' && (
                         <div>
-                            <label style={labelStyle}>Message d'avertissement affiché à l'utilisateur</label>
+                            <label style={labelStyle}>Message d'avertissement affich\u00e9 \u00e0 l'utilisateur</label>
                             <textarea
                                 value={data.action_config?.message || ''}
                                 onChange={(e) => setData('action_config', {
@@ -254,13 +257,13 @@ export default function RulesEdit({ rule }) {
                     <RulePreview conditionType={data.condition_type} conditionValue={data.condition_value} />
 
                     {/* Enabled toggle */}
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#f8fafc', fontSize: '0.875rem' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: t.text, fontSize: '0.875rem' }}>
                         <input
                             type="checkbox"
                             checked={data.enabled}
                             onChange={(e) => setData('enabled', e.target.checked)}
                         />
-                        Règle active
+                        R\u00e8gle active
                     </label>
 
                     {/* Actions */}
@@ -270,7 +273,7 @@ export default function RulesEdit({ rule }) {
                                 type="submit"
                                 disabled={processing}
                                 style={{
-                                    background: '#3b82f6', color: '#fff', border: 'none',
+                                    background: t.accent, color: '#fff', border: 'none',
                                     borderRadius: 8, padding: '0.7rem 2rem', cursor: 'pointer',
                                     fontSize: '0.875rem', fontWeight: 600,
                                     opacity: processing ? 0.5 : 1,
@@ -282,8 +285,8 @@ export default function RulesEdit({ rule }) {
                                 type="button"
                                 onClick={() => router.visit('/rules')}
                                 style={{
-                                    background: 'transparent', color: '#94a3b8',
-                                    border: '1px solid #334155', borderRadius: 8,
+                                    background: 'transparent', color: t.textMuted,
+                                    border: `1px solid ${t.border}`, borderRadius: 8,
                                     padding: '0.7rem 1.5rem', cursor: 'pointer',
                                     fontSize: '0.875rem',
                                 }}

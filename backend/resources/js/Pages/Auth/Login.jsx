@@ -1,6 +1,8 @@
 import { useForm } from '@inertiajs/react';
+import { useTheme } from '../../Contexts/ThemeContext';
 
 export default function Login() {
+    const { theme: t } = useTheme();
     const { data, setData, post, processing, errors } = useForm({
         email: '',
         password: '',
@@ -15,13 +17,13 @@ export default function Login() {
     return (
         <div style={{
             minHeight: '100vh',
-            background: '#0f172a',
+            background: t.bg,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
         }}>
             <div style={{
-                background: '#1e293b',
+                background: t.surface,
                 borderRadius: '12px',
                 padding: '40px',
                 width: '100%',
@@ -29,10 +31,10 @@ export default function Login() {
                 boxShadow: '0 25px 50px rgba(0,0,0,0.5)',
             }}>
                 <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-                    <h1 style={{ fontSize: '28px', fontWeight: 'bold', color: '#f8fafc', margin: 0 }}>
+                    <h1 style={{ fontSize: '28px', fontWeight: 'bold', color: t.text, margin: 0 }}>
                         Icon
                     </h1>
-                    <p style={{ color: '#94a3b8', marginTop: '8px', fontSize: '14px' }}>
+                    <p style={{ color: t.textMuted, marginTop: '8px', fontSize: '14px' }}>
                         Monitoring IA — GS2E
                     </p>
                 </div>
@@ -49,10 +51,10 @@ export default function Login() {
                             style={{
                                 width: '100%',
                                 padding: '10px 14px',
-                                background: '#0f172a',
-                                border: errors.email ? '1px solid #ef4444' : '1px solid #334155',
+                                background: t.bg,
+                                border: errors.email ? `1px solid ${t.danger}` : `1px solid ${t.border}`,
                                 borderRadius: '8px',
-                                color: '#f8fafc',
+                                color: t.text,
                                 fontSize: '14px',
                                 outline: 'none',
                                 boxSizing: 'border-box',
@@ -61,7 +63,7 @@ export default function Login() {
                             autoFocus
                         />
                         {errors.email && (
-                            <p style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px' }}>{errors.email}</p>
+                            <p style={{ color: t.danger, fontSize: '12px', marginTop: '4px' }}>{errors.email}</p>
                         )}
                     </div>
 
@@ -76,10 +78,10 @@ export default function Login() {
                             style={{
                                 width: '100%',
                                 padding: '10px 14px',
-                                background: '#0f172a',
-                                border: '1px solid #334155',
+                                background: t.bg,
+                                border: `1px solid ${t.border}`,
                                 borderRadius: '8px',
-                                color: '#f8fafc',
+                                color: t.text,
                                 fontSize: '14px',
                                 outline: 'none',
                                 boxSizing: 'border-box',
@@ -93,9 +95,9 @@ export default function Login() {
                             type="checkbox"
                             checked={data.remember}
                             onChange={e => setData('remember', e.target.checked)}
-                            style={{ accentColor: '#3b82f6' }}
+                            style={{ accentColor: t.accent }}
                         />
-                        <label style={{ color: '#94a3b8', fontSize: '13px' }}>Se souvenir de moi</label>
+                        <label style={{ color: t.textMuted, fontSize: '13px' }}>Se souvenir de moi</label>
                     </div>
 
                     <button
@@ -104,7 +106,7 @@ export default function Login() {
                         style={{
                             width: '100%',
                             padding: '12px',
-                            background: processing ? '#1e40af' : '#3b82f6',
+                            background: processing ? '#1e40af' : t.accent,
                             color: 'white',
                             border: 'none',
                             borderRadius: '8px',

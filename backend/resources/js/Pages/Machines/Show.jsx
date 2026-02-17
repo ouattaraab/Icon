@@ -1,6 +1,7 @@
 import { router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
+import { useTheme } from '../../Contexts/ThemeContext';
 
 const statusColors = {
     online: '#22c55e',
@@ -62,11 +63,6 @@ const platformColors = {
     mistral: '#f97316',
 };
 
-const cardStyle = {
-    background: '#1e293b', borderRadius: 12,
-    border: '1px solid #334155', padding: '1.5rem',
-};
-
 function formatDate(isoStr) {
     if (!isoStr) return null;
     try {
@@ -84,6 +80,7 @@ function formatShortDate(dateStr) {
 }
 
 export default function MachinesShow({ machine, stats, dailyActivity = [], eventTypes = {}, alerts = [], platformBreakdown = [], hourlyActivity = {}, pendingCommands = [] }) {
+    const { theme: t } = useTheme();
     const [activeTab, setActiveTab] = useState('events');
     const [confirmAction, setConfirmAction] = useState(null);
     const [editing, setEditing] = useState(false);
@@ -94,6 +91,11 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
     });
     const { auth, flash } = usePage().props;
     const canManage = auth?.is_manager ?? false;
+
+    const cardStyle = {
+        background: t.surface, borderRadius: 12,
+        border: `1px solid ${t.border}`, padding: '1.5rem',
+    };
 
     const handleSaveEdit = () => {
         router.put(`/machines/${machine.id}`, editData, {
@@ -136,22 +138,22 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
                 }} onClick={() => setConfirmAction(null)}>
                     <div
                         style={{
-                            background: '#1e293b', border: '1px solid #334155', borderRadius: 12,
+                            background: t.surface, border: `1px solid ${t.border}`, borderRadius: 12,
                             padding: '2rem', maxWidth: 420, width: '100%',
                         }}
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <h3 style={{ color: '#f8fafc', margin: '0 0 0.75rem', fontSize: '1.1rem' }}>
+                        <h3 style={{ color: t.text, margin: '0 0 0.75rem', fontSize: '1.1rem' }}>
                             Confirmer l'action
                         </h3>
-                        <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: '0 0 1.5rem', lineHeight: 1.5 }}>
-                            {confirmAction.label} sur <strong style={{ color: '#e2e8f0' }}>{machine.hostname}</strong> ?
+                        <p style={{ color: t.textMuted, fontSize: '0.85rem', margin: '0 0 1.5rem', lineHeight: 1.5 }}>
+                            {confirmAction.label} sur <strong style={{ color: t.textSecondary }}>{machine.hostname}</strong> ?
                         </p>
                         <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
                             <button
                                 onClick={() => setConfirmAction(null)}
                                 style={{
-                                    background: '#334155', color: '#e2e8f0', border: 'none', borderRadius: 8,
+                                    background: t.border, color: t.textSecondary, border: 'none', borderRadius: 8,
                                     padding: '0.6rem 1.25rem', cursor: 'pointer', fontSize: '0.85rem',
                                 }}
                             >
@@ -163,7 +165,7 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
                                     setConfirmAction(null);
                                 }}
                                 style={{
-                                    background: confirmAction.type === 'toggle' && machine.status !== 'inactive' ? '#ef4444' : '#3b82f6',
+                                    background: confirmAction.type === 'toggle' && machine.status !== 'inactive' ? t.danger : t.accent,
                                     color: '#fff', border: 'none', borderRadius: 8,
                                     padding: '0.6rem 1.25rem', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600,
                                 }}
@@ -180,7 +182,7 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
                 <div style={{
                     background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)',
                     borderRadius: 8, padding: '0.75rem 1rem', marginBottom: '1rem',
-                    color: '#22c55e', fontSize: '0.85rem', fontWeight: 500,
+                    color: t.success, fontSize: '0.85rem', fontWeight: 500,
                 }}>
                     {flash.success}
                 </div>
@@ -193,10 +195,10 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
                     borderRadius: 8, padding: '0.75rem 1rem', marginBottom: '1rem',
                     display: 'flex', alignItems: 'center', gap: '0.5rem',
                 }}>
-                    <span style={{ color: '#f59e0b', fontSize: '0.85rem', fontWeight: 600 }}>
+                    <span style={{ color: t.warning, fontSize: '0.85rem', fontWeight: 600 }}>
                         {pendingCommands.length} commande{pendingCommands.length > 1 ? 's' : ''} en attente
                     </span>
-                    <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>
+                    <span style={{ color: t.textMuted, fontSize: '0.75rem' }}>
                         ({pendingCommands.map(c => c.type === 'force_sync_rules' ? 'sync' : c.type).join(', ')})
                     </span>
                 </div>
@@ -206,7 +208,7 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
             <button
                 onClick={() => router.visit('/machines')}
                 style={{
-                    background: 'transparent', color: '#94a3b8', border: 'none',
+                    background: 'transparent', color: t.textMuted, border: 'none',
                     cursor: 'pointer', fontSize: '0.875rem', marginBottom: '1rem', padding: 0,
                 }}
             >
@@ -227,10 +229,10 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
                                 {machine.os === 'windows' ? 'W' : 'M'}
                             </span>
                             <div>
-                                <h2 style={{ color: '#f8fafc', margin: 0, fontSize: '1.5rem', fontWeight: 700 }}>
+                                <h2 style={{ color: t.text, margin: 0, fontSize: '1.5rem', fontWeight: 700 }}>
                                     {machine.hostname}
                                 </h2>
-                                <p style={{ color: '#94a3b8', margin: '0.2rem 0 0', fontSize: '0.85rem' }}>
+                                <p style={{ color: t.textMuted, margin: '0.2rem 0 0', fontSize: '0.85rem' }}>
                                     {machine.os} {machine.os_version} — Agent v{machine.agent_version}
                                 </p>
                             </div>
@@ -245,7 +247,7 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
                                             padding: '0.15rem 0.5rem', borderRadius: 12,
                                             fontSize: '0.65rem', fontWeight: 600,
                                             color: '#fff',
-                                            background: tag.color || '#475569',
+                                            background: tag.color || t.textSubtle,
                                         }}
                                     >
                                         {tag.name}
@@ -258,7 +260,7 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
                         <button
                             onClick={() => router.visit(`/exchanges?machine_id=${machine.id}`)}
                             style={{
-                                background: '#334155', color: '#e2e8f0', border: 'none',
+                                background: t.border, color: t.textSecondary, border: 'none',
                                 borderRadius: 6, padding: '0.4rem 0.75rem',
                                 cursor: 'pointer', fontSize: '0.8rem',
                             }}
@@ -269,7 +271,7 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
                             <button
                                 onClick={() => setEditing(true)}
                                 style={{
-                                    background: '#334155', color: '#e2e8f0', border: 'none',
+                                    background: t.border, color: t.textSecondary, border: 'none',
                                     borderRadius: 6, padding: '0.4rem 0.75rem',
                                     cursor: 'pointer', fontSize: '0.8rem',
                                 }}
@@ -330,7 +332,7 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
                 {!editing ? (
                     <div style={{
                         display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                        gap: '1rem', marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid #334155',
+                        gap: '1rem', marginTop: '1.5rem', paddingTop: '1rem', borderTop: `1px solid ${t.border}`,
                     }}>
                         <InfoItem label="Adresse IP" value={machine.ip_address || '\u2014'} mono />
                         <InfoItem label="Departement" value={machine.department || '\u2014'} />
@@ -340,7 +342,7 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
                         <InfoItem label="ID machine" value={machine.id?.slice(0, 12) + '...'} mono />
                     </div>
                 ) : (
-                    <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid #334155' }}>
+                    <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: `1px solid ${t.border}` }}>
                         <div style={{
                             display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
                             gap: '1rem', marginBottom: '1rem',
@@ -351,7 +353,7 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
                                 onChange={(v) => setEditData({ ...editData, assigned_user: v })} />
                         </div>
                         <div style={{ marginBottom: '1rem' }}>
-                            <span style={{ color: '#64748b', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 1, display: 'block', marginBottom: '0.3rem' }}>
+                            <span style={{ color: t.textFaint, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 1, display: 'block', marginBottom: '0.3rem' }}>
                                 Notes
                             </span>
                             <textarea
@@ -360,21 +362,21 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
                                 placeholder="Notes internes sur cette machine..."
                                 rows={3}
                                 style={{
-                                    background: '#0f172a', border: '1px solid #334155', borderRadius: 8,
-                                    padding: '0.6rem 1rem', color: '#f8fafc', fontSize: '0.875rem',
+                                    background: t.bg, border: `1px solid ${t.border}`, borderRadius: 8,
+                                    padding: '0.6rem 1rem', color: t.text, fontSize: '0.875rem',
                                     width: '100%', fontFamily: 'inherit', resize: 'vertical',
                                 }}
                             />
                         </div>
                         <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
                             <button onClick={handleCancelEdit} style={{
-                                background: '#334155', color: '#e2e8f0', border: 'none', borderRadius: 8,
+                                background: t.border, color: t.textSecondary, border: 'none', borderRadius: 8,
                                 padding: '0.5rem 1rem', cursor: 'pointer', fontSize: '0.85rem',
                             }}>
                                 Annuler
                             </button>
                             <button onClick={handleSaveEdit} style={{
-                                background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 8,
+                                background: t.accent, color: '#fff', border: 'none', borderRadius: 8,
                                 padding: '0.5rem 1rem', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600,
                             }}>
                                 Enregistrer
@@ -385,11 +387,11 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
 
                 {/* Notes display (when not editing) */}
                 {!editing && machine.notes && (
-                    <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #334155' }}>
-                        <span style={{ color: '#64748b', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 1 }}>
+                    <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: `1px solid ${t.border}` }}>
+                        <span style={{ color: t.textFaint, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 1 }}>
                             Notes
                         </span>
-                        <p style={{ color: '#94a3b8', margin: '0.3rem 0 0', fontSize: '0.85rem', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+                        <p style={{ color: t.textMuted, margin: '0.3rem 0 0', fontSize: '0.85rem', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
                             {machine.notes}
                         </p>
                     </div>
@@ -411,7 +413,7 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
                 {/* Daily Activity Chart */}
                 <div style={cardStyle}>
-                    <h3 style={{ color: '#f8fafc', margin: '0 0 1rem', fontSize: '0.95rem', fontWeight: 600 }}>
+                    <h3 style={{ color: t.text, margin: '0 0 1rem', fontSize: '0.95rem', fontWeight: 600 }}>
                         Activite (14 derniers jours)
                     </h3>
                     {dailyActivity.length > 0 ? (
@@ -434,7 +436,7 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
                                                 )}
                                             </div>
                                         </div>
-                                        <span style={{ color: '#475569', fontSize: '0.55rem', whiteSpace: 'nowrap' }}>
+                                        <span style={{ color: t.textSubtle, fontSize: '0.55rem', whiteSpace: 'nowrap' }}>
                                             {formatShortDate(day.date)}
                                         </span>
                                     </div>
@@ -442,14 +444,14 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
                             })}
                         </div>
                     ) : (
-                        <p style={{ color: '#64748b', fontSize: '0.8rem', margin: 0 }}>Aucune activite recente.</p>
+                        <p style={{ color: t.textFaint, fontSize: '0.8rem', margin: 0 }}>Aucune activite recente.</p>
                     )}
                     {dailyActivity.length > 0 && (
                         <div style={{ display: 'flex', gap: '1rem', marginTop: '0.75rem' }}>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.7rem', color: '#94a3b8' }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.7rem', color: t.textMuted }}>
                                 <span style={{ width: 8, height: 8, borderRadius: 2, background: '#3b82f6' }} /> Normal
                             </span>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.7rem', color: '#94a3b8' }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.7rem', color: t.textMuted }}>
                                 <span style={{ width: 8, height: 8, borderRadius: 2, background: '#ef4444' }} /> Bloque
                             </span>
                         </div>
@@ -458,7 +460,7 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
 
                 {/* Event Type Distribution */}
                 <div style={cardStyle}>
-                    <h3 style={{ color: '#f8fafc', margin: '0 0 1rem', fontSize: '0.95rem', fontWeight: 600 }}>
+                    <h3 style={{ color: t.text, margin: '0 0 1rem', fontSize: '0.95rem', fontWeight: 600 }}>
                         Types d'evenements
                     </h3>
                     {eventTypesTotal > 0 ? (
@@ -468,17 +470,17 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
                                 return (
                                     <div key={type}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
-                                            <span style={{ color: '#e2e8f0', fontSize: '0.8rem' }}>
+                                            <span style={{ color: t.textSecondary, fontSize: '0.8rem' }}>
                                                 {eventTypeLabels[type] || type}
                                             </span>
-                                            <span style={{ color: '#64748b', fontSize: '0.75rem' }}>
+                                            <span style={{ color: t.textFaint, fontSize: '0.75rem' }}>
                                                 {count} ({pct}%)
                                             </span>
                                         </div>
-                                        <div style={{ height: 6, background: '#0f172a', borderRadius: 3 }}>
+                                        <div style={{ height: 6, background: t.bg, borderRadius: 3 }}>
                                             <div style={{
                                                 height: '100%', width: `${pct}%`, borderRadius: 3,
-                                                background: eventTypeColors[type] || '#64748b',
+                                                background: eventTypeColors[type] || t.textFaint,
                                             }} />
                                         </div>
                                     </div>
@@ -486,7 +488,7 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
                             })}
                         </div>
                     ) : (
-                        <p style={{ color: '#64748b', fontSize: '0.8rem', margin: 0 }}>Aucun evenement.</p>
+                        <p style={{ color: t.textFaint, fontSize: '0.8rem', margin: 0 }}>Aucun evenement.</p>
                     )}
                 </div>
             </div>
@@ -495,7 +497,7 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
                 {/* Platform breakdown */}
                 <div style={cardStyle}>
-                    <h3 style={{ color: '#f8fafc', margin: '0 0 1rem', fontSize: '0.95rem', fontWeight: 600 }}>
+                    <h3 style={{ color: t.text, margin: '0 0 1rem', fontSize: '0.95rem', fontWeight: 600 }}>
                         Usage par plateforme
                     </h3>
                     {platformBreakdown.length > 0 ? (
@@ -503,17 +505,17 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
                             {platformBreakdown.map((p) => {
                                 const maxP = platformBreakdown[0]?.total || 1;
                                 const pct = Math.max(2, Math.round((p.total / maxP) * 100));
-                                const color = platformColors[p.platform] || '#64748b';
+                                const color = platformColors[p.platform] || t.textFaint;
                                 return (
                                     <div key={p.platform}
                                         onClick={() => router.visit(`/exchanges?machine_id=${machine.id}&platform=${p.platform}`)}
                                         style={{ cursor: 'pointer' }}
                                     >
                                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
-                                            <span style={{ color: '#e2e8f0', fontSize: '0.8rem', fontWeight: 500, textTransform: 'capitalize' }}>
+                                            <span style={{ color: t.textSecondary, fontSize: '0.8rem', fontWeight: 500, textTransform: 'capitalize' }}>
                                                 {p.platform}
                                             </span>
-                                            <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>
+                                            <span style={{ color: t.textMuted, fontSize: '0.75rem' }}>
                                                 {p.total} evts{p.blocked > 0 ? ` (${p.blocked} bloq.)` : ''}
                                             </span>
                                         </div>
@@ -534,13 +536,13 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
                             })}
                         </div>
                     ) : (
-                        <p style={{ color: '#64748b', fontSize: '0.8rem', margin: 0 }}>Aucune donnee de plateforme.</p>
+                        <p style={{ color: t.textFaint, fontSize: '0.8rem', margin: 0 }}>Aucune donnee de plateforme.</p>
                     )}
                 </div>
 
                 {/* Hourly activity heatmap */}
                 <div style={cardStyle}>
-                    <h3 style={{ color: '#f8fafc', margin: '0 0 1rem', fontSize: '0.95rem', fontWeight: 600 }}>
+                    <h3 style={{ color: t.text, margin: '0 0 1rem', fontSize: '0.95rem', fontWeight: 600 }}>
                         Activite par heure (7j)
                     </h3>
                     {Object.keys(hourlyActivity).length > 0 ? (
@@ -554,13 +556,13 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
                                             aspectRatio: '1', borderRadius: 4,
                                             background: count > 0
                                                 ? `rgba(59, 130, 246, ${intensity})`
-                                                : '#0f172a',
-                                            border: '1px solid #33415520',
+                                                : t.bg,
+                                            border: `1px solid ${t.border}20`,
                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                                         }}>
                                             <span style={{
                                                 fontSize: '0.55rem',
-                                                color: count > 0 ? '#e2e8f0' : '#475569',
+                                                color: count > 0 ? t.textSecondary : t.textSubtle,
                                                 fontWeight: count > 0 ? 600 : 400,
                                             }}>
                                                 {h}h
@@ -570,7 +572,7 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
                                 })}
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem' }}>
-                                <span style={{ color: '#475569', fontSize: '0.6rem' }}>Faible</span>
+                                <span style={{ color: t.textSubtle, fontSize: '0.6rem' }}>Faible</span>
                                 <div style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                                     {[0.15, 0.3, 0.5, 0.7, 1].map((v, i) => (
                                         <div key={i} style={{
@@ -579,11 +581,11 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
                                         }} />
                                     ))}
                                 </div>
-                                <span style={{ color: '#475569', fontSize: '0.6rem' }}>Forte</span>
+                                <span style={{ color: t.textSubtle, fontSize: '0.6rem' }}>Forte</span>
                             </div>
                         </div>
                     ) : (
-                        <p style={{ color: '#64748b', fontSize: '0.8rem', margin: 0 }}>Aucune donnee horaire.</p>
+                        <p style={{ color: t.textFaint, fontSize: '0.8rem', margin: 0 }}>Aucune donnee horaire.</p>
                     )}
                 </div>
             </div>
@@ -603,11 +605,11 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
                         <div style={{ overflowX: 'auto' }}>
                             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                 <thead>
-                                    <tr style={{ borderBottom: '1px solid #334155' }}>
+                                    <tr style={{ borderBottom: `1px solid ${t.border}` }}>
                                         {['Type', 'Plateforme', 'Domaine', 'Severite', 'Date'].map((h) => (
                                             <th key={h} style={{
                                                 padding: '0.6rem 0.75rem', textAlign: 'left',
-                                                color: '#94a3b8', fontSize: '0.7rem',
+                                                color: t.textMuted, fontSize: '0.7rem',
                                                 textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600,
                                             }}>{h}</th>
                                         ))}
@@ -616,7 +618,7 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
                                 <tbody>
                                     {machine.events.map((event) => (
                                         <tr key={event.id} style={{
-                                            borderBottom: '1px solid #0f172a',
+                                            borderBottom: `1px solid ${t.bg}`,
                                             cursor: event.elasticsearch_id ? 'pointer' : 'default',
                                         }}
                                             onClick={() => event.elasticsearch_id && router.visit(`/exchanges/${event.elasticsearch_id}`)}
@@ -625,30 +627,30 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
                                                 <span style={{
                                                     padding: '0.15rem 0.5rem', borderRadius: 4,
                                                     fontSize: '0.7rem', fontWeight: 600,
-                                                    color: event.event_type === 'block' ? '#fca5a5' : '#e2e8f0',
-                                                    background: eventTypeColors[event.event_type] ? `${eventTypeColors[event.event_type]}20` : '#334155',
-                                                    border: `1px solid ${eventTypeColors[event.event_type] || '#475569'}40`,
+                                                    color: event.event_type === 'block' ? '#fca5a5' : t.textSecondary,
+                                                    background: eventTypeColors[event.event_type] ? `${eventTypeColors[event.event_type]}20` : t.border,
+                                                    border: `1px solid ${eventTypeColors[event.event_type] || t.textSubtle}40`,
                                                 }}>
                                                     {eventTypeLabels[event.event_type] || event.event_type}
                                                 </span>
                                             </td>
-                                            <td style={{ padding: '0.6rem 0.75rem', color: '#94a3b8', fontSize: '0.8rem' }}>
+                                            <td style={{ padding: '0.6rem 0.75rem', color: t.textMuted, fontSize: '0.8rem' }}>
                                                 {event.platform || '\u2014'}
                                             </td>
-                                            <td style={{ padding: '0.6rem 0.75rem', color: '#94a3b8', fontSize: '0.8rem', fontFamily: 'monospace' }}>
+                                            <td style={{ padding: '0.6rem 0.75rem', color: t.textMuted, fontSize: '0.8rem', fontFamily: 'monospace' }}>
                                                 {event.domain || '\u2014'}
                                             </td>
                                             <td style={{ padding: '0.6rem 0.75rem' }}>
                                                 {event.severity && (
                                                     <span style={{
-                                                        color: severityColors[event.severity] || '#94a3b8',
+                                                        color: severityColors[event.severity] || t.textMuted,
                                                         fontSize: '0.75rem', fontWeight: 600,
                                                     }}>
                                                         {event.severity}
                                                     </span>
                                                 )}
                                             </td>
-                                            <td style={{ padding: '0.6rem 0.75rem', color: '#64748b', fontSize: '0.8rem' }}>
+                                            <td style={{ padding: '0.6rem 0.75rem', color: t.textFaint, fontSize: '0.8rem' }}>
                                                 {formatDate(event.occurred_at) || event.occurred_at}
                                             </td>
                                         </tr>
@@ -657,7 +659,7 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
                             </table>
                         </div>
                     ) : (
-                        <p style={{ color: '#64748b', fontSize: '0.875rem', margin: 0 }}>Aucun evenement enregistre.</p>
+                        <p style={{ color: t.textFaint, fontSize: '0.875rem', margin: 0 }}>Aucun evenement enregistre.</p>
                     )}
                 </div>
             )}
@@ -669,8 +671,8 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                             {alerts.map((alert) => (
                                 <div key={alert.id} style={{
-                                    background: '#0f172a', borderRadius: 8,
-                                    border: `1px solid ${alert.status === 'open' && alert.severity === 'critical' ? '#7f1d1d' : '#334155'}`,
+                                    background: t.bg, borderRadius: 8,
+                                    border: `1px solid ${alert.status === 'open' && alert.severity === 'critical' ? '#7f1d1d' : t.border}`,
                                     padding: '1rem',
                                 }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
@@ -686,7 +688,7 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
                                             <span style={{
                                                 padding: '0.15rem 0.4rem', borderRadius: 4,
                                                 fontSize: '0.65rem', fontWeight: 600,
-                                                color: alertStatusColors[alert.status] || '#94a3b8',
+                                                color: alertStatusColors[alert.status] || t.textMuted,
                                                 background: `${alertStatusColors[alert.status] || '#94a3b8'}15`,
                                             }}>
                                                 {alertStatusLabels[alert.status] || alert.status}
@@ -701,21 +703,21 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
                                                 </span>
                                             )}
                                         </div>
-                                        <span style={{ color: '#64748b', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+                                        <span style={{ color: t.textFaint, fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
                                             {alert.created_at}
                                         </span>
                                     </div>
-                                    <p style={{ color: '#f8fafc', fontSize: '0.85rem', margin: '0 0 0.25rem', fontWeight: 500 }}>
+                                    <p style={{ color: t.text, fontSize: '0.85rem', margin: '0 0 0.25rem', fontWeight: 500 }}>
                                         {alert.title}
                                     </p>
                                     {alert.description && (
-                                        <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: 0, lineHeight: 1.5 }}>
+                                        <p style={{ color: t.textMuted, fontSize: '0.8rem', margin: 0, lineHeight: 1.5 }}>
                                             {alert.description.substring(0, 200)}
                                             {alert.description.length > 200 ? '...' : ''}
                                         </p>
                                     )}
                                     {alert.acknowledged_at && (
-                                        <p style={{ color: '#64748b', fontSize: '0.7rem', margin: '0.5rem 0 0' }}>
+                                        <p style={{ color: t.textFaint, fontSize: '0.7rem', margin: '0.5rem 0 0' }}>
                                             Acquittee {alert.acknowledged_at}
                                         </p>
                                     )}
@@ -723,7 +725,7 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
                             ))}
                         </div>
                     ) : (
-                        <p style={{ color: '#64748b', fontSize: '0.875rem', margin: 0 }}>Aucune alerte pour cette machine.</p>
+                        <p style={{ color: t.textFaint, fontSize: '0.875rem', margin: 0 }}>Aucune alerte pour cette machine.</p>
                     )}
                 </div>
             )}
@@ -732,14 +734,15 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
 }
 
 function TabButton({ active, onClick, label, count, badge }) {
+    const { theme: t } = useTheme();
     return (
         <button
             onClick={onClick}
             style={{
-                background: active ? '#1e293b' : 'transparent',
-                color: active ? '#f8fafc' : '#94a3b8',
-                border: active ? '1px solid #334155' : '1px solid transparent',
-                borderBottom: active ? '1px solid #1e293b' : '1px solid #334155',
+                background: active ? t.surface : 'transparent',
+                color: active ? t.text : t.textMuted,
+                border: active ? `1px solid ${t.border}` : '1px solid transparent',
+                borderBottom: active ? `1px solid ${t.surface}` : `1px solid ${t.border}`,
                 borderRadius: '8px 8px 0 0',
                 padding: '0.6rem 1.25rem',
                 cursor: 'pointer', fontSize: '0.85rem',
@@ -749,7 +752,7 @@ function TabButton({ active, onClick, label, count, badge }) {
             }}
         >
             {label}
-            {count != null && <span style={{ color: '#64748b', fontSize: '0.75rem' }}>({count})</span>}
+            {count != null && <span style={{ color: t.textFaint, fontSize: '0.75rem' }}>({count})</span>}
             {badge != null && (
                 <span style={{
                     background: '#ef4444', color: '#fff', borderRadius: 10,
@@ -764,13 +767,14 @@ function TabButton({ active, onClick, label, count, badge }) {
 }
 
 function InfoItem({ label, value, mono }) {
+    const { theme: t } = useTheme();
     return (
         <div>
-            <span style={{ color: '#64748b', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 1 }}>
+            <span style={{ color: t.textFaint, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 1 }}>
                 {label}
             </span>
             <p style={{
-                color: '#e2e8f0', margin: '0.2rem 0 0', fontSize: '0.875rem',
+                color: t.textSecondary, margin: '0.2rem 0 0', fontSize: '0.875rem',
                 fontFamily: mono ? 'monospace' : 'inherit',
             }}>
                 {value}
@@ -780,9 +784,10 @@ function InfoItem({ label, value, mono }) {
 }
 
 function EditField({ label, value, onChange }) {
+    const { theme: t } = useTheme();
     return (
         <div>
-            <span style={{ color: '#64748b', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 1, display: 'block', marginBottom: '0.3rem' }}>
+            <span style={{ color: t.textFaint, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 1, display: 'block', marginBottom: '0.3rem' }}>
                 {label}
             </span>
             <input
@@ -790,8 +795,8 @@ function EditField({ label, value, onChange }) {
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 style={{
-                    background: '#0f172a', border: '1px solid #334155', borderRadius: 8,
-                    padding: '0.5rem 0.75rem', color: '#f8fafc', fontSize: '0.875rem',
+                    background: t.bg, border: `1px solid ${t.border}`, borderRadius: 8,
+                    padding: '0.5rem 0.75rem', color: t.text, fontSize: '0.875rem',
                     width: '100%',
                 }}
             />
@@ -800,12 +805,13 @@ function EditField({ label, value, onChange }) {
 }
 
 function StatCard({ label, value, color }) {
+    const { theme: t } = useTheme();
     return (
         <div style={{
-            background: '#1e293b', borderRadius: 12,
-            border: '1px solid #334155', padding: '1.25rem',
+            background: t.surface, borderRadius: 12,
+            border: `1px solid ${t.border}`, padding: '1.25rem',
         }}>
-            <span style={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 500 }}>{label}</span>
+            <span style={{ color: t.textMuted, fontSize: '0.75rem', fontWeight: 500 }}>{label}</span>
             <p style={{ color, fontSize: '2rem', fontWeight: 700, margin: '0.3rem 0 0' }}>{value}</p>
         </div>
     );

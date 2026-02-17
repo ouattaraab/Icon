@@ -1,7 +1,9 @@
 import { useForm } from '@inertiajs/react';
 import { useState } from 'react';
+import { useTheme } from '../../Contexts/ThemeContext';
 
 export default function TwoFactorChallenge({ user_id }) {
+    const { theme: t } = useTheme();
     const [useRecovery, setUseRecovery] = useState(false);
     const { data, setData, post, processing, errors } = useForm({
         code: '',
@@ -16,13 +18,13 @@ export default function TwoFactorChallenge({ user_id }) {
     return (
         <div style={{
             minHeight: '100vh',
-            background: '#0f172a',
+            background: t.bg,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
         }}>
             <div style={{
-                background: '#1e293b',
+                background: t.surface,
                 borderRadius: 12,
                 padding: 40,
                 width: '100%',
@@ -30,15 +32,15 @@ export default function TwoFactorChallenge({ user_id }) {
                 boxShadow: '0 25px 50px rgba(0,0,0,0.5)',
             }}>
                 <div style={{ textAlign: 'center', marginBottom: 32 }}>
-                    <h1 style={{ fontSize: 28, fontWeight: 'bold', color: '#f8fafc', margin: 0 }}>
+                    <h1 style={{ fontSize: 28, fontWeight: 'bold', color: t.text, margin: 0 }}>
                         Icon
                     </h1>
-                    <p style={{ color: '#94a3b8', marginTop: 8, fontSize: 14 }}>
+                    <p style={{ color: t.textMuted, marginTop: 8, fontSize: 14 }}>
                         Vérification à deux facteurs
                     </p>
                 </div>
 
-                <p style={{ color: '#94a3b8', fontSize: 13, marginBottom: 20, textAlign: 'center' }}>
+                <p style={{ color: t.textMuted, fontSize: 13, marginBottom: 20, textAlign: 'center' }}>
                     {useRecovery
                         ? 'Entrez un de vos codes de récupération.'
                         : 'Entrez le code à 6 chiffres de votre application d\'authentification.'
@@ -57,10 +59,10 @@ export default function TwoFactorChallenge({ user_id }) {
                             style={{
                                 width: '100%',
                                 padding: '10px 14px',
-                                background: '#0f172a',
-                                border: errors.code ? '1px solid #ef4444' : '1px solid #334155',
+                                background: t.bg,
+                                border: errors.code ? `1px solid ${t.danger}` : `1px solid ${t.border}`,
                                 borderRadius: 8,
-                                color: '#f8fafc',
+                                color: t.text,
                                 fontSize: useRecovery ? 14 : 24,
                                 letterSpacing: useRecovery ? 'normal' : '0.3em',
                                 textAlign: 'center',
@@ -74,7 +76,7 @@ export default function TwoFactorChallenge({ user_id }) {
                             autoComplete="one-time-code"
                         />
                         {errors.code && (
-                            <p style={{ color: '#ef4444', fontSize: 12, marginTop: 4 }}>{errors.code}</p>
+                            <p style={{ color: t.danger, fontSize: 12, marginTop: 4 }}>{errors.code}</p>
                         )}
                     </div>
 
@@ -84,7 +86,7 @@ export default function TwoFactorChallenge({ user_id }) {
                         style={{
                             width: '100%',
                             padding: 12,
-                            background: processing ? '#1e40af' : '#3b82f6',
+                            background: processing ? '#1e40af' : t.accent,
                             color: 'white',
                             border: 'none',
                             borderRadius: 8,
@@ -107,8 +109,8 @@ export default function TwoFactorChallenge({ user_id }) {
                             width: '100%',
                             padding: 10,
                             background: 'transparent',
-                            color: '#64748b',
-                            border: '1px solid #334155',
+                            color: t.textFaint,
+                            border: `1px solid ${t.border}`,
                             borderRadius: 8,
                             fontSize: 13,
                             cursor: 'pointer',

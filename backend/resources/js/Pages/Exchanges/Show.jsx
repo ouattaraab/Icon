@@ -1,5 +1,6 @@
 import { router } from '@inertiajs/react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
+import { useTheme } from '../../Contexts/ThemeContext';
 
 const severityColors = {
     critical: { bg: '#7f1d1d', color: '#fca5a5' },
@@ -27,11 +28,6 @@ const dlpCategoryLabels = {
     generic: 'Pattern generique',
 };
 
-const cardStyle = {
-    background: '#1e293b', borderRadius: 12,
-    border: '1px solid #334155', padding: '1.5rem', marginBottom: '1rem',
-};
-
 function getPlatformColor(name) {
     const lower = (name || '').toLowerCase();
     for (const [key, color] of Object.entries(platformColors)) {
@@ -51,9 +47,15 @@ function formatDate(isoStr) {
 }
 
 export default function ExchangesShow({ exchange, machine, event, matchedRuleNames = {} }) {
+    const { theme: t } = useTheme();
     const sev = severityColors[exchange.severity] || severityColors.info;
     const dlpMatches = event?.metadata?.dlp_matches;
     const hasDlp = dlpMatches && Object.keys(dlpMatches).length > 0;
+
+    const cardStyle = {
+        background: t.surface, borderRadius: 12,
+        border: `1px solid ${t.border}`, padding: '1.5rem', marginBottom: '1rem',
+    };
 
     return (
         <DashboardLayout title="Detail de l'echange">
@@ -61,7 +63,7 @@ export default function ExchangesShow({ exchange, machine, event, matchedRuleNam
             <button
                 onClick={() => router.visit('/exchanges')}
                 style={{
-                    background: 'transparent', color: '#94a3b8', border: 'none',
+                    background: 'transparent', color: t.textMuted, border: 'none',
                     cursor: 'pointer', fontSize: '0.875rem', marginBottom: '1rem', padding: 0,
                 }}
             >
@@ -94,7 +96,7 @@ export default function ExchangesShow({ exchange, machine, event, matchedRuleNam
                             <span style={{
                                 padding: '0.2rem 0.5rem', borderRadius: 4,
                                 fontSize: '0.7rem', fontWeight: 600,
-                                color: '#e2e8f0', background: '#334155',
+                                color: t.textSecondary, background: t.border,
                             }}>
                                 {eventTypeLabels[exchange.event_type] || exchange.event_type}
                             </span>
@@ -109,18 +111,18 @@ export default function ExchangesShow({ exchange, machine, event, matchedRuleNam
                                 </span>
                             )}
                         </div>
-                        <p style={{ color: '#64748b', fontSize: '0.8rem', margin: 0, fontFamily: 'monospace' }}>
+                        <p style={{ color: t.textFaint, fontSize: '0.8rem', margin: 0, fontFamily: 'monospace' }}>
                             {exchange.domain}
                         </p>
                     </div>
-                    <span style={{ color: '#64748b', fontSize: '0.8rem' }}>
+                    <span style={{ color: t.textFaint, fontSize: '0.8rem' }}>
                         {formatDate(exchange.occurred_at) || exchange.occurred_at}
                     </span>
                 </div>
 
                 <div style={{
                     display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-                    gap: '1rem', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #334155',
+                    gap: '1rem', marginTop: '1rem', paddingTop: '1rem', borderTop: `1px solid ${t.border}`,
                 }}>
                     <MetaItem
                         label="Machine"
@@ -137,7 +139,7 @@ export default function ExchangesShow({ exchange, machine, event, matchedRuleNam
                                     </span>
                                     <span
                                         onClick={(e) => { e.stopPropagation(); router.visit(`/machines/${machine.id}`); }}
-                                        style={{ color: '#3b82f6', cursor: 'pointer' }}
+                                        style={{ color: t.accent, cursor: 'pointer' }}
                                     >
                                         {machine.hostname}
                                     </span>
@@ -155,8 +157,8 @@ export default function ExchangesShow({ exchange, machine, event, matchedRuleNam
 
                 {/* Matched rules */}
                 {exchange.matched_rules?.length > 0 && (
-                    <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #334155' }}>
-                        <span style={{ color: '#64748b', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 1 }}>
+                    <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: `1px solid ${t.border}` }}>
+                        <span style={{ color: t.textFaint, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 1 }}>
                             Regles declenchees
                         </span>
                         <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginTop: '0.4rem' }}>
@@ -184,20 +186,20 @@ export default function ExchangesShow({ exchange, machine, event, matchedRuleNam
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                         {Object.entries(dlpMatches).map(([category, matches]) => (
                             <div key={category} style={{
-                                background: '#0f172a', borderRadius: 8, padding: '1rem',
-                                border: '1px solid #334155',
+                                background: t.bg, borderRadius: 8, padding: '1rem',
+                                border: `1px solid ${t.border}`,
                             }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
                                     <span style={{
                                         width: 8, height: 8, borderRadius: '50%',
                                         background: category === 'credentials' || category === 'gs2e_internal' ? '#ef4444' : '#f59e0b',
                                     }} />
-                                    <span style={{ color: '#e2e8f0', fontSize: '0.85rem', fontWeight: 600 }}>
+                                    <span style={{ color: t.textSecondary, fontSize: '0.85rem', fontWeight: 600 }}>
                                         {dlpCategoryLabels[category] || category}
                                     </span>
                                     <span style={{
-                                        color: '#64748b', fontSize: '0.7rem',
-                                        background: '#1e293b', padding: '0.1rem 0.4rem', borderRadius: 4,
+                                        color: t.textFaint, fontSize: '0.7rem',
+                                        background: t.surface, padding: '0.1rem 0.4rem', borderRadius: 4,
                                     }}>
                                         {Array.isArray(matches) ? matches.length : 1} detection(s)
                                     </span>
@@ -208,7 +210,7 @@ export default function ExchangesShow({ exchange, machine, event, matchedRuleNam
                                             <code key={i} style={{
                                                 color: '#fca5a5', fontSize: '0.75rem',
                                                 fontFamily: 'monospace', padding: '0.2rem 0.5rem',
-                                                background: '#1e293b', borderRadius: 4,
+                                                background: t.surface, borderRadius: 4,
                                                 display: 'inline-block',
                                             }}>
                                                 {typeof match === 'object' ? JSON.stringify(match) : match}
@@ -219,7 +221,7 @@ export default function ExchangesShow({ exchange, machine, event, matchedRuleNam
                                     <code style={{
                                         color: '#fca5a5', fontSize: '0.75rem',
                                         fontFamily: 'monospace', padding: '0.2rem 0.5rem',
-                                        background: '#1e293b', borderRadius: 4,
+                                        background: t.surface, borderRadius: 4,
                                     }}>
                                         {typeof matches === 'object' ? JSON.stringify(matches) : matches}
                                     </code>
@@ -232,13 +234,13 @@ export default function ExchangesShow({ exchange, machine, event, matchedRuleNam
 
             {/* Prompt */}
             <div style={cardStyle}>
-                <h3 style={{ color: '#f8fafc', margin: '0 0 1rem', fontSize: '1rem', fontWeight: 600 }}>
+                <h3 style={{ color: t.text, margin: '0 0 1rem', fontSize: '1rem', fontWeight: 600 }}>
                     Prompt (requete utilisateur)
                 </h3>
                 {exchange.prompt ? (
                     <pre style={{
-                        background: '#0f172a', border: '1px solid #334155', borderRadius: 8,
-                        padding: '1rem', color: '#e2e8f0', fontSize: '0.8rem', lineHeight: 1.6,
+                        background: t.bg, border: `1px solid ${t.border}`, borderRadius: 8,
+                        padding: '1rem', color: t.textSecondary, fontSize: '0.8rem', lineHeight: 1.6,
                         whiteSpace: 'pre-wrap', wordBreak: 'break-word',
                         maxHeight: 500, overflowY: 'auto', margin: 0,
                     }}
@@ -247,19 +249,19 @@ export default function ExchangesShow({ exchange, machine, event, matchedRuleNam
                         }}
                     />
                 ) : (
-                    <p style={{ color: '#64748b', fontSize: '0.8rem' }}>Aucun prompt capture.</p>
+                    <p style={{ color: t.textFaint, fontSize: '0.8rem' }}>Aucun prompt capture.</p>
                 )}
             </div>
 
             {/* Response */}
             <div style={cardStyle}>
-                <h3 style={{ color: '#f8fafc', margin: '0 0 1rem', fontSize: '1rem', fontWeight: 600 }}>
+                <h3 style={{ color: t.text, margin: '0 0 1rem', fontSize: '1rem', fontWeight: 600 }}>
                     Reponse IA
                 </h3>
                 {exchange.response ? (
                     <pre style={{
-                        background: '#0f172a', border: '1px solid #334155', borderRadius: 8,
-                        padding: '1rem', color: '#e2e8f0', fontSize: '0.8rem', lineHeight: 1.6,
+                        background: t.bg, border: `1px solid ${t.border}`, borderRadius: 8,
+                        padding: '1rem', color: t.textSecondary, fontSize: '0.8rem', lineHeight: 1.6,
                         whiteSpace: 'pre-wrap', wordBreak: 'break-word',
                         maxHeight: 500, overflowY: 'auto', margin: 0,
                     }}
@@ -268,19 +270,19 @@ export default function ExchangesShow({ exchange, machine, event, matchedRuleNam
                         }}
                     />
                 ) : (
-                    <p style={{ color: '#64748b', fontSize: '0.8rem' }}>Aucune reponse capturee.</p>
+                    <p style={{ color: t.textFaint, fontSize: '0.8rem' }}>Aucune reponse capturee.</p>
                 )}
             </div>
 
             {/* Event metadata (raw) */}
             {event?.metadata && Object.keys(event.metadata).length > 0 && !hasDlp && (
                 <div style={cardStyle}>
-                    <h3 style={{ color: '#f8fafc', margin: '0 0 1rem', fontSize: '1rem', fontWeight: 600 }}>
+                    <h3 style={{ color: t.text, margin: '0 0 1rem', fontSize: '1rem', fontWeight: 600 }}>
                         Metadonnees
                     </h3>
                     <pre style={{
-                        background: '#0f172a', border: '1px solid #334155', borderRadius: 8,
-                        padding: '1rem', color: '#94a3b8', fontSize: '0.75rem', lineHeight: 1.5,
+                        background: t.bg, border: `1px solid ${t.border}`, borderRadius: 8,
+                        padding: '1rem', color: t.textMuted, fontSize: '0.75rem', lineHeight: 1.5,
                         whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0,
                         maxHeight: 300, overflowY: 'auto',
                     }}>
@@ -293,13 +295,14 @@ export default function ExchangesShow({ exchange, machine, event, matchedRuleNam
 }
 
 function MetaItem({ label, value, mono }) {
+    const { theme: t } = useTheme();
     return (
         <div>
-            <span style={{ color: '#64748b', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 1 }}>
+            <span style={{ color: t.textFaint, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 1 }}>
                 {label}
             </span>
             <div style={{
-                color: '#e2e8f0', margin: '0.2rem 0 0', fontSize: '0.8rem',
+                color: t.textSecondary, margin: '0.2rem 0 0', fontSize: '0.8rem',
                 fontFamily: mono ? 'monospace' : 'inherit',
             }}>
                 {value}

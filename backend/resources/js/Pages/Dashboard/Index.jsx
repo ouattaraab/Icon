@@ -1,6 +1,7 @@
 import { Link, router } from '@inertiajs/react';
 import { useEffect, useState, useCallback } from 'react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
+import { useTheme } from '../../Contexts/ThemeContext';
 
 const platformColors = {
     chatgpt: '#10a37f',
@@ -20,14 +21,16 @@ const severityColors = {
     info: '#3b82f6',
 };
 
-const cardStyle = {
-    background: '#1e293b',
-    borderRadius: 12,
-    padding: '1.5rem',
-    border: '1px solid #334155',
-};
-
 function StatCard({ label, value, color = '#3b82f6', subtitle, href, pulse }) {
+    const { theme: t } = useTheme();
+
+    const cardStyle = {
+        background: t.surface,
+        borderRadius: 12,
+        padding: '1.5rem',
+        border: `1px solid ${t.border}`,
+    };
+
     const content = (
         <div style={{ ...cardStyle, position: 'relative' }}>
             {pulse && (
@@ -43,7 +46,7 @@ function StatCard({ label, value, color = '#3b82f6', subtitle, href, pulse }) {
                 }} />
             )}
             <p style={{
-                color: '#94a3b8',
+                color: t.textMuted,
                 fontSize: '0.75rem',
                 margin: 0,
                 textTransform: 'uppercase',
@@ -61,7 +64,7 @@ function StatCard({ label, value, color = '#3b82f6', subtitle, href, pulse }) {
                 {value}
             </p>
             {subtitle && (
-                <p style={{ color: '#64748b', fontSize: '0.75rem', margin: '0.25rem 0 0' }}>
+                <p style={{ color: t.textFaint, fontSize: '0.75rem', margin: '0.25rem 0 0' }}>
                     {subtitle}
                 </p>
             )}
@@ -108,6 +111,15 @@ export default function DashboardIndex({
     departmentStats = [],
     dashboardConfig = null,
 }) {
+    const { theme: t } = useTheme();
+
+    const cardStyle = {
+        background: t.surface,
+        borderRadius: 12,
+        padding: '1.5rem',
+        border: `1px solid ${t.border}`,
+    };
+
     const [stats, setStats] = useState(initialStats);
     const [recentAlerts, setRecentAlerts] = useState(initialAlerts);
     const [liveFeed, setLiveFeed] = useState([]);
@@ -289,12 +301,12 @@ export default function DashboardIndex({
                     width: 8,
                     height: 8,
                     borderRadius: '50%',
-                    background: wsConnected ? '#22c55e' : '#3b82f6',
+                    background: wsConnected ? t.success : t.accent,
                     display: 'inline-block',
-                    boxShadow: wsConnected ? '0 0 6px #22c55e' : 'none',
+                    boxShadow: wsConnected ? `0 0 6px ${t.success}` : 'none',
                     animation: 'pulse 2s infinite',
                 }} />
-                <span style={{ color: '#64748b', fontSize: '0.75rem' }}>
+                <span style={{ color: t.textFaint, fontSize: '0.75rem' }}>
                     {wsConnected ? 'Temps reel actif' : 'Actualisation auto (30s)'}
                 </span>
             </div>
@@ -304,9 +316,9 @@ export default function DashboardIndex({
                 <button
                     onClick={() => setShowConfig(!showConfig)}
                     style={{
-                        background: showConfig ? '#334155' : '#1e293b',
-                        color: '#94a3b8',
-                        border: '1px solid #334155',
+                        background: showConfig ? t.border : t.surface,
+                        color: t.textMuted,
+                        border: `1px solid ${t.border}`,
                         borderRadius: 6,
                         padding: '0.4rem 0.75rem',
                         cursor: 'pointer',
@@ -323,22 +335,22 @@ export default function DashboardIndex({
                 <div style={{
                     ...cardStyle,
                     marginBottom: '1.5rem',
-                    border: '1px solid #3b82f6',
+                    border: `1px solid ${t.accent}`,
                 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                        <h3 style={{ color: '#f8fafc', fontSize: '1rem', margin: 0, fontWeight: 600 }}>
+                        <h3 style={{ color: t.text, fontSize: '1rem', margin: 0, fontWeight: 600 }}>
                             Widgets du tableau de bord
                         </h3>
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
                             <button onClick={resetConfig} style={{
-                                background: '#334155', color: '#94a3b8', border: 'none',
+                                background: t.border, color: t.textMuted, border: 'none',
                                 borderRadius: 6, padding: '0.35rem 0.6rem', cursor: 'pointer',
                                 fontSize: '0.7rem',
                             }}>
                                 Réinitialiser
                             </button>
                             <button onClick={saveConfig} style={{
-                                background: '#3b82f6', color: '#fff', border: 'none',
+                                background: t.accent, color: '#fff', border: 'none',
                                 borderRadius: 6, padding: '0.35rem 0.6rem', cursor: 'pointer',
                                 fontSize: '0.7rem', fontWeight: 600,
                             }}>
@@ -353,15 +365,15 @@ export default function DashboardIndex({
                                 alignItems: 'center',
                                 gap: '0.75rem',
                                 padding: '0.5rem 0.75rem',
-                                background: '#0f172a',
+                                background: t.bg,
                                 borderRadius: 6,
                             }}>
                                 <button
                                     onClick={() => toggleWidget(w.id)}
                                     style={{
                                         width: 18, height: 18, borderRadius: 4,
-                                        border: `2px solid ${w.visible ? '#3b82f6' : '#475569'}`,
-                                        background: w.visible ? '#3b82f6' : 'transparent',
+                                        border: `2px solid ${w.visible ? t.accent : t.textSubtle}`,
+                                        background: w.visible ? t.accent : 'transparent',
                                         cursor: 'pointer', display: 'flex',
                                         alignItems: 'center', justifyContent: 'center',
                                         color: '#fff', fontSize: '0.65rem', fontWeight: 700,
@@ -371,7 +383,7 @@ export default function DashboardIndex({
                                     {w.visible ? '\u2713' : ''}
                                 </button>
                                 <span style={{
-                                    color: w.visible ? '#e2e8f0' : '#64748b',
+                                    color: w.visible ? t.textSecondary : t.textFaint,
                                     fontSize: '0.8rem',
                                     fontWeight: 500,
                                     flex: 1,
@@ -382,7 +394,7 @@ export default function DashboardIndex({
                                     <button
                                         onClick={() => moveWidget(w.id, -1)}
                                         style={{
-                                            background: '#1e293b', color: '#94a3b8', border: '1px solid #334155',
+                                            background: t.surface, color: t.textMuted, border: `1px solid ${t.border}`,
                                             borderRadius: 4, width: 22, height: 22, cursor: 'pointer',
                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                                             fontSize: '0.7rem',
@@ -393,7 +405,7 @@ export default function DashboardIndex({
                                     <button
                                         onClick={() => moveWidget(w.id, 1)}
                                         style={{
-                                            background: '#1e293b', color: '#94a3b8', border: '1px solid #334155',
+                                            background: t.surface, color: t.textMuted, border: `1px solid ${t.border}`,
                                             borderRadius: 4, width: 22, height: 22, cursor: 'pointer',
                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                                             fontSize: '0.7rem',
@@ -436,7 +448,7 @@ export default function DashboardIndex({
                 <StatCard
                     label="Alertes ouvertes"
                     value={stats.open_alerts ?? 0}
-                    color={(stats.critical_alerts ?? 0) > 0 ? '#ef4444' : '#94a3b8'}
+                    color={(stats.critical_alerts ?? 0) > 0 ? '#ef4444' : t.textMuted}
                     subtitle={(stats.critical_alerts ?? 0) > 0 ? `${stats.critical_alerts} critiques` : null}
                     href="/alerts"
                     pulse={(stats.critical_alerts ?? 0) > 0}
@@ -450,7 +462,7 @@ export default function DashboardIndex({
                 <StatCard
                     label="Version agent"
                     value={stats.agent_version ?? '-'}
-                    color="#94a3b8"
+                    color={t.textMuted}
                 />
             </div>}
 
@@ -463,7 +475,7 @@ export default function DashboardIndex({
             }}>
                 {/* Activity last 24h */}
                 <div style={{ ...cardStyle, minHeight: 280 }}>
-                    <h3 style={{ color: '#f8fafc', fontSize: '1rem', margin: '0 0 1.25rem', fontWeight: 600 }}>
+                    <h3 style={{ color: t.text, fontSize: '1rem', margin: '0 0 1.25rem', fontWeight: 600 }}>
                         Activité des dernières 24h
                     </h3>
                     {activity24h.length > 0 ? (
@@ -489,7 +501,7 @@ export default function DashboardIndex({
                                         }}
                                     >
                                         <span style={{
-                                            color: '#94a3b8',
+                                            color: t.textMuted,
                                             fontSize: '0.55rem',
                                             marginBottom: 4,
                                         }}>
@@ -508,7 +520,7 @@ export default function DashboardIndex({
                                             title={`${item.hour}: ${item.count} événements`}
                                         />
                                         <span style={{
-                                            color: '#64748b',
+                                            color: t.textFaint,
                                             fontSize: '0.55rem',
                                             marginTop: 4,
                                             transform: 'rotate(-45deg)',
@@ -528,7 +540,7 @@ export default function DashboardIndex({
                             alignItems: 'center',
                             justifyContent: 'center',
                         }}>
-                            <p style={{ color: '#475569', fontSize: '0.85rem' }}>
+                            <p style={{ color: t.textSubtle, fontSize: '0.85rem' }}>
                                 Aucune activité dans les dernières 24h
                             </p>
                         </div>
@@ -537,7 +549,7 @@ export default function DashboardIndex({
 
                 {/* Platform usage */}
                 <div style={{ ...cardStyle, minHeight: 280 }}>
-                    <h3 style={{ color: '#f8fafc', fontSize: '1rem', margin: '0 0 1.25rem', fontWeight: 600 }}>
+                    <h3 style={{ color: t.text, fontSize: '1rem', margin: '0 0 1.25rem', fontWeight: 600 }}>
                         Usage par plateforme
                     </h3>
                     {initialPlatformUsage.length > 0 ? (
@@ -545,7 +557,7 @@ export default function DashboardIndex({
                             {initialPlatformUsage.map((item) => {
                                 const maxCount = initialPlatformUsage[0]?.count || 1;
                                 const pct = Math.round((item.count / maxCount) * 100);
-                                const color = platformColors[item.platform] || '#64748b';
+                                const color = platformColors[item.platform] || t.textFaint;
                                 return (
                                     <div key={item.platform}>
                                         <div style={{
@@ -554,21 +566,21 @@ export default function DashboardIndex({
                                             marginBottom: '0.2rem',
                                         }}>
                                             <span style={{
-                                                color: '#e2e8f0',
+                                                color: t.textSecondary,
                                                 fontSize: '0.8rem',
                                                 fontWeight: 500,
                                                 textTransform: 'capitalize',
                                             }}>
                                                 {item.platform}
                                             </span>
-                                            <span style={{ color: '#94a3b8', fontSize: '0.8rem', fontWeight: 600 }}>
+                                            <span style={{ color: t.textMuted, fontSize: '0.8rem', fontWeight: 600 }}>
                                                 {item.count}
                                             </span>
                                         </div>
                                         <div style={{
                                             height: 8,
                                             borderRadius: 4,
-                                            background: '#0f172a',
+                                            background: t.bg,
                                             overflow: 'hidden',
                                         }}>
                                             <div style={{
@@ -590,7 +602,7 @@ export default function DashboardIndex({
                             alignItems: 'center',
                             justifyContent: 'center',
                         }}>
-                            <p style={{ color: '#475569', fontSize: '0.85rem' }}>
+                            <p style={{ color: t.textSubtle, fontSize: '0.85rem' }}>
                                 Aucune donnée de plateforme
                             </p>
                         </div>
@@ -603,7 +615,7 @@ export default function DashboardIndex({
                 const maxDaily = Math.max(1, ...dailyEvents.map((d) => d.total));
                 return (
                     <div style={{ ...cardStyle, marginBottom: '1.5rem' }}>
-                        <h3 style={{ color: '#f8fafc', fontSize: '1rem', margin: '0 0 1.25rem', fontWeight: 600 }}>
+                        <h3 style={{ color: t.text, fontSize: '1rem', margin: '0 0 1.25rem', fontWeight: 600 }}>
                             Tendance sur 7 jours
                         </h3>
                         <div style={{
@@ -630,7 +642,7 @@ export default function DashboardIndex({
                                         }}
                                     >
                                         <span style={{
-                                            color: '#94a3b8',
+                                            color: t.textMuted,
                                             fontSize: '0.65rem',
                                             marginBottom: 4,
                                         }}>
@@ -659,7 +671,7 @@ export default function DashboardIndex({
                                             )}
                                         </div>
                                         <span style={{
-                                            color: '#64748b',
+                                            color: t.textFaint,
                                             fontSize: '0.65rem',
                                             marginTop: 6,
                                             whiteSpace: 'nowrap',
@@ -676,12 +688,12 @@ export default function DashboardIndex({
                             marginTop: '0.75rem',
                             justifyContent: 'center',
                         }}>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#94a3b8', fontSize: '0.7rem' }}>
-                                <span style={{ width: 10, height: 10, borderRadius: 2, background: '#3b82f6', display: 'inline-block' }} />
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: t.textMuted, fontSize: '0.7rem' }}>
+                                <span style={{ width: 10, height: 10, borderRadius: 2, background: t.accent, display: 'inline-block' }} />
                                 Normal
                             </span>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#94a3b8', fontSize: '0.7rem' }}>
-                                <span style={{ width: 10, height: 10, borderRadius: 2, background: '#ef4444', display: 'inline-block' }} />
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: t.textMuted, fontSize: '0.7rem' }}>
+                                <span style={{ width: 10, height: 10, borderRadius: 2, background: t.danger, display: 'inline-block' }} />
                                 Bloqué
                             </span>
                         </div>
@@ -695,7 +707,7 @@ export default function DashboardIndex({
                 const deptColors = ['#3b82f6', '#8b5cf6', '#22c55e', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899', '#f97316', '#14b8a6', '#6366f1'];
                 return (
                     <div style={{ ...cardStyle, marginBottom: '1.5rem' }}>
-                        <h3 style={{ color: '#f8fafc', fontSize: '1rem', margin: '0 0 1.25rem', fontWeight: 600 }}>
+                        <h3 style={{ color: t.text, fontSize: '1rem', margin: '0 0 1.25rem', fontWeight: 600 }}>
                             Activité par département (30j)
                         </h3>
                         <div style={{ display: 'flex', gap: '1.5rem' }}>
@@ -707,10 +719,10 @@ export default function DashboardIndex({
                                     return (
                                         <div key={dept.department}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
-                                                <span style={{ color: '#e2e8f0', fontSize: '0.8rem', fontWeight: 500 }}>
+                                                <span style={{ color: t.textSecondary, fontSize: '0.8rem', fontWeight: 500 }}>
                                                     {dept.department}
                                                 </span>
-                                                <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>
+                                                <span style={{ color: t.textMuted, fontSize: '0.75rem' }}>
                                                     {dept.event_count} évén. · {dept.machine_count} machine{dept.machine_count > 1 ? 's' : ''}
                                                 </span>
                                             </div>
@@ -743,7 +755,7 @@ export default function DashboardIndex({
                                     const color = deptColors[idx % deptColors.length];
                                     return (
                                         <div key={dept.department} style={{
-                                            background: '#0f172a',
+                                            background: t.bg,
                                             borderRadius: 8,
                                             padding: '0.6rem 0.75rem',
                                             display: 'flex',
@@ -752,7 +764,7 @@ export default function DashboardIndex({
                                         }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                                 <div style={{ width: 8, height: 8, borderRadius: 2, background: color }} />
-                                                <span style={{ color: '#e2e8f0', fontSize: '0.75rem', fontWeight: 500 }}>
+                                                <span style={{ color: t.textSecondary, fontSize: '0.75rem', fontWeight: 500 }}>
                                                     {dept.department}
                                                 </span>
                                             </div>
@@ -769,7 +781,7 @@ export default function DashboardIndex({
                                                         {dept.alert_count} alerte{dept.alert_count > 1 ? 's' : ''}
                                                     </span>
                                                 )}
-                                                <span style={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600 }}>
+                                                <span style={{ color: t.textMuted, fontSize: '0.75rem', fontWeight: 600 }}>
                                                     {dept.blocked_count} bloqués
                                                 </span>
                                             </div>
@@ -796,13 +808,13 @@ export default function DashboardIndex({
                         alignItems: 'center',
                         marginBottom: '1rem',
                     }}>
-                        <h3 style={{ color: '#f8fafc', fontSize: '1rem', margin: 0, fontWeight: 600 }}>
+                        <h3 style={{ color: t.text, fontSize: '1rem', margin: 0, fontWeight: 600 }}>
                             Alertes récentes
                         </h3>
                         <Link
                             href="/alerts"
                             style={{
-                                color: '#3b82f6',
+                                color: t.accent,
                                 fontSize: '0.75rem',
                                 textDecoration: 'none',
                                 fontWeight: 500,
@@ -822,25 +834,25 @@ export default function DashboardIndex({
                                         alignItems: 'center',
                                         gap: '0.75rem',
                                         padding: '0.6rem 0.75rem',
-                                        background: '#0f172a',
+                                        background: t.bg,
                                         borderRadius: 8,
                                         textDecoration: 'none',
                                         border: '1px solid transparent',
                                         transition: 'border-color 0.15s',
                                     }}
-                                    onMouseEnter={(e) => e.currentTarget.style.borderColor = '#334155'}
+                                    onMouseEnter={(e) => e.currentTarget.style.borderColor = t.border}
                                     onMouseLeave={(e) => e.currentTarget.style.borderColor = 'transparent'}
                                 >
                                     <div style={{
                                         width: 8,
                                         height: 8,
                                         borderRadius: '50%',
-                                        background: severityColors[alert.severity] || '#64748b',
+                                        background: severityColors[alert.severity] || t.textFaint,
                                         flexShrink: 0,
                                     }} />
                                     <div style={{ flex: 1, minWidth: 0 }}>
                                         <p style={{
-                                            color: '#e2e8f0',
+                                            color: t.textSecondary,
                                             fontSize: '0.8rem',
                                             margin: 0,
                                             fontWeight: 500,
@@ -851,7 +863,7 @@ export default function DashboardIndex({
                                             {alert.title}
                                         </p>
                                         <p style={{
-                                            color: '#64748b',
+                                            color: t.textFaint,
                                             fontSize: '0.7rem',
                                             margin: '0.15rem 0 0',
                                         }}>
@@ -866,7 +878,7 @@ export default function DashboardIndex({
                                         padding: '0.2rem 0.5rem',
                                         borderRadius: 4,
                                         background: alert.severity === 'critical' ? 'rgba(239,68,68,0.15)' : 'rgba(245,158,11,0.15)',
-                                        color: severityColors[alert.severity] || '#64748b',
+                                        color: severityColors[alert.severity] || t.textFaint,
                                         flexShrink: 0,
                                     }}>
                                         {alert.severity}
@@ -879,7 +891,7 @@ export default function DashboardIndex({
                             padding: '2rem 0',
                             textAlign: 'center',
                         }}>
-                            <p style={{ color: '#475569', fontSize: '0.85rem', margin: 0 }}>
+                            <p style={{ color: t.textSubtle, fontSize: '0.85rem', margin: 0 }}>
                                 Aucune alerte ouverte
                             </p>
                         </div>
@@ -897,13 +909,13 @@ export default function DashboardIndex({
                                 alignItems: 'center',
                                 marginBottom: '0.75rem',
                             }}>
-                                <h3 style={{ color: '#f8fafc', fontSize: '1rem', margin: 0, fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <h3 style={{ color: t.text, fontSize: '1rem', margin: 0, fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                     Activité en direct
                                     <span style={{
                                         width: 6,
                                         height: 6,
                                         borderRadius: '50%',
-                                        background: '#22c55e',
+                                        background: t.success,
                                         display: 'inline-block',
                                         animation: 'pulse 2s infinite',
                                     }} />
@@ -912,7 +924,7 @@ export default function DashboardIndex({
                                     onClick={() => setLiveFeed([])}
                                     style={{
                                         background: 'transparent',
-                                        color: '#64748b',
+                                        color: t.textFaint,
                                         border: 'none',
                                         cursor: 'pointer',
                                         fontSize: '0.7rem',
@@ -937,13 +949,13 @@ export default function DashboardIndex({
                             alignItems: 'center',
                             marginBottom: '1rem',
                         }}>
-                            <h3 style={{ color: '#f8fafc', fontSize: '1rem', margin: 0, fontWeight: 600 }}>
+                            <h3 style={{ color: t.text, fontSize: '1rem', margin: 0, fontWeight: 600 }}>
                                 Top machines (7j)
                             </h3>
                             <Link
                                 href="/machines"
                                 style={{
-                                    color: '#3b82f6',
+                                    color: t.accent,
                                     fontSize: '0.75rem',
                                     textDecoration: 'none',
                                     fontWeight: 500,
@@ -966,17 +978,17 @@ export default function DashboardIndex({
                                                 alignItems: 'center',
                                                 gap: '0.75rem',
                                                 padding: '0.6rem 0.75rem',
-                                                background: '#0f172a',
+                                                background: t.bg,
                                                 borderRadius: 8,
                                                 textDecoration: 'none',
                                                 border: '1px solid transparent',
                                                 transition: 'border-color 0.15s',
                                             }}
-                                            onMouseEnter={(e) => e.currentTarget.style.borderColor = '#334155'}
+                                            onMouseEnter={(e) => e.currentTarget.style.borderColor = t.border}
                                             onMouseLeave={(e) => e.currentTarget.style.borderColor = 'transparent'}
                                         >
                                             <span style={{
-                                                color: '#475569',
+                                                color: t.textSubtle,
                                                 fontSize: '0.75rem',
                                                 fontWeight: 700,
                                                 width: 20,
@@ -987,7 +999,7 @@ export default function DashboardIndex({
                                             </span>
                                             <div style={{ flex: 1, minWidth: 0 }}>
                                                 <p style={{
-                                                    color: '#e2e8f0',
+                                                    color: t.textSecondary,
                                                     fontSize: '0.8rem',
                                                     margin: 0,
                                                     fontWeight: 500,
@@ -1000,7 +1012,7 @@ export default function DashboardIndex({
                                                 <div style={{
                                                     height: 4,
                                                     borderRadius: 2,
-                                                    background: '#1e293b',
+                                                    background: t.surface,
                                                     marginTop: 4,
                                                     overflow: 'hidden',
                                                 }}>
@@ -1008,13 +1020,13 @@ export default function DashboardIndex({
                                                         height: '100%',
                                                         width: `${pct}%`,
                                                         borderRadius: 2,
-                                                        background: '#3b82f6',
+                                                        background: t.accent,
                                                         transition: 'width 0.3s ease',
                                                     }} />
                                                 </div>
                                             </div>
                                             <span style={{
-                                                color: '#94a3b8',
+                                                color: t.textMuted,
                                                 fontSize: '0.8rem',
                                                 fontWeight: 600,
                                                 flexShrink: 0,
@@ -1030,7 +1042,7 @@ export default function DashboardIndex({
                                 padding: '2rem 0',
                                 textAlign: 'center',
                             }}>
-                                <p style={{ color: '#475569', fontSize: '0.85rem', margin: 0 }}>
+                                <p style={{ color: t.textSubtle, fontSize: '0.85rem', margin: 0 }}>
                                     Aucune activité cette semaine
                                 </p>
                             </div>
@@ -1058,6 +1070,7 @@ const feedTypeConfig = {
 };
 
 function FeedItem({ item }) {
+    const { theme: t } = useTheme();
     const config = feedTypeConfig[item.type] || feedTypeConfig.events;
     const timeStr = item.time ? formatTimeAgo(item.time) : '';
 
@@ -1067,7 +1080,7 @@ function FeedItem({ item }) {
             alignItems: 'center',
             gap: '0.5rem',
             padding: '0.4rem 0.6rem',
-            background: '#0f172a',
+            background: t.bg,
             borderRadius: 6,
         }}>
             <span style={{
@@ -1086,7 +1099,7 @@ function FeedItem({ item }) {
                 {config.icon}
             </span>
             <span style={{
-                color: '#e2e8f0',
+                color: t.textSecondary,
                 fontSize: '0.75rem',
                 flex: 1,
                 whiteSpace: 'nowrap',
@@ -1095,7 +1108,7 @@ function FeedItem({ item }) {
             }}>
                 {item.message}
             </span>
-            <span style={{ color: '#475569', fontSize: '0.65rem', flexShrink: 0 }}>
+            <span style={{ color: t.textSubtle, fontSize: '0.65rem', flexShrink: 0 }}>
                 {timeStr}
             </span>
         </div>

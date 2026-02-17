@@ -1,5 +1,6 @@
 import { router, usePage } from '@inertiajs/react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
+import { useTheme } from '../../Contexts/ThemeContext';
 
 const severityStyles = {
     critical: { bg: '#7f1d1d', color: '#fca5a5', label: 'Critique', border: '#ef4444' },
@@ -33,11 +34,6 @@ const conditionLabels = {
     content_length: 'Longueur du contenu',
 };
 
-const cardStyle = {
-    background: '#1e293b', borderRadius: 12,
-    border: '1px solid #334155', padding: '1.5rem',
-};
-
 function formatDate(isoStr) {
     if (!isoStr) return null;
     try {
@@ -49,11 +45,17 @@ function formatDate(isoStr) {
 }
 
 export default function AlertsShow({ alert, relatedAlerts = [] }) {
+    const { theme: t } = useTheme();
     const { auth } = usePage().props;
     const canManage = auth?.is_manager ?? false;
 
     const sev = severityStyles[alert.severity] || severityStyles.warning;
     const status = statusConfig[alert.status] || statusConfig.open;
+
+    const cardStyle = {
+        background: t.surface, borderRadius: 12,
+        border: `1px solid ${t.border}`, padding: '1.5rem',
+    };
 
     return (
         <DashboardLayout title="Detail de l'alerte">
@@ -61,7 +63,7 @@ export default function AlertsShow({ alert, relatedAlerts = [] }) {
             <button
                 onClick={() => router.visit('/alerts')}
                 style={{
-                    background: 'transparent', color: '#94a3b8', border: 'none',
+                    background: 'transparent', color: t.textMuted, border: 'none',
                     cursor: 'pointer', fontSize: '0.875rem', marginBottom: '1rem', padding: 0,
                 }}
             >
@@ -71,7 +73,7 @@ export default function AlertsShow({ alert, relatedAlerts = [] }) {
             {/* Alert header */}
             <div style={{
                 ...cardStyle, marginBottom: '1.5rem',
-                borderColor: alert.status === 'open' ? sev.border + '60' : '#334155',
+                borderColor: alert.status === 'open' ? sev.border + '60' : t.border,
             }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
                     <div style={{ flex: 1 }}>
@@ -92,11 +94,11 @@ export default function AlertsShow({ alert, relatedAlerts = [] }) {
                                 {status.label}
                             </span>
                         </div>
-                        <h2 style={{ color: '#f8fafc', margin: '0 0 0.5rem', fontSize: '1.25rem', fontWeight: 700 }}>
+                        <h2 style={{ color: t.text, margin: '0 0 0.5rem', fontSize: '1.25rem', fontWeight: 700 }}>
                             {alert.title}
                         </h2>
                         {alert.description && (
-                            <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.9rem', lineHeight: 1.6 }}>
+                            <p style={{ color: t.textMuted, margin: 0, fontSize: '0.9rem', lineHeight: 1.6 }}>
                                 {alert.description}
                             </p>
                         )}
@@ -144,7 +146,7 @@ export default function AlertsShow({ alert, relatedAlerts = [] }) {
                 {/* Timeline */}
                 <div style={{
                     display: 'flex', gap: '2rem', marginTop: '1.5rem', paddingTop: '1rem',
-                    borderTop: '1px solid #334155', flexWrap: 'wrap',
+                    borderTop: `1px solid ${t.border}`, flexWrap: 'wrap',
                 }}>
                     <TimelineItem
                         label="Creee"
@@ -176,13 +178,13 @@ export default function AlertsShow({ alert, relatedAlerts = [] }) {
                 {alert.machine && (
                     <div style={cardStyle}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                            <h3 style={{ color: '#f8fafc', margin: 0, fontSize: '0.95rem', fontWeight: 600 }}>
+                            <h3 style={{ color: t.text, margin: 0, fontSize: '0.95rem', fontWeight: 600 }}>
                                 Machine
                             </h3>
                             <button
                                 onClick={() => router.visit(`/machines/${alert.machine.id}`)}
                                 style={{
-                                    background: '#334155', color: '#e2e8f0', border: 'none',
+                                    background: t.border, color: t.textSecondary, border: 'none',
                                     borderRadius: 6, padding: '0.35rem 0.75rem',
                                     cursor: 'pointer', fontSize: '0.8rem',
                                 }}
@@ -202,7 +204,7 @@ export default function AlertsShow({ alert, relatedAlerts = [] }) {
                 {/* Rule info */}
                 {alert.rule && (
                     <div style={cardStyle}>
-                        <h3 style={{ color: '#f8fafc', margin: '0 0 1rem', fontSize: '0.95rem', fontWeight: 600 }}>
+                        <h3 style={{ color: t.text, margin: '0 0 1rem', fontSize: '0.95rem', fontWeight: 600 }}>
                             Regle declenchee
                         </h3>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
@@ -219,14 +221,14 @@ export default function AlertsShow({ alert, relatedAlerts = [] }) {
             {alert.event && (
                 <div style={{ ...cardStyle, marginBottom: '1.5rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                        <h3 style={{ color: '#f8fafc', margin: 0, fontSize: '0.95rem', fontWeight: 600 }}>
+                        <h3 style={{ color: t.text, margin: 0, fontSize: '0.95rem', fontWeight: 600 }}>
                             Evenement associe
                         </h3>
                         {alert.event.elasticsearch_id && (
                             <button
                                 onClick={() => router.visit(`/exchanges/${alert.event.elasticsearch_id}`)}
                                 style={{
-                                    background: '#334155', color: '#e2e8f0', border: 'none',
+                                    background: t.border, color: t.textSecondary, border: 'none',
                                     borderRadius: 6, padding: '0.35rem 0.75rem',
                                     cursor: 'pointer', fontSize: '0.8rem',
                                 }}
@@ -250,7 +252,7 @@ export default function AlertsShow({ alert, relatedAlerts = [] }) {
             {/* Related alerts on same machine */}
             {relatedAlerts.length > 0 && (
                 <div style={cardStyle}>
-                    <h3 style={{ color: '#f8fafc', margin: '0 0 1rem', fontSize: '0.95rem', fontWeight: 600 }}>
+                    <h3 style={{ color: t.text, margin: '0 0 1rem', fontSize: '0.95rem', fontWeight: 600 }}>
                         Autres alertes sur cette machine
                     </h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -262,13 +264,13 @@ export default function AlertsShow({ alert, relatedAlerts = [] }) {
                                     key={ra.id}
                                     onClick={() => router.visit(`/alerts/${ra.id}`)}
                                     style={{
-                                        background: '#0f172a', borderRadius: 8,
-                                        padding: '0.75rem 1rem', border: '1px solid #334155',
+                                        background: t.bg, borderRadius: 8,
+                                        padding: '0.75rem 1rem', border: `1px solid ${t.border}`,
                                         cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.75rem',
                                         transition: 'border-color 0.15s',
                                     }}
-                                    onMouseEnter={(e) => e.currentTarget.style.borderColor = '#475569'}
-                                    onMouseLeave={(e) => e.currentTarget.style.borderColor = '#334155'}
+                                    onMouseEnter={(e) => e.currentTarget.style.borderColor = t.textSubtle}
+                                    onMouseLeave={(e) => e.currentTarget.style.borderColor = t.border}
                                 >
                                     <span style={{
                                         padding: '0.15rem 0.4rem', borderRadius: 4,
@@ -277,13 +279,13 @@ export default function AlertsShow({ alert, relatedAlerts = [] }) {
                                     }}>
                                         {raSev.label}
                                     </span>
-                                    <span style={{ color: '#e2e8f0', fontSize: '0.85rem', flex: 1 }}>
+                                    <span style={{ color: t.textSecondary, fontSize: '0.85rem', flex: 1 }}>
                                         {ra.title}
                                     </span>
                                     <span style={{ color: raSt.color, fontSize: '0.7rem', fontWeight: 500 }}>
                                         {raSt.label}
                                     </span>
-                                    <span style={{ color: '#64748b', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+                                    <span style={{ color: t.textFaint, fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
                                         {ra.created_at}
                                     </span>
                                 </div>
@@ -297,30 +299,32 @@ export default function AlertsShow({ alert, relatedAlerts = [] }) {
 }
 
 function TimelineItem({ label, date, relative, by, active }) {
+    const { theme: t } = useTheme();
+
     return (
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
             <div style={{
                 width: 10, height: 10, borderRadius: '50%', marginTop: 4,
-                background: active ? '#3b82f6' : '#334155',
-                border: '2px solid ' + (active ? '#60a5fa' : '#475569'),
+                background: active ? t.accent : t.border,
+                border: '2px solid ' + (active ? '#60a5fa' : t.textSubtle),
                 flexShrink: 0,
             }} />
             <div>
-                <span style={{ color: '#94a3b8', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>
+                <span style={{ color: t.textMuted, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>
                     {label}
                 </span>
                 {date && (
-                    <p style={{ color: '#e2e8f0', fontSize: '0.8rem', margin: '0.15rem 0 0' }}>
+                    <p style={{ color: t.textSecondary, fontSize: '0.8rem', margin: '0.15rem 0 0' }}>
                         {date}
                     </p>
                 )}
                 {relative && (
-                    <p style={{ color: '#64748b', fontSize: '0.7rem', margin: '0.1rem 0 0' }}>
+                    <p style={{ color: t.textFaint, fontSize: '0.7rem', margin: '0.1rem 0 0' }}>
                         {relative}
                     </p>
                 )}
                 {by && (
-                    <p style={{ color: '#64748b', fontSize: '0.7rem', margin: '0.1rem 0 0' }}>
+                    <p style={{ color: t.textFaint, fontSize: '0.7rem', margin: '0.1rem 0 0' }}>
                         par {by}
                     </p>
                 )}
@@ -330,13 +334,15 @@ function TimelineItem({ label, date, relative, by, active }) {
 }
 
 function MetaItem({ label, value, mono }) {
+    const { theme: t } = useTheme();
+
     return (
         <div>
-            <span style={{ color: '#64748b', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 1 }}>
+            <span style={{ color: t.textFaint, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 1 }}>
                 {label}
             </span>
             <p style={{
-                color: '#e2e8f0', margin: '0.15rem 0 0', fontSize: '0.85rem',
+                color: t.textSecondary, margin: '0.15rem 0 0', fontSize: '0.85rem',
                 fontFamily: mono ? 'monospace' : 'inherit',
             }}>
                 {value || '\u2014'}

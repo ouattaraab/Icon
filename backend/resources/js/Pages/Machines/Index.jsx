@@ -1,6 +1,7 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import { useState, useCallback } from 'react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
+import { useTheme } from '../../Contexts/ThemeContext';
 
 const statusColors = {
     online: '#22c55e',
@@ -14,21 +15,22 @@ const osIcons = {
     macos: 'M',
 };
 
-const inputStyle = {
-    background: '#1e293b',
-    border: '1px solid #334155',
-    borderRadius: 8,
-    padding: '0.5rem 1rem',
-    color: '#f8fafc',
-    fontSize: '0.875rem',
-};
-
 export default function MachinesIndex({ machines, filters, tags = [] }) {
+    const { theme: t } = useTheme();
     const { auth, flash } = usePage().props;
     const isManager = auth?.user?.role === 'admin' || auth?.user?.role === 'manager';
     const [search, setSearch] = useState(filters?.search || '');
     const [selected, setSelected] = useState([]);
     const [bulkProcessing, setBulkProcessing] = useState(false);
+
+    const inputStyle = {
+        background: t.surface,
+        border: `1px solid ${t.border}`,
+        borderRadius: 8,
+        padding: '0.5rem 1rem',
+        color: t.text,
+        fontSize: '0.875rem',
+    };
 
     const allIds = machines?.data?.map((m) => m.id) || [];
     const allSelected = allIds.length > 0 && allIds.every((id) => selected.includes(id));
@@ -118,7 +120,7 @@ export default function MachinesIndex({ machines, filters, tags = [] }) {
                     borderRadius: 8,
                     padding: '0.75rem 1rem',
                     marginBottom: '1rem',
-                    color: '#22c55e',
+                    color: t.success,
                     fontSize: '0.85rem',
                     fontWeight: 500,
                 }}>
@@ -130,7 +132,7 @@ export default function MachinesIndex({ machines, filters, tags = [] }) {
             {isManager && selected.length > 0 && (
                 <div style={{
                     background: '#1e3a5f',
-                    border: '1px solid #3b82f6',
+                    border: `1px solid ${t.accent}`,
                     borderRadius: 10,
                     padding: '0.65rem 1rem',
                     marginBottom: '1rem',
@@ -147,7 +149,7 @@ export default function MachinesIndex({ machines, filters, tags = [] }) {
                             onClick={() => handleBulkAction('force_sync')}
                             disabled={bulkProcessing}
                             style={{
-                                background: '#3b82f6', color: '#fff', border: 'none',
+                                background: t.accent, color: '#fff', border: 'none',
                                 borderRadius: 6, padding: '0.4rem 0.85rem', fontSize: '0.8rem',
                                 fontWeight: 600, cursor: bulkProcessing ? 'not-allowed' : 'pointer',
                                 opacity: bulkProcessing ? 0.6 : 1,
@@ -159,7 +161,7 @@ export default function MachinesIndex({ machines, filters, tags = [] }) {
                             onClick={() => handleBulkAction('restart')}
                             disabled={bulkProcessing}
                             style={{
-                                background: '#f59e0b', color: '#fff', border: 'none',
+                                background: t.warning, color: '#fff', border: 'none',
                                 borderRadius: 6, padding: '0.4rem 0.85rem', fontSize: '0.8rem',
                                 fontWeight: 600, cursor: bulkProcessing ? 'not-allowed' : 'pointer',
                                 opacity: bulkProcessing ? 0.6 : 1,
@@ -171,7 +173,7 @@ export default function MachinesIndex({ machines, filters, tags = [] }) {
                             onClick={() => handleBulkAction('disable')}
                             disabled={bulkProcessing}
                             style={{
-                                background: '#ef4444', color: '#fff', border: 'none',
+                                background: t.danger, color: '#fff', border: 'none',
                                 borderRadius: 6, padding: '0.4rem 0.85rem', fontSize: '0.8rem',
                                 fontWeight: 600, cursor: bulkProcessing ? 'not-allowed' : 'pointer',
                                 opacity: bulkProcessing ? 0.6 : 1,
@@ -182,7 +184,7 @@ export default function MachinesIndex({ machines, filters, tags = [] }) {
                         <button
                             onClick={() => setSelected([])}
                             style={{
-                                background: 'transparent', color: '#94a3b8', border: '1px solid #475569',
+                                background: 'transparent', color: t.textMuted, border: `1px solid ${t.textSubtle}`,
                                 borderRadius: 6, padding: '0.4rem 0.85rem', fontSize: '0.8rem',
                                 cursor: 'pointer',
                             }}
@@ -232,15 +234,15 @@ export default function MachinesIndex({ machines, filters, tags = [] }) {
                         style={inputStyle}
                     >
                         <option value="">Tous les tags</option>
-                        {tags.map((t) => (
-                            <option key={t.id} value={t.id}>{t.name}</option>
+                        {tags.map((tg) => (
+                            <option key={tg.id} value={tg.id}>{tg.name}</option>
                         ))}
                     </select>
                 )}
                 <button
                     onClick={() => applyFilters()}
                     style={{
-                        background: '#3b82f6', color: '#fff', border: 'none',
+                        background: t.accent, color: '#fff', border: 'none',
                         borderRadius: 8, padding: '0.5rem 1rem', cursor: 'pointer',
                         fontSize: '0.875rem', fontWeight: 600,
                     }}
@@ -254,7 +256,7 @@ export default function MachinesIndex({ machines, filters, tags = [] }) {
                             router.get('/machines', {}, { preserveState: true, replace: true });
                         }}
                         style={{
-                            background: 'transparent', color: '#94a3b8', border: '1px solid #334155',
+                            background: 'transparent', color: t.textMuted, border: `1px solid ${t.border}`,
                             borderRadius: 8, padding: '0.5rem 1rem', cursor: 'pointer',
                             fontSize: '0.8rem',
                         }}
@@ -262,35 +264,35 @@ export default function MachinesIndex({ machines, filters, tags = [] }) {
                         Effacer les filtres
                     </button>
                 )}
-                <span style={{ color: '#64748b', fontSize: '0.8rem', marginLeft: 'auto' }}>
+                <span style={{ color: t.textFaint, fontSize: '0.8rem', marginLeft: 'auto' }}>
                     {total} machine(s)
                 </span>
             </div>
 
             {/* Table */}
             <div style={{
-                background: '#1e293b',
+                background: t.surface,
                 borderRadius: 12,
-                border: '1px solid #334155',
+                border: `1px solid ${t.border}`,
                 overflowX: 'auto',
             }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
-                        <tr style={{ borderBottom: '1px solid #334155' }}>
+                        <tr style={{ borderBottom: `1px solid ${t.border}` }}>
                             {isManager && (
                                 <th style={{ padding: '0.75rem 0.5rem 0.75rem 1rem', width: 36 }}>
                                     <input
                                         type="checkbox"
                                         checked={allSelected}
                                         onChange={toggleAll}
-                                        style={{ accentColor: '#3b82f6', cursor: 'pointer' }}
+                                        style={{ accentColor: t.accent, cursor: 'pointer' }}
                                     />
                                 </th>
                             )}
                             {['Hostname', 'OS', 'Agent', 'Statut', 'Tags', 'Dernier contact', 'Département'].map((h) => (
                                 <th key={h} style={{
                                     padding: '0.75rem 1rem', textAlign: 'left',
-                                    color: '#94a3b8', fontSize: '0.75rem',
+                                    color: t.textMuted, fontSize: '0.75rem',
                                     textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600,
                                 }}>
                                     {h}
@@ -301,7 +303,7 @@ export default function MachinesIndex({ machines, filters, tags = [] }) {
                     <tbody>
                         {machines?.data?.length === 0 && (
                             <tr>
-                                <td colSpan={isManager ? 9 : 8} style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
+                                <td colSpan={isManager ? 9 : 8} style={{ padding: '2rem', textAlign: 'center', color: t.textFaint }}>
                                     {hasFilters ? 'Aucune machine ne correspond aux filtres.' : 'Aucune machine enregistrée.'}
                                 </td>
                             </tr>
@@ -310,7 +312,7 @@ export default function MachinesIndex({ machines, filters, tags = [] }) {
                             <tr
                                 key={machine.id}
                                 style={{
-                                    borderBottom: '1px solid #1e293b',
+                                    borderBottom: `1px solid ${t.surface}`,
                                     cursor: 'pointer',
                                     background: selected.includes(machine.id) ? 'rgba(59,130,246,0.08)' : 'transparent',
                                 }}
@@ -325,18 +327,18 @@ export default function MachinesIndex({ machines, filters, tags = [] }) {
                                                 toggleSelect(machine.id);
                                             }}
                                             onClick={(e) => e.stopPropagation()}
-                                            style={{ accentColor: '#3b82f6', cursor: 'pointer' }}
+                                            style={{ accentColor: t.accent, cursor: 'pointer' }}
                                         />
                                     </td>
                                 )}
                                 <td
-                                    style={{ padding: '0.75rem 1rem', color: '#f8fafc', fontSize: '0.875rem', fontWeight: 500 }}
+                                    style={{ padding: '0.75rem 1rem', color: t.text, fontSize: '0.875rem', fontWeight: 500 }}
                                     onClick={() => router.visit(`/machines/${machine.id}`)}
                                 >
                                     {machine.hostname}
                                 </td>
                                 <td
-                                    style={{ padding: '0.75rem 1rem', color: '#94a3b8', fontSize: '0.875rem' }}
+                                    style={{ padding: '0.75rem 1rem', color: t.textMuted, fontSize: '0.875rem' }}
                                     onClick={() => router.visit(`/machines/${machine.id}`)}
                                 >
                                     <span style={{
@@ -350,7 +352,7 @@ export default function MachinesIndex({ machines, filters, tags = [] }) {
                                     {machine.os} {machine.os_version}
                                 </td>
                                 <td
-                                    style={{ padding: '0.75rem 1rem', color: '#94a3b8', fontSize: '0.875rem' }}
+                                    style={{ padding: '0.75rem 1rem', color: t.textMuted, fontSize: '0.875rem' }}
                                     onClick={() => router.visit(`/machines/${machine.id}`)}
                                 >
                                     v{machine.agent_version}
@@ -391,18 +393,18 @@ export default function MachinesIndex({ machines, filters, tags = [] }) {
                                             </span>
                                         ))}
                                         {(!machine.tags || machine.tags.length === 0) && (
-                                            <span style={{ color: '#475569', fontSize: '0.75rem' }}>{'\u2014'}</span>
+                                            <span style={{ color: t.textSubtle, fontSize: '0.75rem' }}>{'\u2014'}</span>
                                         )}
                                     </div>
                                 </td>
                                 <td
-                                    style={{ padding: '0.75rem 1rem', color: '#94a3b8', fontSize: '0.875rem' }}
+                                    style={{ padding: '0.75rem 1rem', color: t.textMuted, fontSize: '0.875rem' }}
                                     onClick={() => router.visit(`/machines/${machine.id}`)}
                                 >
                                     {machine.last_heartbeat || '\u2014'}
                                 </td>
                                 <td
-                                    style={{ padding: '0.75rem 1rem', color: '#94a3b8', fontSize: '0.875rem' }}
+                                    style={{ padding: '0.75rem 1rem', color: t.textMuted, fontSize: '0.875rem' }}
                                     onClick={() => router.visit(`/machines/${machine.id}`)}
                                 >
                                     {machine.department || '\u2014'}
@@ -423,8 +425,8 @@ export default function MachinesIndex({ machines, filters, tags = [] }) {
                         onClick={() => goToPage(currentPage - 1)}
                         disabled={currentPage === 1}
                         style={{
-                            background: '#1e293b', border: '1px solid #334155', borderRadius: 6,
-                            padding: '0.4rem 0.75rem', color: currentPage === 1 ? '#475569' : '#e2e8f0',
+                            background: t.surface, border: `1px solid ${t.border}`, borderRadius: 6,
+                            padding: '0.4rem 0.75rem', color: currentPage === 1 ? t.textSubtle : t.textSecondary,
                             cursor: currentPage === 1 ? 'default' : 'pointer', fontSize: '0.8rem',
                         }}
                     >
@@ -432,16 +434,16 @@ export default function MachinesIndex({ machines, filters, tags = [] }) {
                     </button>
                     {generatePageNumbers().map((p, i) =>
                         p === '...' ? (
-                            <span key={`e${i}`} style={{ color: '#64748b', padding: '0 0.25rem' }}>...</span>
+                            <span key={`e${i}`} style={{ color: t.textFaint, padding: '0 0.25rem' }}>...</span>
                         ) : (
                             <button
                                 key={p}
                                 onClick={() => goToPage(p)}
                                 style={{
-                                    background: p === currentPage ? '#3b82f6' : '#1e293b',
-                                    border: '1px solid ' + (p === currentPage ? '#3b82f6' : '#334155'),
+                                    background: p === currentPage ? t.accent : t.surface,
+                                    border: `1px solid ${p === currentPage ? t.accent : t.border}`,
                                     borderRadius: 6, padding: '0.4rem 0.7rem',
-                                    color: p === currentPage ? '#fff' : '#e2e8f0',
+                                    color: p === currentPage ? '#fff' : t.textSecondary,
                                     cursor: 'pointer', fontSize: '0.8rem', fontWeight: p === currentPage ? 700 : 400,
                                 }}
                             >
@@ -453,8 +455,8 @@ export default function MachinesIndex({ machines, filters, tags = [] }) {
                         onClick={() => goToPage(currentPage + 1)}
                         disabled={currentPage === lastPage}
                         style={{
-                            background: '#1e293b', border: '1px solid #334155', borderRadius: 6,
-                            padding: '0.4rem 0.75rem', color: currentPage === lastPage ? '#475569' : '#e2e8f0',
+                            background: t.surface, border: `1px solid ${t.border}`, borderRadius: 6,
+                            padding: '0.4rem 0.75rem', color: currentPage === lastPage ? t.textSubtle : t.textSecondary,
                             cursor: currentPage === lastPage ? 'default' : 'pointer', fontSize: '0.8rem',
                         }}
                     >

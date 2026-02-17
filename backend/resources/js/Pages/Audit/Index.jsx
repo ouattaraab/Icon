@@ -1,6 +1,7 @@
 import { router } from '@inertiajs/react';
 import { useState, useCallback } from 'react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
+import { useTheme } from '../../Contexts/ThemeContext';
 
 const actionLabels = {
     'auth.login': 'Connexion',
@@ -54,13 +55,14 @@ function getActionColor(action) {
     return actionColors[prefix] || '#64748b';
 }
 
-const filterInputStyle = {
-    background: '#1e293b', border: '1px solid #334155', borderRadius: 8,
-    padding: '0.4rem 0.75rem', color: '#f8fafc', fontSize: '0.8rem',
-};
-
 export default function AuditIndex({ logs, actionTypes, users, filters }) {
+    const { theme: t } = useTheme();
     const [search, setSearch] = useState(filters?.search || '');
+
+    const filterInputStyle = {
+        background: t.surface, border: `1px solid ${t.border}`, borderRadius: 8,
+        padding: '0.4rem 0.75rem', color: t.text, fontSize: '0.8rem',
+    };
 
     const applyFilter = useCallback((key, value) => {
         const params = { ...filters, [key]: value };
@@ -160,14 +162,14 @@ export default function AuditIndex({ logs, actionTypes, users, filters }) {
                 display: 'flex', gap: '0.5rem', alignItems: 'center',
                 marginBottom: '1.5rem', flexWrap: 'wrap',
             }}>
-                <span style={{ color: '#64748b', fontSize: '0.75rem' }}>Période :</span>
+                <span style={{ color: t.textFaint, fontSize: '0.75rem' }}>Période :</span>
                 <input
                     type="date"
                     value={filters?.date_from || ''}
                     onChange={(e) => applyFilter('date_from', e.target.value)}
                     style={filterInputStyle}
                 />
-                <span style={{ color: '#64748b' }}>&mdash;</span>
+                <span style={{ color: t.textFaint }}>&mdash;</span>
                 <input
                     type="date"
                     value={filters?.date_to || ''}
@@ -175,7 +177,7 @@ export default function AuditIndex({ logs, actionTypes, users, filters }) {
                     style={filterInputStyle}
                 />
                 <button onClick={applySearch} style={{
-                    background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 6,
+                    background: t.accent, color: '#fff', border: 'none', borderRadius: 6,
                     padding: '0.4rem 0.75rem', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600,
                 }}>
                     Rechercher
@@ -184,29 +186,29 @@ export default function AuditIndex({ logs, actionTypes, users, filters }) {
                     <button
                         onClick={() => { setSearch(''); router.get('/audit', {}, { preserveState: true, replace: true }); }}
                         style={{
-                            background: 'transparent', color: '#94a3b8', border: '1px solid #475569',
+                            background: 'transparent', color: t.textMuted, border: `1px solid ${t.textSubtle}`,
                             borderRadius: 6, padding: '0.4rem 0.75rem', fontSize: '0.75rem', cursor: 'pointer',
                         }}
                     >
                         Effacer filtres
                     </button>
                 )}
-                <span style={{ color: '#64748b', fontSize: '0.8rem', marginLeft: 'auto' }}>
+                <span style={{ color: t.textFaint, fontSize: '0.8rem', marginLeft: 'auto' }}>
                     {total} entrée(s)
                 </span>
             </div>
 
             {/* Audit log table */}
             <div style={{
-                background: '#1e293b', borderRadius: 12,
-                border: '1px solid #334155', overflow: 'hidden',
+                background: t.surface, borderRadius: 12,
+                border: `1px solid ${t.border}`, overflow: 'hidden',
             }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
-                        <tr style={{ borderBottom: '1px solid #334155' }}>
+                        <tr style={{ borderBottom: `1px solid ${t.border}` }}>
                             {['Date', 'Utilisateur', 'Action', 'Cible', 'Détails', 'IP'].map((h) => (
                                 <th key={h} style={{
-                                    padding: '0.75rem', textAlign: 'left', color: '#94a3b8',
+                                    padding: '0.75rem', textAlign: 'left', color: t.textMuted,
                                     fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600,
                                 }}>{h}</th>
                             ))}
@@ -215,8 +217,8 @@ export default function AuditIndex({ logs, actionTypes, users, filters }) {
                     <tbody>
                         {logs?.data?.length > 0 ? (
                             logs.data.map((log) => (
-                                <tr key={log.id} style={{ borderBottom: '1px solid #0f172a' }}>
-                                    <td style={{ padding: '0.6rem 0.75rem', color: '#94a3b8', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+                                <tr key={log.id} style={{ borderBottom: `1px solid ${t.bg}` }}>
+                                    <td style={{ padding: '0.6rem 0.75rem', color: t.textMuted, fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
                                         {new Date(log.created_at).toLocaleString('fr-FR', {
                                             day: '2-digit', month: '2-digit', year: 'numeric',
                                             hour: '2-digit', minute: '2-digit',
@@ -225,15 +227,15 @@ export default function AuditIndex({ logs, actionTypes, users, filters }) {
                                     <td style={{ padding: '0.6rem 0.75rem' }}>
                                         {log.user ? (
                                             <div>
-                                                <span style={{ color: '#e2e8f0', fontSize: '0.8rem', fontWeight: 500 }}>
+                                                <span style={{ color: t.textSecondary, fontSize: '0.8rem', fontWeight: 500 }}>
                                                     {log.user.name}
                                                 </span>
-                                                <span style={{ color: '#64748b', fontSize: '0.7rem', display: 'block' }}>
+                                                <span style={{ color: t.textFaint, fontSize: '0.7rem', display: 'block' }}>
                                                     {log.user.email}
                                                 </span>
                                             </div>
                                         ) : (
-                                            <span style={{ color: '#64748b', fontSize: '0.8rem' }}>Système</span>
+                                            <span style={{ color: t.textFaint, fontSize: '0.8rem' }}>Système</span>
                                         )}
                                     </td>
                                     <td style={{ padding: '0.6rem 0.75rem' }}>
@@ -246,15 +248,15 @@ export default function AuditIndex({ logs, actionTypes, users, filters }) {
                                             {actionLabels[log.action] || log.action}
                                         </span>
                                     </td>
-                                    <td style={{ padding: '0.6rem 0.75rem', color: '#94a3b8', fontSize: '0.8rem' }}>
+                                    <td style={{ padding: '0.6rem 0.75rem', color: t.textMuted, fontSize: '0.8rem' }}>
                                         {log.target_type || '\u2014'}
                                         {log.target_id ? (
-                                            <span style={{ color: '#475569', fontSize: '0.7rem', fontFamily: 'monospace' }}>
+                                            <span style={{ color: t.textSubtle, fontSize: '0.7rem', fontFamily: 'monospace' }}>
                                                 {' #'}{log.target_id.slice(0, 8)}
                                             </span>
                                         ) : ''}
                                     </td>
-                                    <td style={{ padding: '0.6rem 0.75rem', color: '#64748b', fontSize: '0.75rem', maxWidth: 300 }}>
+                                    <td style={{ padding: '0.6rem 0.75rem', color: t.textFaint, fontSize: '0.75rem', maxWidth: 300 }}>
                                         {log.details ? (
                                             <span style={{
                                                 display: 'block', overflow: 'hidden',
@@ -264,14 +266,14 @@ export default function AuditIndex({ logs, actionTypes, users, filters }) {
                                             </span>
                                         ) : '\u2014'}
                                     </td>
-                                    <td style={{ padding: '0.6rem 0.75rem', color: '#475569', fontSize: '0.75rem', fontFamily: 'monospace' }}>
+                                    <td style={{ padding: '0.6rem 0.75rem', color: t.textSubtle, fontSize: '0.75rem', fontFamily: 'monospace' }}>
                                         {log.ip_address || '\u2014'}
                                     </td>
                                 </tr>
                             ))
                         ) : (
                             <tr>
-                                <td colSpan={6} style={{ padding: '2rem', textAlign: 'center', color: '#64748b', fontSize: '0.85rem' }}>
+                                <td colSpan={6} style={{ padding: '2rem', textAlign: 'center', color: t.textFaint, fontSize: '0.85rem' }}>
                                     {hasFilters ? 'Aucun résultat pour ces filtres.' : "Aucune entrée dans le journal d'audit."}
                                 </td>
                             </tr>
@@ -286,7 +288,7 @@ export default function AuditIndex({ logs, actionTypes, users, filters }) {
                     <PagBtn label="Préc." onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1} />
                     {generatePageNumbers().map((p, i) =>
                         p === '...' ? (
-                            <span key={`e${i}`} style={{ color: '#64748b', padding: '0 0.25rem' }}>...</span>
+                            <span key={`e${i}`} style={{ color: t.textFaint, padding: '0 0.25rem' }}>...</span>
                         ) : (
                             <PagBtn key={p} label={p} onClick={() => goToPage(p)} active={p === currentPage} />
                         )
@@ -299,15 +301,16 @@ export default function AuditIndex({ logs, actionTypes, users, filters }) {
 }
 
 function PagBtn({ label, onClick, disabled, active }) {
+    const { theme: t } = useTheme();
     return (
         <button
             onClick={onClick}
             disabled={disabled}
             style={{
-                background: active ? '#3b82f6' : '#1e293b',
-                border: '1px solid ' + (active ? '#3b82f6' : '#334155'),
+                background: active ? t.accent : t.surface,
+                border: `1px solid ${active ? t.accent : t.border}`,
                 borderRadius: 6, padding: '0.4rem 0.7rem',
-                color: active ? '#fff' : disabled ? '#475569' : '#e2e8f0',
+                color: active ? '#fff' : disabled ? t.textSubtle : t.textSecondary,
                 cursor: disabled ? 'default' : 'pointer',
                 fontSize: '0.8rem', fontWeight: active ? 700 : 400,
             }}

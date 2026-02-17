@@ -1,6 +1,7 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import { useState, useRef, useCallback } from 'react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
+import { useTheme } from '../../Contexts/ThemeContext';
 
 const categoryColors = {
     block: { bg: '#7f1d1d', color: '#fca5a5' },
@@ -15,6 +16,7 @@ const btnStyle = {
 };
 
 export default function RulesIndex({ rules }) {
+    const { theme: t } = useTheme();
     const { flash } = usePage().props;
     const fileInputRef = useRef(null);
     const [importing, setImporting] = useState(false);
@@ -89,14 +91,14 @@ export default function RulesIndex({ rules }) {
 
             {/* Action bar */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
-                <p style={{ color: '#94a3b8', fontSize: '0.875rem', margin: 0 }}>
+                <p style={{ color: t.textMuted, fontSize: '0.875rem', margin: 0 }}>
                     {rules?.total ?? 0} règle(s) configurée(s)
                 </p>
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
                     {/* Export */}
                     <button
                         onClick={handleExport}
-                        style={{ ...btnStyle, background: '#1e293b', color: '#94a3b8', border: '1px solid #334155' }}
+                        style={{ ...btnStyle, background: t.surface, color: t.textMuted, border: `1px solid ${t.border}` }}
                     >
                         Export JSON
                     </button>
@@ -104,7 +106,7 @@ export default function RulesIndex({ rules }) {
                     <button
                         onClick={handleImportClick}
                         disabled={importing}
-                        style={{ ...btnStyle, background: '#1e293b', color: '#94a3b8', border: '1px solid #334155', opacity: importing ? 0.6 : 1 }}
+                        style={{ ...btnStyle, background: t.surface, color: t.textMuted, border: `1px solid ${t.border}`, opacity: importing ? 0.6 : 1 }}
                     >
                         {importing ? 'Import...' : 'Import JSON'}
                     </button>
@@ -118,7 +120,7 @@ export default function RulesIndex({ rules }) {
                     {/* Create */}
                     <Link
                         href="/rules/create"
-                        style={{ ...btnStyle, background: '#3b82f6', color: '#fff' }}
+                        style={{ ...btnStyle, background: t.accent, color: '#fff' }}
                     >
                         + Nouvelle règle
                     </Link>
@@ -127,18 +129,18 @@ export default function RulesIndex({ rules }) {
 
             {/* Table */}
             <div style={{
-                background: '#1e293b',
+                background: t.surface,
                 borderRadius: 12,
-                border: '1px solid #334155',
+                border: `1px solid ${t.border}`,
                 overflow: 'hidden',
             }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
-                        <tr style={{ borderBottom: '1px solid #334155' }}>
+                        <tr style={{ borderBottom: `1px solid ${t.border}` }}>
                             {['Nom', 'Catégorie', 'Cible', 'Type', 'Priorité', 'Statut', 'Actions'].map((h) => (
                                 <th key={h} style={{
                                     padding: '0.75rem 1rem', textAlign: 'left',
-                                    color: '#94a3b8', fontSize: '0.75rem',
+                                    color: t.textMuted, fontSize: '0.75rem',
                                     textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600,
                                 }}>
                                     {h}
@@ -149,7 +151,7 @@ export default function RulesIndex({ rules }) {
                     <tbody>
                         {rules?.data?.length === 0 && (
                             <tr>
-                                <td colSpan={7} style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
+                                <td colSpan={7} style={{ padding: '2rem', textAlign: 'center', color: t.textFaint }}>
                                     Aucune règle configurée. Créez-en une ou importez un fichier JSON.
                                 </td>
                             </tr>
@@ -157,11 +159,11 @@ export default function RulesIndex({ rules }) {
                         {rules?.data?.map((rule) => {
                             const cat = categoryColors[rule.category] || categoryColors.log;
                             return (
-                                <tr key={rule.id} style={{ borderBottom: '1px solid #1e293b' }}>
-                                    <td style={{ padding: '0.75rem 1rem', color: '#f8fafc', fontSize: '0.875rem', fontWeight: 500 }}>
+                                <tr key={rule.id} style={{ borderBottom: `1px solid ${t.surface}` }}>
+                                    <td style={{ padding: '0.75rem 1rem', color: t.text, fontSize: '0.875rem', fontWeight: 500 }}>
                                         {rule.name}
                                         {rule.description && (
-                                            <p style={{ color: '#64748b', fontSize: '0.75rem', margin: '0.25rem 0 0' }}>
+                                            <p style={{ color: t.textFaint, fontSize: '0.75rem', margin: '0.25rem 0 0' }}>
                                                 {rule.description}
                                             </p>
                                         )}
@@ -176,13 +178,13 @@ export default function RulesIndex({ rules }) {
                                             {rule.category}
                                         </span>
                                     </td>
-                                    <td style={{ padding: '0.75rem 1rem', color: '#94a3b8', fontSize: '0.875rem' }}>
+                                    <td style={{ padding: '0.75rem 1rem', color: t.textMuted, fontSize: '0.875rem' }}>
                                         {rule.target}
                                     </td>
-                                    <td style={{ padding: '0.75rem 1rem', color: '#94a3b8', fontSize: '0.875rem' }}>
+                                    <td style={{ padding: '0.75rem 1rem', color: t.textMuted, fontSize: '0.875rem' }}>
                                         {rule.condition_type}
                                     </td>
-                                    <td style={{ padding: '0.75rem 1rem', color: '#94a3b8', fontSize: '0.875rem' }}>
+                                    <td style={{ padding: '0.75rem 1rem', color: t.textMuted, fontSize: '0.875rem' }}>
                                         {rule.priority}
                                     </td>
                                     <td style={{ padding: '0.75rem 1rem' }}>
@@ -204,7 +206,7 @@ export default function RulesIndex({ rules }) {
                                             <Link
                                                 href={`/rules/${rule.id}/edit`}
                                                 style={{
-                                                    color: '#3b82f6', fontSize: '0.8rem',
+                                                    color: t.accent, fontSize: '0.8rem',
                                                     textDecoration: 'none', fontWeight: 500,
                                                 }}
                                             >
@@ -229,8 +231,8 @@ export default function RulesIndex({ rules }) {
                         onClick={() => goToPage(currentPage - 1)}
                         disabled={currentPage === 1}
                         style={{
-                            background: '#1e293b', border: '1px solid #334155', borderRadius: 6,
-                            padding: '0.4rem 0.75rem', color: currentPage === 1 ? '#475569' : '#e2e8f0',
+                            background: t.surface, border: `1px solid ${t.border}`, borderRadius: 6,
+                            padding: '0.4rem 0.75rem', color: currentPage === 1 ? t.textSubtle : t.textSecondary,
                             cursor: currentPage === 1 ? 'default' : 'pointer', fontSize: '0.8rem',
                         }}
                     >
@@ -238,16 +240,16 @@ export default function RulesIndex({ rules }) {
                     </button>
                     {generatePageNumbers().map((p, i) =>
                         p === '...' ? (
-                            <span key={`e${i}`} style={{ color: '#64748b', padding: '0 0.25rem' }}>...</span>
+                            <span key={`e${i}`} style={{ color: t.textFaint, padding: '0 0.25rem' }}>...</span>
                         ) : (
                             <button
                                 key={p}
                                 onClick={() => goToPage(p)}
                                 style={{
-                                    background: p === currentPage ? '#3b82f6' : '#1e293b',
-                                    border: '1px solid ' + (p === currentPage ? '#3b82f6' : '#334155'),
+                                    background: p === currentPage ? t.accent : t.surface,
+                                    border: `1px solid ${p === currentPage ? t.accent : t.border}`,
                                     borderRadius: 6, padding: '0.4rem 0.7rem',
-                                    color: p === currentPage ? '#fff' : '#e2e8f0',
+                                    color: p === currentPage ? '#fff' : t.textSecondary,
                                     cursor: 'pointer', fontSize: '0.8rem', fontWeight: p === currentPage ? 700 : 400,
                                 }}
                             >
@@ -259,8 +261,8 @@ export default function RulesIndex({ rules }) {
                         onClick={() => goToPage(currentPage + 1)}
                         disabled={currentPage === lastPage}
                         style={{
-                            background: '#1e293b', border: '1px solid #334155', borderRadius: 6,
-                            padding: '0.4rem 0.75rem', color: currentPage === lastPage ? '#475569' : '#e2e8f0',
+                            background: t.surface, border: `1px solid ${t.border}`, borderRadius: 6,
+                            padding: '0.4rem 0.75rem', color: currentPage === lastPage ? t.textSubtle : t.textSecondary,
                             cursor: currentPage === lastPage ? 'default' : 'pointer', fontSize: '0.8rem',
                         }}
                     >

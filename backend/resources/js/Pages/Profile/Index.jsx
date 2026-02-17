@@ -1,45 +1,14 @@
 import { useForm, usePage, router } from '@inertiajs/react';
 import { useState } from 'react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
-
-const cardStyle = {
-    background: '#1e293b',
-    borderRadius: 12,
-    padding: '1.5rem',
-    border: '1px solid #334155',
-    marginBottom: '1.5rem',
-};
-
-const labelStyle = {
-    color: '#e2e8f0',
-    fontSize: '0.85rem',
-    fontWeight: 500,
-    display: 'block',
-    marginBottom: '0.35rem',
-};
-
-const inputStyle = {
-    width: '100%',
-    padding: '0.6rem 0.75rem',
-    borderRadius: 8,
-    border: '1px solid #334155',
-    background: '#0f172a',
-    color: '#f8fafc',
-    fontSize: '0.85rem',
-    outline: 'none',
-    boxSizing: 'border-box',
-};
-
-const errorStyle = {
-    color: '#ef4444',
-    fontSize: '0.7rem',
-    margin: '0.25rem 0 0',
-};
+import { useTheme } from '../../Contexts/ThemeContext';
 
 const roleLabels = { admin: 'Administrateur', manager: 'Manager', viewer: 'Lecteur' };
 const roleColors = { admin: '#ef4444', manager: '#f59e0b', viewer: '#3b82f6' };
 
 export default function ProfileIndex({ user, sessions = [] }) {
+    const { theme: t } = useTheme();
+
     const { flash } = usePage().props;
     const [twoFactorSetup, setTwoFactorSetup] = useState(null);
     const [twoFactorCode, setTwoFactorCode] = useState('');
@@ -64,6 +33,40 @@ export default function ProfileIndex({ user, sessions = [] }) {
     const notifForm = useForm({
         notify_critical_alerts: user.notify_critical_alerts ?? false,
     });
+
+    const cardStyle = {
+        background: t.surface,
+        borderRadius: 12,
+        padding: '1.5rem',
+        border: `1px solid ${t.border}`,
+        marginBottom: '1.5rem',
+    };
+
+    const labelStyle = {
+        color: t.textSecondary,
+        fontSize: '0.85rem',
+        fontWeight: 500,
+        display: 'block',
+        marginBottom: '0.35rem',
+    };
+
+    const inputStyle = {
+        width: '100%',
+        padding: '0.6rem 0.75rem',
+        borderRadius: 8,
+        border: `1px solid ${t.border}`,
+        background: t.bg,
+        color: t.text,
+        fontSize: '0.85rem',
+        outline: 'none',
+        boxSizing: 'border-box',
+    };
+
+    const errorStyle = {
+        color: t.danger,
+        fontSize: '0.7rem',
+        margin: '0.25rem 0 0',
+    };
 
     const handleProfileSubmit = (e) => {
         e.preventDefault();
@@ -103,22 +106,22 @@ export default function ProfileIndex({ user, sessions = [] }) {
             <div style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: '1rem' }}>
                 <div style={{
                     width: 48, height: 48, borderRadius: '50%',
-                    background: roleColors[user.role] || '#64748b',
+                    background: roleColors[user.role] || t.textFaint,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     color: '#fff', fontSize: '1.25rem', fontWeight: 700,
                 }}>
                     {user.name?.charAt(0).toUpperCase()}
                 </div>
                 <div>
-                    <p style={{ color: '#f8fafc', fontSize: '1.1rem', fontWeight: 600, margin: 0 }}>
+                    <p style={{ color: t.text, fontSize: '1.1rem', fontWeight: 600, margin: 0 }}>
                         {user.name}
                     </p>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem' }}>
-                        <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>{user.email}</span>
+                        <span style={{ color: t.textMuted, fontSize: '0.8rem' }}>{user.email}</span>
                         <span style={{
                             padding: '0.1rem 0.5rem', borderRadius: 4,
                             fontSize: '0.65rem', fontWeight: 700,
-                            color: roleColors[user.role] || '#94a3b8',
+                            color: roleColors[user.role] || t.textMuted,
                             background: `${roleColors[user.role] || '#94a3b8'}20`,
                         }}>
                             {roleLabels[user.role] || user.role}
@@ -129,7 +132,7 @@ export default function ProfileIndex({ user, sessions = [] }) {
 
             {/* Profile form */}
             <form onSubmit={handleProfileSubmit} style={cardStyle}>
-                <h3 style={{ color: '#f8fafc', fontSize: '1.1rem', fontWeight: 600, margin: '0 0 1.25rem' }}>
+                <h3 style={{ color: t.text, fontSize: '1.1rem', fontWeight: 600, margin: '0 0 1.25rem' }}>
                     Informations personnelles
                 </h3>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
@@ -159,7 +162,7 @@ export default function ProfileIndex({ user, sessions = [] }) {
                         type="submit"
                         disabled={profileForm.processing}
                         style={{
-                            background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 8,
+                            background: t.accent, color: '#fff', border: 'none', borderRadius: 8,
                             padding: '0.6rem 1.5rem', fontSize: '0.85rem', fontWeight: 600,
                             cursor: profileForm.processing ? 'not-allowed' : 'pointer',
                             opacity: profileForm.processing ? 0.7 : 1,
@@ -172,7 +175,7 @@ export default function ProfileIndex({ user, sessions = [] }) {
 
             {/* Password form */}
             <form onSubmit={handlePasswordSubmit} style={cardStyle}>
-                <h3 style={{ color: '#f8fafc', fontSize: '1.1rem', fontWeight: 600, margin: '0 0 1.25rem' }}>
+                <h3 style={{ color: t.text, fontSize: '1.1rem', fontWeight: 600, margin: '0 0 1.25rem' }}>
                     Changer le mot de passe
                 </h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.25rem' }}>
@@ -213,7 +216,7 @@ export default function ProfileIndex({ user, sessions = [] }) {
                         type="submit"
                         disabled={passwordForm.processing}
                         style={{
-                            background: '#334155', color: '#e2e8f0', border: 'none', borderRadius: 8,
+                            background: t.border, color: t.textSecondary, border: 'none', borderRadius: 8,
                             padding: '0.6rem 1.5rem', fontSize: '0.85rem', fontWeight: 600,
                             cursor: passwordForm.processing ? 'not-allowed' : 'pointer',
                             opacity: passwordForm.processing ? 0.7 : 1,
@@ -226,7 +229,7 @@ export default function ProfileIndex({ user, sessions = [] }) {
 
             {/* Notification preferences */}
             <form onSubmit={handleNotifSubmit} style={cardStyle}>
-                <h3 style={{ color: '#f8fafc', fontSize: '1.1rem', fontWeight: 600, margin: '0 0 1.25rem' }}>
+                <h3 style={{ color: t.text, fontSize: '1.1rem', fontWeight: 600, margin: '0 0 1.25rem' }}>
                     Notifications
                 </h3>
                 <div
@@ -238,22 +241,22 @@ export default function ProfileIndex({ user, sessions = [] }) {
                 >
                     <div style={{
                         width: 40, height: 22, borderRadius: 11,
-                        background: notifForm.data.notify_critical_alerts ? '#3b82f6' : '#334155',
+                        background: notifForm.data.notify_critical_alerts ? t.accent : t.border,
                         position: 'relative', transition: 'background 0.2s', flexShrink: 0,
                     }}>
                         <div style={{
-                            width: 16, height: 16, borderRadius: '50%', background: '#f8fafc',
+                            width: 16, height: 16, borderRadius: '50%', background: t.text,
                             position: 'absolute', top: 3,
                             left: notifForm.data.notify_critical_alerts ? 21 : 3,
                             transition: 'left 0.2s',
                         }} />
                     </div>
                     <div>
-                        <span style={{ color: '#e2e8f0', fontSize: '0.85rem', fontWeight: 500 }}>
+                        <span style={{ color: t.textSecondary, fontSize: '0.85rem', fontWeight: 500 }}>
                             Alertes critiques par email
                         </span>
-                        <p style={{ color: '#64748b', fontSize: '0.7rem', margin: '0.2rem 0 0' }}>
-                            Recevoir un email lorsqu'une alerte critique est créée
+                        <p style={{ color: t.textFaint, fontSize: '0.7rem', margin: '0.2rem 0 0' }}>
+                            Recevoir un email lorsqu'une alerte critique est cr\u00e9\u00e9e
                         </p>
                     </div>
                 </div>
@@ -262,24 +265,24 @@ export default function ProfileIndex({ user, sessions = [] }) {
                         type="submit"
                         disabled={notifForm.processing}
                         style={{
-                            background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 8,
+                            background: t.accent, color: '#fff', border: 'none', borderRadius: 8,
                             padding: '0.6rem 1.5rem', fontSize: '0.85rem', fontWeight: 600,
                             cursor: notifForm.processing ? 'not-allowed' : 'pointer',
                             opacity: notifForm.processing ? 0.7 : 1,
                         }}
                     >
-                        Enregistrer les préférences
+                        Enregistrer les pr\u00e9f\u00e9rences
                     </button>
                 </div>
             </form>
 
             {/* Two-Factor Authentication */}
             <div style={cardStyle}>
-                <h3 style={{ color: '#f8fafc', fontSize: '1.1rem', fontWeight: 600, margin: '0 0 0.5rem' }}>
-                    Authentification à deux facteurs (2FA)
+                <h3 style={{ color: t.text, fontSize: '1.1rem', fontWeight: 600, margin: '0 0 0.5rem' }}>
+                    Authentification \u00e0 deux facteurs (2FA)
                 </h3>
-                <p style={{ color: '#64748b', fontSize: '0.8rem', margin: '0 0 1.25rem' }}>
-                    Ajoutez une couche de sécurité supplémentaire à votre compte avec un code TOTP.
+                <p style={{ color: t.textFaint, fontSize: '0.8rem', margin: '0 0 1.25rem' }}>
+                    Ajoutez une couche de s\u00e9curit\u00e9 suppl\u00e9mentaire \u00e0 votre compte avec un code TOTP.
                 </p>
 
                 {user.two_factor_enabled ? (
@@ -291,7 +294,7 @@ export default function ProfileIndex({ user, sessions = [] }) {
                             border: '1px solid rgba(34,197,94,0.3)', borderRadius: 8,
                         }}>
                             <span style={{ color: '#22c55e', fontWeight: 600, fontSize: '0.85rem' }}>
-                                2FA activé
+                                2FA activ\u00e9
                             </span>
                         </div>
 
@@ -299,17 +302,17 @@ export default function ProfileIndex({ user, sessions = [] }) {
                             <button
                                 onClick={() => setShowDisableForm(true)}
                                 style={{
-                                    background: '#334155', color: '#e2e8f0', border: 'none', borderRadius: 8,
+                                    background: t.border, color: t.textSecondary, border: 'none', borderRadius: 8,
                                     padding: '0.6rem 1.5rem', fontSize: '0.85rem', fontWeight: 600,
                                     cursor: 'pointer',
                                 }}
                             >
-                                Désactiver le 2FA
+                                D\u00e9sactiver le 2FA
                             </button>
                         ) : (
                             <div>
-                                <p style={{ color: '#94a3b8', fontSize: '0.8rem', marginBottom: '0.75rem' }}>
-                                    Confirmez votre mot de passe pour désactiver le 2FA :
+                                <p style={{ color: t.textMuted, fontSize: '0.8rem', marginBottom: '0.75rem' }}>
+                                    Confirmez votre mot de passe pour d\u00e9sactiver le 2FA :
                                 </p>
                                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
                                     <div>
@@ -332,7 +335,7 @@ export default function ProfileIndex({ user, sessions = [] }) {
                                             });
                                         }}
                                         style={{
-                                            background: '#ef4444', color: '#fff', border: 'none', borderRadius: 8,
+                                            background: t.danger, color: '#fff', border: 'none', borderRadius: 8,
                                             padding: '0.6rem 1rem', fontSize: '0.85rem', fontWeight: 600,
                                             cursor: 'pointer',
                                         }}
@@ -342,7 +345,7 @@ export default function ProfileIndex({ user, sessions = [] }) {
                                     <button
                                         onClick={() => { setShowDisableForm(false); setDisablePassword(''); }}
                                         style={{
-                                            background: 'transparent', color: '#94a3b8', border: '1px solid #334155',
+                                            background: 'transparent', color: t.textMuted, border: `1px solid ${t.border}`,
                                             borderRadius: 8, padding: '0.6rem 1rem', fontSize: '0.85rem',
                                             cursor: 'pointer',
                                         }}
@@ -356,7 +359,7 @@ export default function ProfileIndex({ user, sessions = [] }) {
                 ) : twoFactorSetup ? (
                     // Setup in progress
                     <div>
-                        <p style={{ color: '#e2e8f0', fontSize: '0.85rem', marginBottom: '0.75rem' }}>
+                        <p style={{ color: t.textSecondary, fontSize: '0.85rem', marginBottom: '0.75rem' }}>
                             1. Scannez ce QR code avec votre application (Google Authenticator, Authy, etc.) :
                         </p>
 
@@ -373,11 +376,11 @@ export default function ProfileIndex({ user, sessions = [] }) {
                         </div>
 
                         <div style={{ marginBottom: '1rem' }}>
-                            <p style={{ color: '#94a3b8', fontSize: '0.75rem', marginBottom: '0.35rem' }}>
-                                Ou entrez cette clé manuellement :
+                            <p style={{ color: t.textMuted, fontSize: '0.75rem', marginBottom: '0.35rem' }}>
+                                Ou entrez cette cl\u00e9 manuellement :
                             </p>
                             <code style={{
-                                background: '#0f172a', color: '#f59e0b', padding: '0.4rem 0.75rem',
+                                background: t.bg, color: '#f59e0b', padding: '0.4rem 0.75rem',
                                 borderRadius: 6, fontSize: '0.85rem', fontFamily: 'monospace',
                                 letterSpacing: '0.15em', wordBreak: 'break-all',
                             }}>
@@ -385,8 +388,8 @@ export default function ProfileIndex({ user, sessions = [] }) {
                             </code>
                         </div>
 
-                        <p style={{ color: '#e2e8f0', fontSize: '0.85rem', marginBottom: '0.5rem' }}>
-                            2. Entrez le code à 6 chiffres pour confirmer :
+                        <p style={{ color: t.textSecondary, fontSize: '0.85rem', marginBottom: '0.5rem' }}>
+                            2. Entrez le code \u00e0 6 chiffres pour confirmer :
                         </p>
                         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', marginBottom: '1rem' }}>
                             <div>
@@ -431,33 +434,33 @@ export default function ProfileIndex({ user, sessions = [] }) {
                                         })
                                         .catch(() => {
                                             setTwoFactorLoading(false);
-                                            setTwoFactorError('Erreur réseau.');
+                                            setTwoFactorError('Erreur r\u00e9seau.');
                                         });
                                 }}
                                 disabled={twoFactorLoading || twoFactorCode.length !== 6}
                                 style={{
-                                    background: '#22c55e', color: '#fff', border: 'none', borderRadius: 8,
+                                    background: t.success, color: '#fff', border: 'none', borderRadius: 8,
                                     padding: '0.6rem 1.25rem', fontSize: '0.85rem', fontWeight: 600,
                                     cursor: twoFactorLoading ? 'not-allowed' : 'pointer',
                                     opacity: twoFactorLoading || twoFactorCode.length !== 6 ? 0.6 : 1,
                                 }}
                             >
-                                {twoFactorLoading ? 'Vérification...' : 'Confirmer'}
+                                {twoFactorLoading ? 'V\u00e9rification...' : 'Confirmer'}
                             </button>
                         </div>
 
                         {/* Recovery codes */}
                         <div style={{
-                            background: '#0f172a', border: '1px solid #334155', borderRadius: 8,
+                            background: t.bg, border: `1px solid ${t.border}`, borderRadius: 8,
                             padding: '1rem', marginBottom: '1rem',
                         }}>
                             <p style={{ color: '#f59e0b', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.5rem' }}>
-                                Codes de récupération (à conserver en lieu sûr) :
+                                Codes de r\u00e9cup\u00e9ration (\u00e0 conserver en lieu s\u00fbr) :
                             </p>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.35rem' }}>
                                 {twoFactorSetup.recovery_codes?.map((code, i) => (
                                     <code key={i} style={{
-                                        color: '#e2e8f0', fontSize: '0.8rem', fontFamily: 'monospace',
+                                        color: t.textSecondary, fontSize: '0.8rem', fontFamily: 'monospace',
                                     }}>
                                         {code}
                                     </code>
@@ -468,7 +471,7 @@ export default function ProfileIndex({ user, sessions = [] }) {
                         <button
                             onClick={() => { setTwoFactorSetup(null); setTwoFactorCode(''); setTwoFactorError(''); }}
                             style={{
-                                background: 'transparent', color: '#94a3b8', border: '1px solid #334155',
+                                background: 'transparent', color: t.textMuted, border: `1px solid ${t.border}`,
                                 borderRadius: 8, padding: '0.5rem 1rem', fontSize: '0.8rem', cursor: 'pointer',
                             }}
                         >
@@ -500,7 +503,7 @@ export default function ProfileIndex({ user, sessions = [] }) {
                         }}
                         disabled={twoFactorLoading}
                         style={{
-                            background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 8,
+                            background: t.accent, color: '#fff', border: 'none', borderRadius: 8,
                             padding: '0.6rem 1.5rem', fontSize: '0.85rem', fontWeight: 600,
                             cursor: twoFactorLoading ? 'not-allowed' : 'pointer',
                             opacity: twoFactorLoading ? 0.7 : 1,
@@ -514,7 +517,7 @@ export default function ProfileIndex({ user, sessions = [] }) {
             {/* Active sessions */}
             <div style={cardStyle}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                    <h3 style={{ color: '#f8fafc', fontSize: '1.1rem', fontWeight: 600, margin: 0 }}>
+                    <h3 style={{ color: t.text, fontSize: '1.1rem', fontWeight: 600, margin: 0 }}>
                         Sessions actives
                     </h3>
                     {sessions.length > 1 && (
@@ -522,12 +525,12 @@ export default function ProfileIndex({ user, sessions = [] }) {
                             <button
                                 onClick={() => setShowRevokeAll(true)}
                                 style={{
-                                    background: 'transparent', color: '#ef4444', border: '1px solid #7f1d1d',
+                                    background: 'transparent', color: t.danger, border: '1px solid #7f1d1d',
                                     borderRadius: 6, padding: '0.35rem 0.75rem', fontSize: '0.75rem',
                                     fontWeight: 600, cursor: 'pointer',
                                 }}
                             >
-                                Révoquer toutes les autres
+                                R\u00e9voquer toutes les autres
                             </button>
                         ) : (
                             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
@@ -546,7 +549,7 @@ export default function ProfileIndex({ user, sessions = [] }) {
                                         });
                                     }}
                                     style={{
-                                        background: '#ef4444', color: '#fff', border: 'none',
+                                        background: t.danger, color: '#fff', border: 'none',
                                         borderRadius: 6, padding: '0.35rem 0.75rem', fontSize: '0.75rem',
                                         fontWeight: 600, cursor: 'pointer',
                                     }}
@@ -556,7 +559,7 @@ export default function ProfileIndex({ user, sessions = [] }) {
                                 <button
                                     onClick={() => { setShowRevokeAll(false); setRevokeAllPassword(''); }}
                                     style={{
-                                        background: 'transparent', color: '#94a3b8', border: '1px solid #334155',
+                                        background: 'transparent', color: t.textMuted, border: `1px solid ${t.border}`,
                                         borderRadius: 6, padding: '0.35rem 0.75rem', fontSize: '0.75rem',
                                         cursor: 'pointer',
                                     }}
@@ -569,8 +572,8 @@ export default function ProfileIndex({ user, sessions = [] }) {
                 </div>
 
                 {sessions.length === 0 ? (
-                    <p style={{ color: '#64748b', fontSize: '0.85rem' }}>
-                        Aucune session active trouvée.
+                    <p style={{ color: t.textFaint, fontSize: '0.85rem' }}>
+                        Aucune session active trouv\u00e9e.
                     </p>
                 ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -579,14 +582,14 @@ export default function ProfileIndex({ user, sessions = [] }) {
                                 key={session.id}
                                 style={{
                                     display: 'flex', alignItems: 'center', gap: '0.75rem',
-                                    padding: '0.65rem 0.75rem', background: '#0f172a',
+                                    padding: '0.65rem 0.75rem', background: t.bg,
                                     borderRadius: 8,
                                     border: session.is_current ? '1px solid rgba(59,130,246,0.4)' : '1px solid transparent',
                                 }}
                             >
                                 <div style={{
                                     width: 32, height: 32, borderRadius: 6,
-                                    background: session.is_current ? '#1e3a5f' : '#334155',
+                                    background: session.is_current ? '#1e3a5f' : t.border,
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                     fontSize: '0.85rem', flexShrink: 0,
                                 }}>
@@ -595,7 +598,7 @@ export default function ProfileIndex({ user, sessions = [] }) {
                                 </div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <p style={{ color: '#e2e8f0', fontSize: '0.85rem', fontWeight: 500, margin: 0 }}>
+                                        <p style={{ color: t.textSecondary, fontSize: '0.85rem', fontWeight: 500, margin: 0 }}>
                                             {session.user_agent}
                                         </p>
                                         {session.is_current && (
@@ -608,24 +611,24 @@ export default function ProfileIndex({ user, sessions = [] }) {
                                             </span>
                                         )}
                                     </div>
-                                    <p style={{ color: '#64748b', fontSize: '0.7rem', margin: '0.15rem 0 0' }}>
+                                    <p style={{ color: t.textFaint, fontSize: '0.7rem', margin: '0.15rem 0 0' }}>
                                         {session.ip_address || 'IP inconnue'} — {session.last_activity}
                                     </p>
                                 </div>
                                 {!session.is_current && (
                                     <button
                                         onClick={() => {
-                                            if (confirm('Révoquer cette session ?')) {
+                                            if (confirm('R\u00e9voquer cette session ?')) {
                                                 router.delete(`/profile/sessions/${session.id}`);
                                             }
                                         }}
                                         style={{
-                                            background: 'transparent', color: '#ef4444', border: '1px solid #7f1d1d',
+                                            background: 'transparent', color: t.danger, border: '1px solid #7f1d1d',
                                             borderRadius: 6, padding: '0.3rem 0.6rem', fontSize: '0.7rem',
                                             cursor: 'pointer', flexShrink: 0, fontWeight: 600,
                                         }}
                                     >
-                                        Révoquer
+                                        R\u00e9voquer
                                     </button>
                                 )}
                             </div>
