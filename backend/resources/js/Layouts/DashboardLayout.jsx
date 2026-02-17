@@ -8,6 +8,7 @@ const navigation = [
     { name: 'Échanges', href: '/exchanges', icon: '\u{1f4ac}' },
     { name: 'Règles', href: '/rules', icon: '\u{2699}\u{fe0f}' },
     { name: 'Rapports', href: '/reports', icon: '\u{1f4c8}' },
+    { name: 'Audit', href: '/audit', icon: '\u{1f4dc}' },
 ];
 
 const severityColors = {

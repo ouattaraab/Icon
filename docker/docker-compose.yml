@@ -25,6 +25,12 @@ services:
       - BROADCAST_CONNECTION=reverb
       - CACHE_STORE=redis
       - SESSION_DRIVER=redis
+      - REVERB_APP_ID=${REVERB_APP_ID}
+      - REVERB_APP_KEY=${REVERB_APP_KEY}
+      - REVERB_APP_SECRET=${REVERB_APP_SECRET}
+      - REVERB_HOST=reverb
+      - REVERB_PORT=8080
+      - REVERB_SCHEME=http
     depends_on:
       postgres:
         condition: service_healthy
@@ -134,11 +140,53 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
       - REDIS_HOST=redis
       - QUEUE_CONNECTION=redis
+      - BROADCAST_CONNECTION=reverb
       - ELASTICSEARCH_HOSTS=elasticsearch:9200
+      - REVERB_APP_ID=${REVERB_APP_ID}
+      - REVERB_APP_KEY=${REVERB_APP_KEY}
+      - REVERB_APP_SECRET=${REVERB_APP_SECRET}
+      - REVERB_HOST=reverb
+      - REVERB_PORT=8080
+      - REVERB_SCHEME=http
     depends_on:
       - app
       - redis
       - postgres
+    networks:
+      - icon-network
+
+  # Laravel Reverb WebSocket Server
+  reverb:
+    build:
+      context: ../backend
+      dockerfile: ../docker/Dockerfile
+    container_name: icon-reverb
+    restart: unless-stopped
+    command: php artisan reverb:start --host=0.0.0.0 --port=8080
+    volumes:
+      - ../backend:/var/www/html
+    env_file:
+      - .env
+    environment:
+      - DB_CONNECTION=pgsql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_DATABASE=icon
+      - DB_USERNAME=icon
+      - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_HOST=redis
+      - QUEUE_CONNECTION=redis
+      - REVERB_APP_ID=${REVERB_APP_ID}
+      - REVERB_APP_KEY=${REVERB_APP_KEY}
+      - REVERB_APP_SECRET=${REVERB_APP_SECRET}
+      - REVERB_HOST=0.0.0.0
+      - REVERB_PORT=8080
+      - REVERB_SCHEME=http
+    ports:
+      - "${REVERB_PORT:-6001}:8080"
+    depends_on:
+      - app
+      - redis
     networks:
       - icon-network
 

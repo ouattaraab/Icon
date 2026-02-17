@@ -1,11 +1,13 @@
 <?php
 
 use App\Http\Controllers\Dashboard\AlertController;
+use App\Http\Controllers\Dashboard\AuditLogController;
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\ExchangeController;
 use App\Http\Controllers\Dashboard\MachineController;
 use App\Http\Controllers\Dashboard\ReportController;
 use App\Http\Controllers\Dashboard\RuleController;
+use App\Models\AuditLog;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -28,6 +30,9 @@ Route::post('/login', function (Request $request) {
 
     if (Auth::attempt($credentials, $request->boolean('remember'))) {
         $request->session()->regenerate();
+        AuditLog::log('auth.login', 'User', (string) Auth::id(), [
+            'email' => Auth::user()->email,
+        ]);
         return redirect()->intended('/');
     }
 
@@ -35,6 +40,7 @@ Route::post('/login', function (Request $request) {
 })->name('login.store');
 
 Route::post('/logout', function (Request $request) {
+    AuditLog::log('auth.logout', 'User', (string) Auth::id());
     Auth::logout();
     $request->session()->invalidate();
     $request->session()->regenerateToken();
@@ -73,4 +79,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
     Route::get('/reports/export', [ReportController::class, 'exportCsv'])->name('reports.export');
     Route::get('/reports/export-pdf', [ReportController::class, 'exportPdf'])->name('reports.export-pdf');
+
+    // Audit Logs
+    Route::get('/audit', [AuditLogController::class, 'index'])->name('audit.index');
 });

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Alert;
+use App\Models\AuditLog;
 use App\Models\Event;
 use App\Models\Machine;
 use Illuminate\Http\Request;
@@ -81,6 +82,12 @@ class ReportController extends Controller
         $type = $request->query('type', 'events'); // events, alerts, machines
 
         $filename = "icon-{$type}-{$dateFrom}-{$dateTo}.csv";
+
+        AuditLog::log('report.export_csv', 'Report', null, [
+            'type' => $type,
+            'date_from' => $dateFrom,
+            'date_to' => $dateTo,
+        ]);
 
         return response()->streamDownload(function () use ($dateFrom, $dateTo, $type) {
             $handle = fopen('php://output', 'w');
@@ -230,6 +237,11 @@ class ReportController extends Controller
             ->orderByDesc('created_at')
             ->limit(20)
             ->get();
+
+        AuditLog::log('report.export_pdf', 'Report', null, [
+            'date_from' => $dateFrom,
+            'date_to' => $dateTo,
+        ]);
 
         $pdf = Pdf::loadView('reports.pdf', [
             'stats' => $stats,
