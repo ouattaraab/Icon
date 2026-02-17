@@ -28,10 +28,23 @@ struct RegisterRequest {
 }
 
 #[derive(Debug, Deserialize)]
-struct RegisterResponse {
-    machine_id: String,
-    api_key: String,
-    hmac_secret: String,
+pub struct RegisterResponse {
+    pub machine_id: String,
+    pub api_key: String,
+    pub hmac_secret: String,
+}
+
+/// Domain entry from the /api/domains/sync endpoint
+#[derive(Debug, Deserialize)]
+pub struct DomainEntry {
+    pub domain: String,
+    pub platform_name: Option<String>,
+    pub is_blocked: bool,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DomainSyncResponse {
+    pub domains: Vec<DomainEntry>,
 }
 
 #[derive(Debug, Serialize)]
@@ -117,13 +130,9 @@ impl ApiClient {
         })
     }
 
-    /// Register this machine with the server, or verify existing registration
-    pub async fn register_or_verify(&self, config: &AppConfig) -> anyhow::Result<String> {
-        if let Some(ref machine_id) = config.machine_id {
-            info!(%machine_id, "Already registered, verifying...");
-            return Ok(machine_id.clone());
-        }
-
+    /// Register this machine with the server.
+    /// Returns `Some(RegisterResponse)` on new registration, `None` if already registered.
+    pub async fn register(&self) -> anyhow::Result<RegisterResponse> {
         let hostname = hostname::get()
             .map(|h| h.to_string_lossy().to_string())
             .unwrap_or_else(|_| "unknown".to_string());
@@ -151,7 +160,14 @@ impl ApiClient {
 
         info!(machine_id = %resp.machine_id, "Successfully registered with server");
 
-        Ok(resp.machine_id)
+        Ok(resp)
+    }
+
+    /// Update the API key and HMAC secret used for authenticated requests.
+    /// Called after registration to apply the received credentials.
+    pub fn set_credentials(&mut self, api_key: String, hmac_secret: String) {
+        self.api_key = Some(api_key);
+        self.hmac_secret = Some(hmac_secret);
     }
 
     /// Send heartbeat to server
@@ -207,6 +223,22 @@ impl ApiClient {
 
         let info = resp.json::<UpdateInfo>().await?;
         Ok(Some(info))
+    }
+
+    /// Fetch monitored domains from the server
+    pub async fn sync_domains(&self) -> anyhow::Result<DomainSyncResponse> {
+        let url = format!("{}/api/domains/sync", self.server_url);
+
+        let resp = self.authenticated_get(&url)
+            .await?
+            .json::<DomainSyncResponse>()
+            .await?;
+
+        info!(
+            count = resp.domains.len(),
+            "Domain sync completed"
+        );
+        Ok(resp)
     }
 
     /// Send a watchdog alert to the server

@@ -23,6 +23,7 @@ pub async fn start_proxy(
     config: AppConfig,
     rule_engine: Arc<RuleEngine>,
     event_queue: Arc<EventQueue>,
+    domain_filter: Arc<DomainFilter>,
 ) -> anyhow::Result<()> {
     let bind_addr = format!("127.0.0.1:{}", config.proxy_port);
     let listener = TcpListener::bind(&bind_addr).await?;
@@ -31,8 +32,6 @@ pub async fn start_proxy(
     // Initialize TLS CA manager (loads or generates CA cert)
     let ca_manager = CaManager::load_or_create(&config.data_dir)?;
     info!("TLS CA manager initialized");
-
-    let domain_filter = Arc::new(DomainFilter::with_defaults());
 
     loop {
         let (stream, peer_addr) = listener.accept().await?;
