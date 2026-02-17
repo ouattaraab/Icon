@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Dashboard\AlertController;
+use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\ExchangeController;
 use App\Http\Controllers\Dashboard\MachineController;
 use App\Http\Controllers\Dashboard\ReportController;
@@ -49,16 +50,7 @@ Route::post('/logout', function (Request $request) {
 Route::middleware(['auth'])->group(function () {
 
     // Dashboard home
-    Route::get('/', function () {
-        return Inertia::render('Dashboard/Index', [
-            'stats' => [
-                'total_machines' => \App\Models\Machine::count(),
-                'active_machines' => \App\Models\Machine::where('status', 'active')->count(),
-                'total_events' => \App\Models\Event::count(),
-                'open_alerts' => \App\Models\Alert::where('status', 'open')->count(),
-            ],
-        ]);
-    })->name('dashboard');
+    Route::get('/', DashboardController::class)->name('dashboard');
 
     // Machines
     Route::get('/machines', [MachineController::class, 'index'])->name('machines.index');
