@@ -1,11 +1,19 @@
+use std::collections::HashMap;
+use std::sync::Mutex;
+
 use regex::Regex;
 use crate::rules::models::RuleCondition;
+
+/// Global regex cache to avoid recompiling patterns on every evaluation.
+/// Key: (pattern, case_insensitive) → compiled Regex
+static REGEX_CACHE: std::sync::LazyLock<Mutex<HashMap<(String, bool), Result<Regex, String>>>> =
+    std::sync::LazyLock::new(|| Mutex::new(HashMap::new()));
 
 /// Évalue si un contenu matche une condition de règle
 pub fn matches_condition(content: &str, condition: &RuleCondition) -> bool {
     match condition {
         RuleCondition::Regex { pattern, case_insensitive } => {
-            match build_regex(pattern, *case_insensitive) {
+            match get_or_compile_regex(pattern, *case_insensitive) {
                 Ok(re) => re.is_match(content),
                 Err(e) => {
                     tracing::warn!(pattern, error = %e, "Invalid regex pattern in rule");
@@ -28,23 +36,43 @@ pub fn matches_condition(content: &str, condition: &RuleCondition) -> bool {
             domains.iter().any(|d| lower_content.contains(&d.to_lowercase()))
         }
 
+        // ContentLength triggers when content is OUTSIDE the allowed range:
+        // - exceeds max (too long → DLP violation)
+        // - below min (too short → suspicious)
+        // If neither min nor max is set, no match.
         RuleCondition::ContentLength { min, max } => {
             let len = content.len();
-            let above_min = min.map_or(true, |m| len >= m);
-            let below_max = max.map_or(true, |m| len <= m);
-            above_min && below_max
+            let exceeds_max = max.map_or(false, |m| len > m);
+            let below_min = min.map_or(false, |m| len < m);
+            exceeds_max || below_min
         }
     }
 }
 
-fn build_regex(pattern: &str, case_insensitive: bool) -> Result<Regex, regex::Error> {
-    if case_insensitive {
+/// Get a cached compiled regex, or compile and cache it.
+fn get_or_compile_regex(pattern: &str, case_insensitive: bool) -> Result<Regex, String> {
+    let key = (pattern.to_string(), case_insensitive);
+
+    let mut cache = REGEX_CACHE.lock().unwrap();
+    if let Some(result) = cache.get(&key) {
+        return result.clone().map_err(|e| e.to_string());
+    }
+
+    let result = if case_insensitive {
         regex::RegexBuilder::new(pattern)
             .case_insensitive(true)
             .build()
     } else {
         Regex::new(pattern)
-    }
+    };
+
+    let cloned = match &result {
+        Ok(re) => Ok(re.clone()),
+        Err(e) => Err(e.to_string()),
+    };
+    cache.insert(key, cloned);
+
+    result.map_err(|e| e.to_string())
 }
 
 #[cfg(test)]
@@ -83,17 +111,82 @@ mod tests {
     }
 
     #[test]
-    fn test_content_length() {
+    fn test_regex_case_insensitive() {
+        let condition = RuleCondition::Regex {
+            pattern: r"\b(password|mot de passe)\b".to_string(),
+            case_insensitive: true,
+        };
+        assert!(matches_condition("Mon PASSWORD est 123", &condition));
+        assert!(matches_condition("Le mot de passe admin", &condition));
+        assert!(!matches_condition("Rien de spécial ici", &condition));
+    }
+
+    #[test]
+    fn test_regex_cache_reuse() {
+        let condition = RuleCondition::Regex {
+            pattern: r"\btest\b".to_string(),
+            case_insensitive: false,
+        };
+        // Call twice — second call should use cached regex
+        assert!(matches_condition("this is a test", &condition));
+        assert!(matches_condition("another test here", &condition));
+        assert!(!matches_condition("no match", &condition));
+    }
+
+    // ContentLength triggers when content is OUTSIDE the allowed range
+    #[test]
+    fn test_content_length_exceeds_max() {
+        let condition = RuleCondition::ContentLength {
+            min: None,
+            max: Some(100),
+        };
+        let short = "court"; // 5 chars — within limit
+        let long = "a".repeat(200); // 200 chars — exceeds max
+        assert!(!matches_condition(short, &condition)); // within range → no match
+        assert!(matches_condition(&long, &condition));  // exceeds max → MATCH
+    }
+
+    #[test]
+    fn test_content_length_below_min() {
+        let condition = RuleCondition::ContentLength {
+            min: Some(50),
+            max: None,
+        };
+        let short = "court"; // 5 chars — below min
+        let long = "a".repeat(200); // 200 chars — above min
+        assert!(matches_condition(short, &condition));  // below min → MATCH
+        assert!(!matches_condition(&long, &condition)); // above min → no match
+    }
+
+    #[test]
+    fn test_content_length_within_range_no_match() {
+        let condition = RuleCondition::ContentLength {
+            min: Some(10),
+            max: Some(5000),
+        };
+        let medium = "a".repeat(500); // within [10, 5000]
+        assert!(!matches_condition(&medium, &condition)); // within range → no match
+    }
+
+    #[test]
+    fn test_content_length_outside_range_both_bounds() {
         let condition = RuleCondition::ContentLength {
             min: Some(100),
             max: Some(5000),
         };
-        let short = "court";
-        let medium = "a".repeat(500);
-        let long = "a".repeat(10000);
-        assert!(!matches_condition(short, &condition));
-        assert!(matches_condition(&medium, &condition));
-        assert!(!matches_condition(&long, &condition));
+        let short = "court"; // 5 chars < 100
+        let long = "a".repeat(10000); // 10000 > 5000
+        assert!(matches_condition(short, &condition));  // below min → MATCH
+        assert!(matches_condition(&long, &condition));  // exceeds max → MATCH
+    }
+
+    #[test]
+    fn test_content_length_no_bounds() {
+        let condition = RuleCondition::ContentLength {
+            min: None,
+            max: None,
+        };
+        assert!(!matches_condition("anything", &condition)); // no bounds → never match
     }
 
     #[test]
@@ -104,5 +197,14 @@ mod tests {
         assert!(matches_condition("https://api.openai.com/v1/chat", &condition));
         assert!(matches_condition("https://claude.ai/chat", &condition));
         assert!(!matches_condition("https://google.com", &condition));
+    }
+
+    #[test]
+    fn test_invalid_regex_returns_false() {
+        let condition = RuleCondition::Regex {
+            pattern: r"[invalid".to_string(),
+            case_insensitive: false,
+        };
+        assert!(!matches_condition("anything", &condition));
     }
 }

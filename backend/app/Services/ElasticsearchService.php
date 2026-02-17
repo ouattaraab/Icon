@@ -221,8 +221,7 @@ class ElasticsearchService
      */
     public function createIndex(): bool
     {
-        $mappingPath = base_path('../docker/elasticsearch/icon-exchanges-mapping.json');
-        $mapping = json_decode(file_get_contents($mappingPath), true);
+        $mapping = $this->getIndexMapping();
 
         try {
             $response = Http::put("{$this->host}/{$this->index}", $mapping);
@@ -231,5 +230,64 @@ class ElasticsearchService
             Log::error('Failed to create ES index', ['error' => $e->getMessage()]);
             return false;
         }
+    }
+
+    /**
+     * Load index mapping from file or return embedded default.
+     */
+    private function getIndexMapping(): array
+    {
+        // Try loading from the docker directory (works locally)
+        $paths = [
+            base_path('../docker/elasticsearch/icon-exchanges-mapping.json'),
+            base_path('docker/elasticsearch/icon-exchanges-mapping.json'),
+        ];
+
+        foreach ($paths as $path) {
+            if (file_exists($path)) {
+                return json_decode(file_get_contents($path), true);
+            }
+        }
+
+        // Embedded fallback mapping (French analyzer for prompt/response search)
+        return [
+            'settings' => [
+                'number_of_shards' => 2,
+                'number_of_replicas' => 0,
+                'analysis' => [
+                    'analyzer' => [
+                        'french_custom' => [
+                            'type' => 'custom',
+                            'tokenizer' => 'standard',
+                            'filter' => ['lowercase', 'french_elision', 'french_stop', 'french_stemmer'],
+                        ],
+                    ],
+                    'filter' => [
+                        'french_elision' => ['type' => 'elision', 'articles' => ['l','m','t','qu','n','s','j','d','c']],
+                        'french_stop' => ['type' => 'stop', 'stopwords' => '_french_'],
+                        'french_stemmer' => ['type' => 'stemmer', 'language' => 'french'],
+                    ],
+                ],
+            ],
+            'mappings' => [
+                'properties' => [
+                    'event_id' => ['type' => 'keyword'],
+                    'machine_id' => ['type' => 'keyword'],
+                    'platform' => ['type' => 'keyword'],
+                    'domain' => ['type' => 'keyword'],
+                    'event_type' => ['type' => 'keyword'],
+                    'prompt' => ['type' => 'text', 'analyzer' => 'french_custom', 'fields' => ['raw' => ['type' => 'keyword', 'ignore_above' => 512]]],
+                    'response' => ['type' => 'text', 'analyzer' => 'french_custom'],
+                    'content_hash' => ['type' => 'keyword'],
+                    'content_length' => ['type' => 'integer'],
+                    'matched_rules' => ['type' => 'keyword'],
+                    'severity' => ['type' => 'keyword'],
+                    'assigned_user' => ['type' => 'keyword'],
+                    'department' => ['type' => 'keyword'],
+                    'occurred_at' => ['type' => 'date'],
+                    'created_at' => ['type' => 'date'],
+                ],
+            ],
+        ];
     }
 }
