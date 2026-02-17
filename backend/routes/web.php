@@ -5,8 +5,40 @@ use App\Http\Controllers\Dashboard\ExchangeController;
 use App\Http\Controllers\Dashboard\MachineController;
 use App\Http\Controllers\Dashboard\ReportController;
 use App\Http\Controllers\Dashboard\RuleController;
+use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+
+/*
+|--------------------------------------------------------------------------
+| Authentication Routes
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/login', fn () => Inertia::render('Auth/Login'))->name('login');
+
+Route::post('/login', function (Request $request) {
+    $credentials = $request->validate([
+        'email' => 'required|email',
+        'password' => 'required',
+    ]);
+
+    if (Auth::attempt($credentials, $request->boolean('remember'))) {
+        $request->session()->regenerate();
+        return redirect()->intended('/');
+    }
+
+    return back()->withErrors(['email' => 'Identifiants invalides.']);
+})->name('login.store');
+
+Route::post('/logout', function (Request $request) {
+    Auth::logout();
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+    return redirect('/login');
+})->name('logout');
 
 /*
 |--------------------------------------------------------------------------
@@ -17,9 +49,16 @@ use Inertia\Inertia;
 Route::middleware(['auth'])->group(function () {
 
     // Dashboard home
-    Route::get('/', fn () => Inertia::render('Dashboard/Index', [
-        'stats' => app(ReportController::class)->index(request())->toResponse(request())->original,
-    ]))->name('dashboard');
+    Route::get('/', function () {
+        return Inertia::render('Dashboard/Index', [
+            'stats' => [
+                'total_machines' => \App\Models\Machine::count(),
+                'active_machines' => \App\Models\Machine::where('status', 'active')->count(),
+                'total_events' => \App\Models\Event::count(),
+                'open_alerts' => \App\Models\Alert::where('status', 'open')->count(),
+            ],
+        ]);
+    })->name('dashboard');
 
     // Machines
     Route::get('/machines', [MachineController::class, 'index'])->name('machines.index');
