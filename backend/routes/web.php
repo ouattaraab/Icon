@@ -99,6 +99,8 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/rules/{rule}', [RuleController::class, 'update'])->name('rules.update');
         Route::delete('/rules/{rule}', [RuleController::class, 'destroy'])->name('rules.destroy');
         Route::post('/rules/{rule}/toggle', [RuleController::class, 'toggleEnabled'])->name('rules.toggle');
+        Route::get('/rules/export', [RuleController::class, 'export'])->name('rules.export');
+        Route::post('/rules/import', [RuleController::class, 'import'])->name('rules.import');
 
         // Domains CRUD
         Route::post('/domains', [DomainController::class, 'store'])->name('domains.store');

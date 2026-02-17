@@ -1,4 +1,5 @@
-import { Link, router } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
+import { useState, useRef, useCallback } from 'react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
 
 const categoryColors = {
@@ -7,25 +8,124 @@ const categoryColors = {
     log: { bg: '#1e3a5f', color: '#93c5fd' },
 };
 
+const btnStyle = {
+    border: 'none', borderRadius: 8, padding: '0.6rem 1.2rem',
+    cursor: 'pointer', fontSize: '0.875rem', fontWeight: 600,
+    textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+};
+
 export default function RulesIndex({ rules }) {
+    const { flash } = usePage().props;
+    const fileInputRef = useRef(null);
+    const [importing, setImporting] = useState(false);
+
+    const handleExport = useCallback(() => {
+        window.location.href = '/rules/export';
+    }, []);
+
+    const handleImportClick = useCallback(() => {
+        fileInputRef.current?.click();
+    }, []);
+
+    const handleFileSelected = useCallback((e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setImporting(true);
+        router.post('/rules/import', { file }, {
+            forceFormData: true,
+            onFinish: () => {
+                setImporting(false);
+                if (fileInputRef.current) fileInputRef.current.value = '';
+            },
+        });
+    }, []);
+
+    // Pagination
+    const currentPage = rules?.current_page ?? 1;
+    const lastPage = rules?.last_page ?? 1;
+
+    const generatePageNumbers = () => {
+        const pages = [];
+        if (lastPage <= 7) {
+            for (let i = 1; i <= lastPage; i++) pages.push(i);
+        } else {
+            pages.push(1);
+            if (currentPage > 3) pages.push('...');
+            for (let i = Math.max(2, currentPage - 1); i <= Math.min(lastPage - 1, currentPage + 1); i++) {
+                pages.push(i);
+            }
+            if (currentPage < lastPage - 2) pages.push('...');
+            pages.push(lastPage);
+        }
+        return pages;
+    };
+
+    const goToPage = (page) => {
+        if (page < 1 || page > lastPage || page === currentPage) return;
+        router.get('/rules', { page }, { preserveState: true, replace: true });
+    };
+
     return (
         <DashboardLayout title="Gestion des règles">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            {/* Flash messages */}
+            {flash?.success && (
+                <div style={{
+                    background: 'rgba(34,197,94,0.1)', border: '1px solid #166534',
+                    borderRadius: 8, padding: '0.75rem 1rem', marginBottom: '1rem',
+                    color: '#86efac', fontSize: '0.85rem',
+                }}>
+                    {flash.success}
+                </div>
+            )}
+            {flash?.error && (
+                <div style={{
+                    background: 'rgba(239,68,68,0.1)', border: '1px solid #991b1b',
+                    borderRadius: 8, padding: '0.75rem 1rem', marginBottom: '1rem',
+                    color: '#fca5a5', fontSize: '0.85rem',
+                }}>
+                    {flash.error}
+                </div>
+            )}
+
+            {/* Action bar */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
                 <p style={{ color: '#94a3b8', fontSize: '0.875rem', margin: 0 }}>
                     {rules?.total ?? 0} règle(s) configurée(s)
                 </p>
-                <Link
-                    href="/rules/create"
-                    style={{
-                        background: '#3b82f6', color: '#fff', border: 'none',
-                        borderRadius: 8, padding: '0.6rem 1.2rem', cursor: 'pointer',
-                        fontSize: '0.875rem', fontWeight: 600, textDecoration: 'none',
-                    }}
-                >
-                    + Nouvelle règle
-                </Link>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                    {/* Export */}
+                    <button
+                        onClick={handleExport}
+                        style={{ ...btnStyle, background: '#1e293b', color: '#94a3b8', border: '1px solid #334155' }}
+                    >
+                        Export JSON
+                    </button>
+                    {/* Import */}
+                    <button
+                        onClick={handleImportClick}
+                        disabled={importing}
+                        style={{ ...btnStyle, background: '#1e293b', color: '#94a3b8', border: '1px solid #334155', opacity: importing ? 0.6 : 1 }}
+                    >
+                        {importing ? 'Import...' : 'Import JSON'}
+                    </button>
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".json"
+                        style={{ display: 'none' }}
+                        onChange={handleFileSelected}
+                    />
+                    {/* Create */}
+                    <Link
+                        href="/rules/create"
+                        style={{ ...btnStyle, background: '#3b82f6', color: '#fff' }}
+                    >
+                        + Nouvelle règle
+                    </Link>
+                </div>
             </div>
 
+            {/* Table */}
             <div style={{
                 background: '#1e293b',
                 borderRadius: 12,
@@ -47,6 +147,13 @@ export default function RulesIndex({ rules }) {
                         </tr>
                     </thead>
                     <tbody>
+                        {rules?.data?.length === 0 && (
+                            <tr>
+                                <td colSpan={7} style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
+                                    Aucune règle configurée. Créez-en une ou importez un fichier JSON.
+                                </td>
+                            </tr>
+                        )}
                         {rules?.data?.map((rule) => {
                             const cat = categoryColors[rule.category] || categoryColors.log;
                             return (
@@ -111,6 +218,56 @@ export default function RulesIndex({ rules }) {
                     </tbody>
                 </table>
             </div>
+
+            {/* Pagination */}
+            {lastPage > 1 && (
+                <div style={{
+                    display: 'flex', justifyContent: 'center', alignItems: 'center',
+                    gap: '0.35rem', marginTop: '1.5rem',
+                }}>
+                    <button
+                        onClick={() => goToPage(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        style={{
+                            background: '#1e293b', border: '1px solid #334155', borderRadius: 6,
+                            padding: '0.4rem 0.75rem', color: currentPage === 1 ? '#475569' : '#e2e8f0',
+                            cursor: currentPage === 1 ? 'default' : 'pointer', fontSize: '0.8rem',
+                        }}
+                    >
+                        Préc.
+                    </button>
+                    {generatePageNumbers().map((p, i) =>
+                        p === '...' ? (
+                            <span key={`e${i}`} style={{ color: '#64748b', padding: '0 0.25rem' }}>...</span>
+                        ) : (
+                            <button
+                                key={p}
+                                onClick={() => goToPage(p)}
+                                style={{
+                                    background: p === currentPage ? '#3b82f6' : '#1e293b',
+                                    border: '1px solid ' + (p === currentPage ? '#3b82f6' : '#334155'),
+                                    borderRadius: 6, padding: '0.4rem 0.7rem',
+                                    color: p === currentPage ? '#fff' : '#e2e8f0',
+                                    cursor: 'pointer', fontSize: '0.8rem', fontWeight: p === currentPage ? 700 : 400,
+                                }}
+                            >
+                                {p}
+                            </button>
+                        )
+                    )}
+                    <button
+                        onClick={() => goToPage(currentPage + 1)}
+                        disabled={currentPage === lastPage}
+                        style={{
+                            background: '#1e293b', border: '1px solid #334155', borderRadius: 6,
+                            padding: '0.4rem 0.75rem', color: currentPage === lastPage ? '#475569' : '#e2e8f0',
+                            cursor: currentPage === lastPage ? 'default' : 'pointer', fontSize: '0.8rem',
+                        }}
+                    >
+                        Suiv.
+                    </button>
+                </div>
+            )}
         </DashboardLayout>
     );
 }

@@ -35,6 +35,27 @@ impl EventQueue {
         }
     }
 
+    /// Log an event with additional metadata (e.g. DLP match details)
+    pub async fn log_event_with_metadata(
+        &self,
+        event_type: &str,
+        platform: Option<&str>,
+        domain: Option<&str>,
+        content_hash: Option<&str>,
+        prompt_excerpt: Option<&str>,
+        response_excerpt: Option<&str>,
+        rule_id: Option<&str>,
+        severity: Option<&str>,
+        metadata: Option<&str>,
+    ) {
+        if let Err(e) = self.db.queue_event(
+            event_type, platform, domain, content_hash,
+            prompt_excerpt, response_excerpt, rule_id, severity, metadata,
+        ) {
+            error!(error = %e, "Failed to queue event locally");
+        }
+    }
+
     /// Main sync loop: periodically sends pending events to the server
     pub async fn run_sync_loop(&self) {
         let mut sync_interval = interval(Duration::from_secs(30));

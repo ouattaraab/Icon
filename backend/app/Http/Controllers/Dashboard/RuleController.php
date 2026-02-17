@@ -7,9 +7,11 @@ use App\Events\RuleUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Rule;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -130,5 +132,113 @@ class RuleController extends Controller
         );
 
         return back();
+    }
+
+    /**
+     * Export all rules as a JSON download.
+     */
+    public function export(): JsonResponse
+    {
+        $rules = Rule::orderBy('priority', 'desc')->get()->map(fn (Rule $rule) => [
+            'name' => $rule->name,
+            'description' => $rule->description,
+            'category' => $rule->category,
+            'target' => $rule->target,
+            'condition_type' => $rule->condition_type,
+            'condition_value' => $rule->condition_value,
+            'action_config' => $rule->action_config,
+            'priority' => $rule->priority,
+            'enabled' => $rule->enabled,
+        ]);
+
+        AuditLog::log('rules.exported', 'Rule', null, ['count' => $rules->count()]);
+
+        return response()->json([
+            'version' => '1.0',
+            'exported_at' => now()->toIso8601String(),
+            'count' => $rules->count(),
+            'rules' => $rules,
+        ], 200, [
+            'Content-Disposition' => 'attachment; filename="icon-rules-' . now()->format('Y-m-d') . '.json"',
+        ]);
+    }
+
+    /**
+     * Import rules from a JSON file upload.
+     */
+    public function import(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:json,txt|max:2048',
+        ]);
+
+        $content = file_get_contents($request->file('file')->getRealPath());
+        $data = json_decode($content, true);
+
+        if (!$data || !isset($data['rules']) || !is_array($data['rules'])) {
+            return back()->with('error', 'Format de fichier invalide. Le fichier doit contenir une clé "rules".');
+        }
+
+        $validCategories = ['block', 'alert', 'log'];
+        $validTargets = ['prompt', 'response', 'clipboard', 'domain'];
+        $validConditionTypes = ['regex', 'keyword', 'domain_list', 'content_length'];
+
+        $imported = 0;
+        $skipped = 0;
+        $errors = [];
+
+        DB::beginTransaction();
+
+        try {
+            foreach ($data['rules'] as $i => $ruleData) {
+                // Validate required fields
+                if (empty($ruleData['name']) || empty($ruleData['category']) || empty($ruleData['target'])
+                    || empty($ruleData['condition_type']) || !isset($ruleData['condition_value'])) {
+                    $errors[] = "Règle #{$i}: champs requis manquants.";
+                    $skipped++;
+                    continue;
+                }
+
+                if (!in_array($ruleData['category'], $validCategories)
+                    || !in_array($ruleData['target'], $validTargets)
+                    || !in_array($ruleData['condition_type'], $validConditionTypes)) {
+                    $errors[] = "Règle #{$i} ({$ruleData['name']}): valeur de catégorie, cible ou type invalide.";
+                    $skipped++;
+                    continue;
+                }
+
+                Rule::create([
+                    'name' => $ruleData['name'],
+                    'description' => $ruleData['description'] ?? null,
+                    'category' => $ruleData['category'],
+                    'target' => $ruleData['target'],
+                    'condition_type' => $ruleData['condition_type'],
+                    'condition_value' => is_array($ruleData['condition_value']) ? $ruleData['condition_value'] : json_decode($ruleData['condition_value'], true),
+                    'action_config' => isset($ruleData['action_config']) && is_array($ruleData['action_config']) ? $ruleData['action_config'] : null,
+                    'priority' => (int) ($ruleData['priority'] ?? 0),
+                    'enabled' => (bool) ($ruleData['enabled'] ?? true),
+                    'created_by' => auth()->id(),
+                ]);
+
+                $imported++;
+            }
+
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return back()->with('error', "Erreur lors de l'import : {$e->getMessage()}");
+        }
+
+        AuditLog::log('rules.imported', 'Rule', null, [
+            'imported' => $imported,
+            'skipped' => $skipped,
+        ]);
+
+        $message = "{$imported} règle(s) importée(s).";
+        if ($skipped > 0) {
+            $message .= " {$skipped} ignorée(s).";
+        }
+
+        return redirect()->route('rules.index')->with('success', $message);
     }
 }

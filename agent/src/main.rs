@@ -106,8 +106,9 @@ async fn main() -> anyhow::Result<()> {
     let clipboard_handle = {
         let re = rule_engine.clone();
         let eq = event_queue.clone();
+        let monitor_config = clipboard::monitor::ClipboardMonitorConfig::from_app_config(&config);
         tokio::spawn(async move {
-            if let Err(e) = clipboard::monitor::start_monitoring(re, eq).await {
+            if let Err(e) = clipboard::monitor::start_monitoring(re, eq, monitor_config).await {
                 error!(error = %e, "Clipboard monitor failed");
             }
         })
