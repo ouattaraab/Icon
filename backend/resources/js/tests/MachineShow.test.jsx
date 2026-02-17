@@ -169,4 +169,26 @@ describe('Machines/Show', () => {
 
         expect(screen.queryByText(/commande en attente/)).not.toBeInTheDocument();
     });
+
+    it('shows edit button for managers', () => {
+        renderPage(MachinesShow, defaultProps);
+
+        expect(screen.getByText('Modifier')).toBeInTheDocument();
+    });
+
+    it('hides edit button for viewers', () => {
+        setPageProps({ auth: { user: { role: 'viewer' }, is_admin: false, is_manager: false } });
+        renderPage(MachinesShow, defaultProps);
+
+        expect(screen.queryByText('Modifier')).not.toBeInTheDocument();
+    });
+
+    it('displays notes when present', () => {
+        renderPage(MachinesShow, {
+            ...defaultProps,
+            machine: { ...defaultProps.machine, notes: 'Machine de test pour le projet Alpha' },
+        });
+
+        expect(screen.getByText('Machine de test pour le projet Alpha')).toBeInTheDocument();
+    });
 });

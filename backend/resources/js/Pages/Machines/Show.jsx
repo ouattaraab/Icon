@@ -86,8 +86,30 @@ function formatShortDate(dateStr) {
 export default function MachinesShow({ machine, stats, dailyActivity = [], eventTypes = {}, alerts = [], platformBreakdown = [], hourlyActivity = {}, pendingCommands = [] }) {
     const [activeTab, setActiveTab] = useState('events');
     const [confirmAction, setConfirmAction] = useState(null);
+    const [editing, setEditing] = useState(false);
+    const [editData, setEditData] = useState({
+        department: machine.department || '',
+        assigned_user: machine.assigned_user || '',
+        notes: machine.notes || '',
+    });
     const { auth, flash } = usePage().props;
     const canManage = auth?.is_manager ?? false;
+
+    const handleSaveEdit = () => {
+        router.put(`/machines/${machine.id}`, editData, {
+            preserveScroll: true,
+            onSuccess: () => setEditing(false),
+        });
+    };
+
+    const handleCancelEdit = () => {
+        setEditing(false);
+        setEditData({
+            department: machine.department || '',
+            assigned_user: machine.assigned_user || '',
+            notes: machine.notes || '',
+        });
+    };
 
     const machineStatus = machine.last_heartbeat &&
         new Date(machine.last_heartbeat) > new Date(Date.now() - 5 * 60 * 1000)
@@ -243,6 +265,18 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
                         >
                             Voir les echanges
                         </button>
+                        {canManage && !editing && (
+                            <button
+                                onClick={() => setEditing(true)}
+                                style={{
+                                    background: '#334155', color: '#e2e8f0', border: 'none',
+                                    borderRadius: 6, padding: '0.4rem 0.75rem',
+                                    cursor: 'pointer', fontSize: '0.8rem',
+                                }}
+                            >
+                                Modifier
+                            </button>
+                        )}
                         {canManage && (
                             <>
                                 <button
@@ -293,17 +327,73 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
                     </div>
                 </div>
 
-                <div style={{
-                    display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                    gap: '1rem', marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid #334155',
-                }}>
-                    <InfoItem label="Adresse IP" value={machine.ip_address || '\u2014'} mono />
-                    <InfoItem label="Departement" value={machine.department || '\u2014'} />
-                    <InfoItem label="Utilisateur assigne" value={machine.assigned_user || '\u2014'} />
-                    <InfoItem label="Dernier contact" value={machine.last_heartbeat ? formatDate(machine.last_heartbeat) : '\u2014'} />
-                    <InfoItem label="Enregistre le" value={machine.created_at ? formatDate(machine.created_at) : '\u2014'} />
-                    <InfoItem label="ID machine" value={machine.id?.slice(0, 12) + '...'} mono />
-                </div>
+                {!editing ? (
+                    <div style={{
+                        display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                        gap: '1rem', marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid #334155',
+                    }}>
+                        <InfoItem label="Adresse IP" value={machine.ip_address || '\u2014'} mono />
+                        <InfoItem label="Departement" value={machine.department || '\u2014'} />
+                        <InfoItem label="Utilisateur assigne" value={machine.assigned_user || '\u2014'} />
+                        <InfoItem label="Dernier contact" value={machine.last_heartbeat ? formatDate(machine.last_heartbeat) : '\u2014'} />
+                        <InfoItem label="Enregistre le" value={machine.created_at ? formatDate(machine.created_at) : '\u2014'} />
+                        <InfoItem label="ID machine" value={machine.id?.slice(0, 12) + '...'} mono />
+                    </div>
+                ) : (
+                    <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid #334155' }}>
+                        <div style={{
+                            display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                            gap: '1rem', marginBottom: '1rem',
+                        }}>
+                            <EditField label="Departement" value={editData.department}
+                                onChange={(v) => setEditData({ ...editData, department: v })} />
+                            <EditField label="Utilisateur assigne" value={editData.assigned_user}
+                                onChange={(v) => setEditData({ ...editData, assigned_user: v })} />
+                        </div>
+                        <div style={{ marginBottom: '1rem' }}>
+                            <span style={{ color: '#64748b', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 1, display: 'block', marginBottom: '0.3rem' }}>
+                                Notes
+                            </span>
+                            <textarea
+                                value={editData.notes}
+                                onChange={(e) => setEditData({ ...editData, notes: e.target.value })}
+                                placeholder="Notes internes sur cette machine..."
+                                rows={3}
+                                style={{
+                                    background: '#0f172a', border: '1px solid #334155', borderRadius: 8,
+                                    padding: '0.6rem 1rem', color: '#f8fafc', fontSize: '0.875rem',
+                                    width: '100%', fontFamily: 'inherit', resize: 'vertical',
+                                }}
+                            />
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                            <button onClick={handleCancelEdit} style={{
+                                background: '#334155', color: '#e2e8f0', border: 'none', borderRadius: 8,
+                                padding: '0.5rem 1rem', cursor: 'pointer', fontSize: '0.85rem',
+                            }}>
+                                Annuler
+                            </button>
+                            <button onClick={handleSaveEdit} style={{
+                                background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 8,
+                                padding: '0.5rem 1rem', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600,
+                            }}>
+                                Enregistrer
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Notes display (when not editing) */}
+                {!editing && machine.notes && (
+                    <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #334155' }}>
+                        <span style={{ color: '#64748b', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 1 }}>
+                            Notes
+                        </span>
+                        <p style={{ color: '#94a3b8', margin: '0.3rem 0 0', fontSize: '0.85rem', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+                            {machine.notes}
+                        </p>
+                    </div>
+                )}
             </div>
 
             {/* Stats cards */}
@@ -685,6 +775,26 @@ function InfoItem({ label, value, mono }) {
             }}>
                 {value}
             </p>
+        </div>
+    );
+}
+
+function EditField({ label, value, onChange }) {
+    return (
+        <div>
+            <span style={{ color: '#64748b', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 1, display: 'block', marginBottom: '0.3rem' }}>
+                {label}
+            </span>
+            <input
+                type="text"
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                style={{
+                    background: '#0f172a', border: '1px solid #334155', borderRadius: 8,
+                    padding: '0.5rem 0.75rem', color: '#f8fafc', fontSize: '0.875rem',
+                    width: '100%',
+                }}
+            />
         </div>
     );
 }

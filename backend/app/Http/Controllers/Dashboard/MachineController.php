@@ -144,6 +144,33 @@ class MachineController extends Controller
         ]);
     }
 
+    public function update(Request $request, Machine $machine): RedirectResponse
+    {
+        $validated = $request->validate([
+            'department' => 'nullable|string|max:255',
+            'assigned_user' => 'nullable|string|max:255',
+            'notes' => 'nullable|string|max:5000',
+        ]);
+
+        $changes = [];
+        foreach (['department', 'assigned_user', 'notes'] as $field) {
+            if (array_key_exists($field, $validated) && $machine->$field !== $validated[$field]) {
+                $changes[$field] = ['old' => $machine->$field, 'new' => $validated[$field]];
+            }
+        }
+
+        $machine->update($validated);
+
+        if (!empty($changes)) {
+            AuditLog::log('machine.updated', 'Machine', $machine->id, [
+                'hostname' => $machine->hostname,
+                'changes' => $changes,
+            ]);
+        }
+
+        return redirect()->back()->with('success', 'Machine mise à jour.');
+    }
+
     public function forceSyncRules(Machine $machine): RedirectResponse
     {
         $commands = cache()->get("machine:{$machine->id}:commands", []);

@@ -145,6 +145,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/alerts/{alert}/resolve', [AlertController::class, 'resolve'])->name('alerts.resolve');
 
         // Machine actions
+        Route::put('/machines/{machine}', [MachineController::class, 'update'])->name('machines.update');
         Route::post('/machines/bulk-action', [MachineController::class, 'bulkAction'])->name('machines.bulkAction');
         Route::post('/machines/{machine}/tags', [TagController::class, 'assignToMachine'])->name('machines.tags');
         Route::post('/machines/bulk-tags', [TagController::class, 'bulkAssign'])->name('machines.bulkTags');

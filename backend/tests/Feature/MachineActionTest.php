@@ -176,4 +176,54 @@ class MachineActionTest extends TestCase
         $this->assertEquals('force_sync_rules', $commands[0]['type']);
         $this->assertEquals('restart', $commands[1]['type']);
     }
+
+    // ── Update machine info ──────────────────────────────────────────────
+
+    public function test_manager_can_update_machine(): void
+    {
+        $this->actingAs($this->manager)
+            ->put("/machines/{$this->machine->id}", [
+                'department' => 'Marketing',
+                'assigned_user' => 'Marie Konan',
+                'notes' => 'Machine de test',
+            ])
+            ->assertRedirect();
+
+        $this->machine->refresh();
+        $this->assertEquals('Marketing', $this->machine->department);
+        $this->assertEquals('Marie Konan', $this->machine->assigned_user);
+        $this->assertEquals('Machine de test', $this->machine->notes);
+    }
+
+    public function test_viewer_cannot_update_machine(): void
+    {
+        $this->actingAs($this->viewer)
+            ->put("/machines/{$this->machine->id}", [
+                'department' => 'Marketing',
+            ])
+            ->assertStatus(403);
+    }
+
+    public function test_update_machine_creates_audit_log(): void
+    {
+        $this->actingAs($this->admin)
+            ->put("/machines/{$this->machine->id}", [
+                'department' => 'Finance',
+                'assigned_user' => 'Amadou Diallo',
+            ]);
+
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'machine.updated',
+            'target_id' => $this->machine->id,
+        ]);
+    }
+
+    public function test_update_machine_validates_notes_max_length(): void
+    {
+        $this->actingAs($this->admin)
+            ->put("/machines/{$this->machine->id}", [
+                'notes' => str_repeat('a', 5001),
+            ])
+            ->assertSessionHasErrors('notes');
+    }
 }

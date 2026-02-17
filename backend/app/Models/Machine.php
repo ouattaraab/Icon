@@ -24,6 +24,7 @@ class Machine extends Model
         'ip_address',
         'department',
         'assigned_user',
+        'notes',
     ];
 
     protected $hidden = [
