@@ -32,6 +32,74 @@ class AlertController extends Controller
         ]);
     }
 
+    public function show(Alert $alert): Response
+    {
+        $alert->load([
+            'machine:id,hostname,os,os_version,department,assigned_user,status',
+            'rule:id,name,category,target,condition_type',
+            'event',
+            'acknowledgedBy:id,name',
+        ]);
+
+        // Related alerts on same machine (last 10, excluding current)
+        $relatedAlerts = Alert::with('rule:id,name')
+            ->where('machine_id', $alert->machine_id)
+            ->where('id', '!=', $alert->id)
+            ->orderByDesc('created_at')
+            ->limit(10)
+            ->get()
+            ->map(fn ($a) => [
+                'id' => $a->id,
+                'severity' => $a->severity,
+                'title' => $a->title,
+                'status' => $a->status,
+                'rule_name' => $a->rule?->name,
+                'created_at' => $a->created_at?->diffForHumans(),
+            ]);
+
+        return Inertia::render('Alerts/Show', [
+            'alert' => [
+                'id' => $alert->id,
+                'severity' => $alert->severity,
+                'title' => $alert->title,
+                'description' => $alert->description,
+                'status' => $alert->status,
+                'created_at' => $alert->created_at?->toIso8601String(),
+                'created_at_human' => $alert->created_at?->diffForHumans(),
+                'acknowledged_at' => $alert->acknowledged_at?->toIso8601String(),
+                'acknowledged_at_human' => $alert->acknowledged_at?->diffForHumans(),
+                'acknowledged_by_name' => $alert->acknowledgedBy?->name,
+                'event_id' => $alert->event_id,
+                'event' => $alert->event ? [
+                    'id' => $alert->event->id,
+                    'event_type' => $alert->event->event_type,
+                    'platform' => $alert->event->platform,
+                    'domain' => $alert->event->domain,
+                    'severity' => $alert->event->severity,
+                    'elasticsearch_id' => $alert->event->elasticsearch_id,
+                    'occurred_at' => $alert->event->occurred_at?->toIso8601String(),
+                ] : null,
+                'machine' => $alert->machine ? [
+                    'id' => $alert->machine->id,
+                    'hostname' => $alert->machine->hostname,
+                    'os' => $alert->machine->os,
+                    'os_version' => $alert->machine->os_version,
+                    'department' => $alert->machine->department,
+                    'assigned_user' => $alert->machine->assigned_user,
+                    'status' => $alert->machine->status,
+                ] : null,
+                'rule' => $alert->rule ? [
+                    'id' => $alert->rule->id,
+                    'name' => $alert->rule->name,
+                    'category' => $alert->rule->category,
+                    'target' => $alert->rule->target,
+                    'condition_type' => $alert->rule->condition_type,
+                ] : null,
+            ],
+            'relatedAlerts' => $relatedAlerts,
+        ]);
+    }
+
     public function acknowledge(Alert $alert): \Illuminate\Http\RedirectResponse
     {
         $alert->update([

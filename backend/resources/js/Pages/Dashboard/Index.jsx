@@ -162,6 +162,28 @@ export default function DashboardIndex({
         setLiveFeed((prev) => [item, ...prev].slice(0, 15));
     }, []);
 
+    // Polling fallback when WebSocket is not available
+    useEffect(() => {
+        if (window.Echo) return; // Skip polling if Echo is available
+
+        const poll = () => {
+            fetch('/dashboard/live', {
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin',
+            })
+                .then((r) => r.ok ? r.json() : null)
+                .then((data) => {
+                    if (!data) return;
+                    setStats((prev) => ({ ...prev, ...data.stats }));
+                    if (data.recentAlerts) setRecentAlerts(data.recentAlerts);
+                })
+                .catch(() => {}); // Silently ignore polling errors
+        };
+
+        const interval = setInterval(poll, 30000); // Poll every 30 seconds
+        return () => clearInterval(interval);
+    }, []);
+
     useEffect(() => {
         if (!window.Echo) return;
 
@@ -257,26 +279,25 @@ export default function DashboardIndex({
     return (
         <DashboardLayout title="Tableau de bord">
             {/* Live indicator */}
-            {wsConnected && (
-                <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    marginBottom: '1rem',
-                }}>
-                    <span style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: '50%',
-                        background: '#22c55e',
-                        display: 'inline-block',
-                        boxShadow: '0 0 6px #22c55e',
-                    }} />
-                    <span style={{ color: '#64748b', fontSize: '0.75rem' }}>
-                        Temps réel actif
-                    </span>
-                </div>
-            )}
+            <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                marginBottom: '1rem',
+            }}>
+                <span style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    background: wsConnected ? '#22c55e' : '#3b82f6',
+                    display: 'inline-block',
+                    boxShadow: wsConnected ? '0 0 6px #22c55e' : 'none',
+                    animation: 'pulse 2s infinite',
+                }} />
+                <span style={{ color: '#64748b', fontSize: '0.75rem' }}>
+                    {wsConnected ? 'Temps reel actif' : 'Actualisation auto (30s)'}
+                </span>
+            </div>
 
             {/* Config button */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>

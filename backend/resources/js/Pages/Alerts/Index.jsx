@@ -88,7 +88,7 @@ export default function AlertsIndex({ alerts, openCount, criticalCount, filters 
                 {alerts?.data?.map((alert) => {
                     const sev = severityStyles[alert.severity] || severityStyles.warning;
                     return (
-                        <div key={alert.id} style={{
+                        <div key={alert.id} onClick={() => router.visit(`/alerts/${alert.id}`)} style={{
                             background: '#1e293b',
                             borderRadius: 8,
                             padding: '1rem 1.25rem',
@@ -96,7 +96,11 @@ export default function AlertsIndex({ alerts, openCount, criticalCount, filters 
                             display: 'flex',
                             alignItems: 'center',
                             gap: '1rem',
-                        }}>
+                            cursor: 'pointer',
+                            transition: 'border-color 0.15s',
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.borderColor = '#475569'}
+                        onMouseLeave={(e) => e.currentTarget.style.borderColor = '#334155'}>
                             <span style={{
                                 padding: '0.2rem 0.5rem',
                                 borderRadius: 6,

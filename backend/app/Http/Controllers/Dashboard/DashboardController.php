@@ -158,6 +158,40 @@ class DashboardController extends Controller
         ]);
     }
 
+    public function liveStats(): JsonResponse
+    {
+        $now = now();
+        $offlineThreshold = (int) Setting::getValue('offline_threshold_seconds', 300);
+
+        $stats = [
+            'online_machines' => Machine::where('last_heartbeat', '>', $now->copy()->subSeconds($offlineThreshold))->count(),
+            'events_today' => Event::where('occurred_at', '>=', $now->copy()->startOfDay())->count(),
+            'blocked_today' => Event::where('event_type', 'block')
+                ->where('occurred_at', '>=', $now->copy()->startOfDay())->count(),
+            'open_alerts' => Alert::where('status', 'open')->count(),
+            'critical_alerts' => Alert::where('status', 'open')->where('severity', 'critical')->count(),
+        ];
+
+        $recentAlerts = Alert::with('machine:id,hostname')
+            ->where('status', 'open')
+            ->orderByDesc('created_at')
+            ->limit(5)
+            ->get()
+            ->map(fn (Alert $a) => [
+                'id' => $a->id,
+                'severity' => $a->severity,
+                'title' => $a->title,
+                'machine' => $a->machine?->hostname,
+                'created_at' => $a->created_at?->diffForHumans(),
+            ]);
+
+        return response()->json([
+            'stats' => $stats,
+            'recentAlerts' => $recentAlerts,
+            'timestamp' => $now->toIso8601String(),
+        ]);
+    }
+
     public function saveConfig(Request $request): JsonResponse
     {
         $validated = $request->validate([

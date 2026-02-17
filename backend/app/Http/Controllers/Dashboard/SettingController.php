@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
+use App\Models\Machine;
 use App\Models\Setting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -82,5 +84,56 @@ class SettingController extends Controller
         }
 
         return redirect()->back()->with('success', 'Paramètres enregistrés.');
+    }
+
+    public function agentVersions(): Response
+    {
+        $targetVersion = Setting::getValue('agent_current_version', '0.1.0');
+        $updateUrl = Setting::getValue('agent_update_url', '');
+
+        // Version distribution across machines
+        $versionDistribution = Machine::whereNotNull('agent_version')
+            ->select('agent_version', DB::raw('COUNT(*) as count'))
+            ->groupBy('agent_version')
+            ->orderByDesc('count')
+            ->get()
+            ->map(fn ($row) => [
+                'version' => $row->agent_version,
+                'count' => (int) $row->count,
+                'is_current' => $row->agent_version === $targetVersion,
+            ]);
+
+        $totalMachines = Machine::count();
+        $upToDate = Machine::where('agent_version', $targetVersion)->count();
+        $outdated = $totalMachines - $upToDate;
+
+        // Machines with outdated agents (details)
+        $outdatedMachines = Machine::where(function ($q) use ($targetVersion) {
+                $q->where('agent_version', '!=', $targetVersion)
+                  ->orWhereNull('agent_version');
+            })
+            ->select('id', 'hostname', 'os', 'agent_version', 'status', 'last_heartbeat', 'department')
+            ->orderBy('hostname')
+            ->limit(50)
+            ->get()
+            ->map(fn ($m) => [
+                'id' => $m->id,
+                'hostname' => $m->hostname,
+                'os' => $m->os,
+                'agent_version' => $m->agent_version,
+                'status' => $m->isOnline() ? 'online' : $m->status,
+                'last_heartbeat' => $m->last_heartbeat?->diffForHumans(),
+                'department' => $m->department,
+            ]);
+
+        return Inertia::render('Settings/AgentVersions', [
+            'targetVersion' => $targetVersion,
+            'updateUrl' => $updateUrl,
+            'versionDistribution' => $versionDistribution,
+            'totalMachines' => $totalMachines,
+            'upToDate' => $upToDate,
+            'outdated' => $outdated,
+            'outdatedMachines' => $outdatedMachines,
+        ]);
     }
 }

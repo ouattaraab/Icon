@@ -1,4 +1,4 @@
-import { useForm } from '@inertiajs/react';
+import { useForm, Link } from '@inertiajs/react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
 
 const cardStyle = {
@@ -214,9 +214,22 @@ export default function SettingsIndex({ settings }) {
 
                 {/* Mise à jour agent */}
                 <div style={cardStyle}>
-                    <h3 style={{ color: '#f8fafc', fontSize: '1.1rem', fontWeight: 600, margin: '0 0 1.25rem' }}>
-                        Mise à jour des agents
-                    </h3>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                        <h3 style={{ color: '#f8fafc', fontSize: '1.1rem', fontWeight: 600, margin: 0 }}>
+                            Mise à jour des agents
+                        </h3>
+                        <Link
+                            href="/settings/agent-versions"
+                            style={{
+                                color: '#3b82f6',
+                                textDecoration: 'none',
+                                fontSize: '0.8rem',
+                                fontWeight: 500,
+                            }}
+                        >
+                            Voir les versions →
+                        </Link>
+                    </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                         <Field
                             label="Version courante de l'agent"

@@ -84,6 +84,7 @@ Route::middleware(['auth'])->group(function () {
 
     // Dashboard home
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/live', [DashboardController::class, 'liveStats'])->name('dashboard.live');
     Route::put('/dashboard/config', [DashboardController::class, 'saveConfig'])->name('dashboard.config');
 
     // Machines
@@ -96,6 +97,7 @@ Route::middleware(['auth'])->group(function () {
     // Alerts (view + export)
     Route::get('/alerts', [AlertController::class, 'index'])->name('alerts.index');
     Route::get('/alerts/export', [AlertController::class, 'exportCsv'])->name('alerts.export');
+    Route::get('/alerts/{alert}', [AlertController::class, 'show'])->name('alerts.show');
 
     // Exchanges (Elasticsearch full-text search)
     Route::get('/exchanges', [ExchangeController::class, 'index'])->name('exchanges.index');
@@ -191,5 +193,6 @@ Route::middleware(['auth'])->group(function () {
         // Settings
         Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
         Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
+        Route::get('/settings/agent-versions', [SettingController::class, 'agentVersions'])->name('settings.agentVersions');
     });
 });
