@@ -39,8 +39,14 @@ pub struct AppConfig {
     /// Clé HMAC pour la signature des requêtes
     pub hmac_secret: Option<String>,
 
-    /// URL WebSocket du serveur
+    /// URL WebSocket du serveur (base URL sans /app/{key})
     pub websocket_url: String,
+
+    /// Clé applicative Reverb (Pusher protocol app key)
+    pub reverb_app_key: Option<String>,
+
+    /// Canal Reverb pour les mises à jour de règles
+    pub reverb_channel: Option<String>,
 }
 
 impl AppConfig {
@@ -55,7 +61,9 @@ impl AppConfig {
             .set_default("event_sync_interval_secs", 30_i64)?
             .set_default("event_batch_size", 100_i64)?
             .set_default("local_retention_days", 7_i64)?
-            .set_default("websocket_url", "wss://icon.gs2e.ci/ws")?
+            .set_default("websocket_url", "wss://icon.gs2e.ci")?
+            .set_default("reverb_app_key", "icon-local-key")?
+            .set_default("reverb_channel", "icon.rules")?
             .set_default("data_dir", Self::default_data_dir().to_string_lossy().to_string())?
             .set_default("db_encryption_key", "CHANGE_ME_ON_INSTALL")?
             // Config file
