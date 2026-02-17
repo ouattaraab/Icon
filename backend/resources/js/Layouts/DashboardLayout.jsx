@@ -63,6 +63,26 @@ export default function DashboardLayout({ children, title }) {
                         time: new Date().toLocaleTimeString('fr-FR'),
                     },
                 ].slice(-10)); // Keep last 10
+
+                // Auto-refresh current page data
+                router.reload({ only: ['alerts', 'stats', 'recentAlerts', 'criticalAlerts'] });
+            });
+
+            channel.listen('.events.ingested', (data) => {
+                setNotifications((prev) => [
+                    ...prev,
+                    {
+                        id: Date.now(),
+                        type: 'events',
+                        severity: data.alerts_created > 0 ? 'warning' : 'info',
+                        title: `${data.count} evenement(s) de ${data.hostname}`,
+                        subtitle: data.platform ? `Plateforme : ${data.platform}` : '',
+                        time: new Date().toLocaleTimeString('fr-FR'),
+                    },
+                ].slice(-10));
+
+                // Auto-refresh stats on current page
+                router.reload({ only: ['stats', 'exchanges', 'events', 'machines', 'dailyEvents', 'total'] });
             });
 
             channel.listen('.machine.status_changed', (data) => {
@@ -77,6 +97,9 @@ export default function DashboardLayout({ children, title }) {
                         time: new Date().toLocaleTimeString('fr-FR'),
                     },
                 ].slice(-10));
+
+                // Auto-refresh machines data
+                router.reload({ only: ['machines', 'stats', 'machine'] });
             });
 
             channel.listen('.rule.changed', (data) => {
@@ -86,15 +109,19 @@ export default function DashboardLayout({ children, title }) {
                         id: Date.now(),
                         type: 'rule',
                         severity: 'info',
-                        title: `Règle ${data.action} : ${data.rule?.name || ''}`,
+                        title: `Regle ${data.action} : ${data.rule?.name || ''}`,
                         subtitle: '',
                         time: new Date().toLocaleTimeString('fr-FR'),
                     },
                 ].slice(-10));
+
+                // Auto-refresh rules data
+                router.reload({ only: ['rules'] });
             });
 
             return () => {
                 channel.stopListening('.alert.created');
+                channel.stopListening('.events.ingested');
                 channel.stopListening('.machine.status_changed');
                 channel.stopListening('.rule.changed');
             };

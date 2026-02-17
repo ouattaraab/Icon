@@ -54,6 +54,26 @@ class MachineController extends Controller
                 ->pluck('platform'),
         ];
 
+        // Daily activity for the last 14 days
+        $dailyActivity = $machine->events()
+            ->where('occurred_at', '>=', now()->subDays(14))
+            ->selectRaw("DATE(occurred_at) as date, COUNT(*) as total, SUM(CASE WHEN event_type = 'block' THEN 1 ELSE 0 END) as blocked")
+            ->groupByRaw('DATE(occurred_at)')
+            ->orderBy('date')
+            ->get()
+            ->map(fn ($row) => [
+                'date' => $row->date,
+                'total' => (int) $row->total,
+                'blocked' => (int) $row->blocked,
+            ]);
+
+        // Event type distribution
+        $eventTypes = $machine->events()
+            ->selectRaw('event_type, COUNT(*) as count')
+            ->groupBy('event_type')
+            ->orderByDesc('count')
+            ->pluck('count', 'event_type');
+
         // Recent alerts for this machine
         $alerts = $machine->alerts()
             ->with('rule:id,name')
@@ -68,12 +88,15 @@ class MachineController extends Controller
                 'status' => $a->status,
                 'rule_name' => $a->rule?->name,
                 'created_at' => $a->created_at?->diffForHumans(),
+                'created_at_full' => $a->created_at?->toIso8601String(),
                 'acknowledged_at' => $a->acknowledged_at?->diffForHumans(),
             ]);
 
         return Inertia::render('Machines/Show', [
             'machine' => $machine,
             'stats' => $stats,
+            'dailyActivity' => $dailyActivity,
+            'eventTypes' => $eventTypes,
             'alerts' => $alerts,
         ]);
     }

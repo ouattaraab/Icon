@@ -9,6 +9,13 @@ const statusColors = {
     inactive: '#94a3b8',
 };
 
+const statusLabels = {
+    online: 'En ligne',
+    active: 'Actif',
+    offline: 'Hors ligne',
+    inactive: 'Inactif',
+};
+
 const severityColors = {
     critical: '#ef4444',
     warning: '#f59e0b',
@@ -17,8 +24,8 @@ const severityColors = {
 
 const alertStatusLabels = {
     open: 'Ouverte',
-    acknowledged: 'Acquittée',
-    resolved: 'Résolue',
+    acknowledged: 'Acquittee',
+    resolved: 'Resolue',
 };
 
 const alertStatusColors = {
@@ -27,14 +34,44 @@ const alertStatusColors = {
     resolved: '#22c55e',
 };
 
-const cardStyle = {
-    background: '#1e293b',
-    borderRadius: 12,
-    border: '1px solid #334155',
-    padding: '1.5rem',
+const eventTypeColors = {
+    prompt: '#3b82f6',
+    response: '#8b5cf6',
+    block: '#ef4444',
+    clipboard: '#f59e0b',
+    alert: '#ec4899',
 };
 
-export default function MachinesShow({ machine, stats, alerts = [] }) {
+const eventTypeLabels = {
+    prompt: 'Prompts',
+    response: 'Reponses',
+    block: 'Blocages',
+    clipboard: 'Presse-papier',
+    alert: 'Alertes',
+};
+
+const cardStyle = {
+    background: '#1e293b', borderRadius: 12,
+    border: '1px solid #334155', padding: '1.5rem',
+};
+
+function formatDate(isoStr) {
+    if (!isoStr) return null;
+    try {
+        return new Date(isoStr).toLocaleString('fr-FR', {
+            day: '2-digit', month: '2-digit', year: 'numeric',
+            hour: '2-digit', minute: '2-digit',
+        });
+    } catch { return isoStr; }
+}
+
+function formatShortDate(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    return `${d.getDate()}/${d.getMonth() + 1}`;
+}
+
+export default function MachinesShow({ machine, stats, dailyActivity = [], eventTypes = {}, alerts = [] }) {
     const [activeTab, setActiveTab] = useState('events');
 
     const machineStatus = machine.last_heartbeat &&
@@ -43,6 +80,12 @@ export default function MachinesShow({ machine, stats, alerts = [] }) {
 
     const openAlerts = alerts.filter(a => a.status === 'open').length;
 
+    // Daily activity chart max
+    const maxDaily = Math.max(...dailyActivity.map(d => d.total), 1);
+
+    // Event types total for percentages
+    const eventTypesTotal = Object.values(eventTypes).reduce((s, v) => s + v, 0);
+
     return (
         <DashboardLayout title={machine.hostname}>
             {/* Back button */}
@@ -50,8 +93,7 @@ export default function MachinesShow({ machine, stats, alerts = [] }) {
                 onClick={() => router.visit('/machines')}
                 style={{
                     background: 'transparent', color: '#94a3b8', border: 'none',
-                    cursor: 'pointer', fontSize: '0.875rem', marginBottom: '1rem',
-                    padding: 0,
+                    cursor: 'pointer', fontSize: '0.875rem', marginBottom: '1rem', padding: 0,
                 }}
             >
                 &larr; Retour au parc machines
@@ -59,93 +101,175 @@ export default function MachinesShow({ machine, stats, alerts = [] }) {
 
             {/* Machine header */}
             <div style={{ ...cardStyle, marginBottom: '1.5rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
                     <div>
-                        <h2 style={{ color: '#f8fafc', margin: 0, fontSize: '1.5rem', fontWeight: 700 }}>
-                            {machine.hostname}
-                        </h2>
-                        <p style={{ color: '#94a3b8', margin: '0.5rem 0 0', fontSize: '0.875rem' }}>
-                            {machine.os} {machine.os_version} | Agent v{machine.agent_version}
-                        </p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <span style={{
+                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                width: 36, height: 36, borderRadius: 8,
+                                background: machine.os === 'windows' ? '#0078d4' : '#333',
+                                color: '#fff', fontSize: '1rem', fontWeight: 700,
+                            }}>
+                                {machine.os === 'windows' ? 'W' : 'M'}
+                            </span>
+                            <div>
+                                <h2 style={{ color: '#f8fafc', margin: 0, fontSize: '1.5rem', fontWeight: 700 }}>
+                                    {machine.hostname}
+                                </h2>
+                                <p style={{ color: '#94a3b8', margin: '0.2rem 0 0', fontSize: '0.85rem' }}>
+                                    {machine.os} {machine.os_version} — Agent v{machine.agent_version}
+                                </p>
+                            </div>
+                        </div>
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                         <button
                             onClick={() => router.visit(`/exchanges?machine_id=${machine.id}`)}
                             style={{
-                                background: '#334155',
-                                color: '#e2e8f0',
-                                border: 'none',
-                                borderRadius: 6,
-                                padding: '0.4rem 0.75rem',
-                                cursor: 'pointer',
-                                fontSize: '0.8rem',
+                                background: '#334155', color: '#e2e8f0', border: 'none',
+                                borderRadius: 6, padding: '0.4rem 0.75rem',
+                                cursor: 'pointer', fontSize: '0.8rem',
                             }}
                         >
-                            Voir les échanges
+                            Voir les echanges
                         </button>
                         <span style={{
-                            padding: '0.3rem 0.8rem',
-                            borderRadius: 20,
-                            fontSize: '0.8rem',
-                            fontWeight: 600,
-                            color: '#fff',
+                            padding: '0.3rem 0.8rem', borderRadius: 20,
+                            fontSize: '0.8rem', fontWeight: 600, color: '#fff',
                             background: statusColors[machineStatus] || '#94a3b8',
                         }}>
-                            {machineStatus}
+                            {statusLabels[machineStatus] || machineStatus}
                         </span>
                     </div>
                 </div>
 
                 <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                    gap: '1rem',
-                    marginTop: '1.5rem',
-                    paddingTop: '1rem',
-                    borderTop: '1px solid #334155',
+                    display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                    gap: '1rem', marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid #334155',
                 }}>
-                    <InfoItem label="Adresse IP" value={machine.ip_address || '—'} />
-                    <InfoItem label="Département" value={machine.department || '—'} />
-                    <InfoItem label="Utilisateur assigné" value={machine.assigned_user || '—'} />
-                    <InfoItem label="Dernier contact" value={machine.last_heartbeat || '—'} />
-                    <InfoItem label="Enregistré le" value={machine.created_at?.slice(0, 10) || '—'} />
+                    <InfoItem label="Adresse IP" value={machine.ip_address || '\u2014'} mono />
+                    <InfoItem label="Departement" value={machine.department || '\u2014'} />
+                    <InfoItem label="Utilisateur assigne" value={machine.assigned_user || '\u2014'} />
+                    <InfoItem label="Dernier contact" value={machine.last_heartbeat ? formatDate(machine.last_heartbeat) : '\u2014'} />
+                    <InfoItem label="Enregistre le" value={machine.created_at ? formatDate(machine.created_at) : '\u2014'} />
                     <InfoItem label="ID machine" value={machine.id?.slice(0, 12) + '...'} mono />
                 </div>
             </div>
 
             {/* Stats cards */}
             <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-                gap: '1rem',
-                marginBottom: '1.5rem',
+                display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                gap: '1rem', marginBottom: '1.5rem',
             }}>
-                <StatCard label="Total événements" value={stats.total_events} color="#3b82f6" />
+                <StatCard label="Total evenements" value={stats.total_events} color="#3b82f6" />
                 <StatCard label="Blocages" value={stats.blocked_events} color="#ef4444" />
                 <StatCard label="Alertes ouvertes" value={stats.alerts_count} color="#f59e0b" />
-                <StatCard
-                    label="Plateformes utilisées"
-                    value={stats.platforms_used?.length || 0}
-                    color="#8b5cf6"
-                />
+                <StatCard label="Plateformes" value={stats.platforms_used?.length || 0} color="#8b5cf6" />
+            </div>
+
+            {/* Daily Activity + Event Types (side by side) */}
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+                {/* Daily Activity Chart */}
+                <div style={cardStyle}>
+                    <h3 style={{ color: '#f8fafc', margin: '0 0 1rem', fontSize: '0.95rem', fontWeight: 600 }}>
+                        Activite (14 derniers jours)
+                    </h3>
+                    {dailyActivity.length > 0 ? (
+                        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 120 }}>
+                            {dailyActivity.map((day) => {
+                                const totalH = (day.total / maxDaily) * 100;
+                                const blockedH = (day.blocked / maxDaily) * 100;
+                                return (
+                                    <div key={day.date} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                                        <div style={{ width: '100%', height: 100, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', position: 'relative' }}>
+                                            <div style={{
+                                                width: '100%', height: `${totalH}%`, minHeight: day.total > 0 ? 2 : 0,
+                                                background: '#3b82f6', borderRadius: '3px 3px 0 0', position: 'relative',
+                                            }}>
+                                                {day.blocked > 0 && (
+                                                    <div style={{
+                                                        position: 'absolute', bottom: 0, left: 0, right: 0,
+                                                        height: `${(day.blocked / day.total) * 100}%`,
+                                                        background: '#ef4444', borderRadius: day.blocked === day.total ? '3px 3px 0 0' : 0,
+                                                    }} />
+                                                )}
+                                            </div>
+                                        </div>
+                                        <span style={{ color: '#475569', fontSize: '0.55rem', whiteSpace: 'nowrap' }}>
+                                            {formatShortDate(day.date)}
+                                        </span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <p style={{ color: '#64748b', fontSize: '0.8rem', margin: 0 }}>Aucune activite recente.</p>
+                    )}
+                    {dailyActivity.length > 0 && (
+                        <div style={{ display: 'flex', gap: '1rem', marginTop: '0.75rem' }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.7rem', color: '#94a3b8' }}>
+                                <span style={{ width: 8, height: 8, borderRadius: 2, background: '#3b82f6' }} /> Normal
+                            </span>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.7rem', color: '#94a3b8' }}>
+                                <span style={{ width: 8, height: 8, borderRadius: 2, background: '#ef4444' }} /> Bloque
+                            </span>
+                        </div>
+                    )}
+                </div>
+
+                {/* Event Type Distribution */}
+                <div style={cardStyle}>
+                    <h3 style={{ color: '#f8fafc', margin: '0 0 1rem', fontSize: '0.95rem', fontWeight: 600 }}>
+                        Types d'evenements
+                    </h3>
+                    {eventTypesTotal > 0 ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                            {Object.entries(eventTypes).map(([type, count]) => {
+                                const pct = ((count / eventTypesTotal) * 100).toFixed(1);
+                                return (
+                                    <div key={type}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
+                                            <span style={{ color: '#e2e8f0', fontSize: '0.8rem' }}>
+                                                {eventTypeLabels[type] || type}
+                                            </span>
+                                            <span style={{ color: '#64748b', fontSize: '0.75rem' }}>
+                                                {count} ({pct}%)
+                                            </span>
+                                        </div>
+                                        <div style={{ height: 6, background: '#0f172a', borderRadius: 3 }}>
+                                            <div style={{
+                                                height: '100%', width: `${pct}%`, borderRadius: 3,
+                                                background: eventTypeColors[type] || '#64748b',
+                                            }} />
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <p style={{ color: '#64748b', fontSize: '0.8rem', margin: 0 }}>Aucun evenement.</p>
+                    )}
+                </div>
             </div>
 
             {/* Platforms used */}
             {stats.platforms_used?.length > 0 && (
                 <div style={{ ...cardStyle, marginBottom: '1.5rem' }}>
-                    <h3 style={{ color: '#f8fafc', margin: '0 0 1rem', fontSize: '1rem', fontWeight: 600 }}>
-                        Plateformes IA détectées
+                    <h3 style={{ color: '#f8fafc', margin: '0 0 0.75rem', fontSize: '0.95rem', fontWeight: 600 }}>
+                        Plateformes IA detectees
                     </h3>
                     <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                         {stats.platforms_used.map((platform) => (
-                            <span key={platform} style={{
-                                padding: '0.3rem 0.8rem',
-                                borderRadius: 20,
-                                fontSize: '0.75rem',
-                                fontWeight: 500,
-                                color: '#e2e8f0',
-                                background: '#334155',
-                            }}>
+                            <span
+                                key={platform}
+                                onClick={() => router.visit(`/exchanges?machine_id=${machine.id}&platform=${platform}`)}
+                                style={{
+                                    padding: '0.3rem 0.8rem', borderRadius: 20,
+                                    fontSize: '0.75rem', fontWeight: 500,
+                                    color: '#e2e8f0', background: '#334155',
+                                    cursor: 'pointer',
+                                }}
+                            >
                                 {platform}
                             </span>
                         ))}
@@ -154,20 +278,11 @@ export default function MachinesShow({ machine, stats, alerts = [] }) {
             )}
 
             {/* Tabs: Events / Alerts */}
-            <div style={{ display: 'flex', gap: '0', marginBottom: '0' }}>
-                <TabButton
-                    active={activeTab === 'events'}
-                    onClick={() => setActiveTab('events')}
-                    label="Événements"
-                    count={machine.events?.length}
-                />
-                <TabButton
-                    active={activeTab === 'alerts'}
-                    onClick={() => setActiveTab('alerts')}
-                    label="Alertes"
-                    count={alerts.length}
-                    badge={openAlerts > 0 ? openAlerts : null}
-                />
+            <div style={{ display: 'flex', gap: 0 }}>
+                <TabButton active={activeTab === 'events'} onClick={() => setActiveTab('events')}
+                    label="Evenements" count={machine.events?.length} />
+                <TabButton active={activeTab === 'alerts'} onClick={() => setActiveTab('alerts')}
+                    label="Alertes" count={alerts.length} badge={openAlerts > 0 ? openAlerts : null} />
             </div>
 
             {/* Events tab */}
@@ -178,55 +293,52 @@ export default function MachinesShow({ machine, stats, alerts = [] }) {
                             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                 <thead>
                                     <tr style={{ borderBottom: '1px solid #334155' }}>
-                                        {['Type', 'Plateforme', 'Domaine', 'Sévérité', 'Date'].map((h) => (
+                                        {['Type', 'Plateforme', 'Domaine', 'Severite', 'Date'].map((h) => (
                                             <th key={h} style={{
-                                                padding: '0.6rem 0.75rem',
-                                                textAlign: 'left',
-                                                color: '#94a3b8',
-                                                fontSize: '0.7rem',
-                                                textTransform: 'uppercase',
-                                                letterSpacing: 1,
-                                                fontWeight: 600,
-                                            }}>
-                                                {h}
-                                            </th>
+                                                padding: '0.6rem 0.75rem', textAlign: 'left',
+                                                color: '#94a3b8', fontSize: '0.7rem',
+                                                textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600,
+                                            }}>{h}</th>
                                         ))}
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {machine.events.map((event) => (
-                                        <tr key={event.id} style={{ borderBottom: '1px solid #0f172a' }}>
+                                        <tr key={event.id} style={{
+                                            borderBottom: '1px solid #0f172a',
+                                            cursor: event.elasticsearch_id ? 'pointer' : 'default',
+                                        }}
+                                            onClick={() => event.elasticsearch_id && router.visit(`/exchanges/${event.elasticsearch_id}`)}
+                                        >
                                             <td style={{ padding: '0.6rem 0.75rem' }}>
                                                 <span style={{
-                                                    padding: '0.15rem 0.5rem',
-                                                    borderRadius: 4,
-                                                    fontSize: '0.7rem',
-                                                    fontWeight: 600,
+                                                    padding: '0.15rem 0.5rem', borderRadius: 4,
+                                                    fontSize: '0.7rem', fontWeight: 600,
                                                     color: event.event_type === 'block' ? '#fca5a5' : '#e2e8f0',
-                                                    background: event.event_type === 'block' ? '#7f1d1d' : '#334155',
+                                                    background: eventTypeColors[event.event_type] ? `${eventTypeColors[event.event_type]}20` : '#334155',
+                                                    border: `1px solid ${eventTypeColors[event.event_type] || '#475569'}40`,
                                                 }}>
-                                                    {event.event_type}
+                                                    {eventTypeLabels[event.event_type] || event.event_type}
                                                 </span>
                                             </td>
                                             <td style={{ padding: '0.6rem 0.75rem', color: '#94a3b8', fontSize: '0.8rem' }}>
-                                                {event.platform || '—'}
+                                                {event.platform || '\u2014'}
                                             </td>
                                             <td style={{ padding: '0.6rem 0.75rem', color: '#94a3b8', fontSize: '0.8rem', fontFamily: 'monospace' }}>
-                                                {event.domain || '—'}
+                                                {event.domain || '\u2014'}
                                             </td>
                                             <td style={{ padding: '0.6rem 0.75rem' }}>
                                                 {event.severity && (
                                                     <span style={{
                                                         color: severityColors[event.severity] || '#94a3b8',
-                                                        fontSize: '0.75rem',
-                                                        fontWeight: 600,
+                                                        fontSize: '0.75rem', fontWeight: 600,
                                                     }}>
                                                         {event.severity}
                                                     </span>
                                                 )}
                                             </td>
                                             <td style={{ padding: '0.6rem 0.75rem', color: '#64748b', fontSize: '0.8rem' }}>
-                                                {event.occurred_at}
+                                                {formatDate(event.occurred_at) || event.occurred_at}
                                             </td>
                                         </tr>
                                     ))}
@@ -234,7 +346,7 @@ export default function MachinesShow({ machine, stats, alerts = [] }) {
                             </table>
                         </div>
                     ) : (
-                        <p style={{ color: '#64748b', fontSize: '0.875rem', margin: 0 }}>Aucun événement enregistré.</p>
+                        <p style={{ color: '#64748b', fontSize: '0.875rem', margin: 0 }}>Aucun evenement enregistre.</p>
                     )}
                 </div>
             )}
@@ -246,28 +358,23 @@ export default function MachinesShow({ machine, stats, alerts = [] }) {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                             {alerts.map((alert) => (
                                 <div key={alert.id} style={{
-                                    background: '#0f172a',
-                                    borderRadius: 8,
+                                    background: '#0f172a', borderRadius: 8,
                                     border: `1px solid ${alert.status === 'open' && alert.severity === 'critical' ? '#7f1d1d' : '#334155'}`,
                                     padding: '1rem',
                                 }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                                             <span style={{
-                                                padding: '0.15rem 0.4rem',
-                                                borderRadius: 4,
-                                                fontSize: '0.65rem',
-                                                fontWeight: 700,
+                                                padding: '0.15rem 0.4rem', borderRadius: 4,
+                                                fontSize: '0.65rem', fontWeight: 700,
                                                 background: alert.severity === 'critical' ? '#7f1d1d' : '#78350f',
                                                 color: alert.severity === 'critical' ? '#fca5a5' : '#fcd34d',
                                             }}>
                                                 {alert.severity}
                                             </span>
                                             <span style={{
-                                                padding: '0.15rem 0.4rem',
-                                                borderRadius: 4,
-                                                fontSize: '0.65rem',
-                                                fontWeight: 600,
+                                                padding: '0.15rem 0.4rem', borderRadius: 4,
+                                                fontSize: '0.65rem', fontWeight: 600,
                                                 color: alertStatusColors[alert.status] || '#94a3b8',
                                                 background: `${alertStatusColors[alert.status] || '#94a3b8'}15`,
                                             }}>
@@ -275,12 +382,9 @@ export default function MachinesShow({ machine, stats, alerts = [] }) {
                                             </span>
                                             {alert.rule_name && (
                                                 <span style={{
-                                                    padding: '0.15rem 0.4rem',
-                                                    borderRadius: 4,
-                                                    fontSize: '0.65rem',
-                                                    fontWeight: 500,
-                                                    color: '#fbbf24',
-                                                    background: '#422006',
+                                                    padding: '0.15rem 0.4rem', borderRadius: 4,
+                                                    fontSize: '0.65rem', fontWeight: 500,
+                                                    color: '#fbbf24', background: '#422006',
                                                 }}>
                                                     {alert.rule_name}
                                                 </span>
@@ -301,7 +405,7 @@ export default function MachinesShow({ machine, stats, alerts = [] }) {
                                     )}
                                     {alert.acknowledged_at && (
                                         <p style={{ color: '#64748b', fontSize: '0.7rem', margin: '0.5rem 0 0' }}>
-                                            Acquittée {alert.acknowledged_at}
+                                            Acquittee {alert.acknowledged_at}
                                         </p>
                                     )}
                                 </div>
@@ -325,32 +429,21 @@ function TabButton({ active, onClick, label, count, badge }) {
                 color: active ? '#f8fafc' : '#94a3b8',
                 border: active ? '1px solid #334155' : '1px solid transparent',
                 borderBottom: active ? '1px solid #1e293b' : '1px solid #334155',
-                borderRadius: active ? '8px 8px 0 0' : '8px 8px 0 0',
+                borderRadius: '8px 8px 0 0',
                 padding: '0.6rem 1.25rem',
-                cursor: 'pointer',
-                fontSize: '0.85rem',
+                cursor: 'pointer', fontSize: '0.85rem',
                 fontWeight: active ? 600 : 400,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                position: 'relative',
-                bottom: -1,
+                display: 'flex', alignItems: 'center', gap: '0.4rem',
+                position: 'relative', bottom: -1,
             }}
         >
             {label}
-            {count != null && (
-                <span style={{ color: '#64748b', fontSize: '0.75rem' }}>({count})</span>
-            )}
+            {count != null && <span style={{ color: '#64748b', fontSize: '0.75rem' }}>({count})</span>}
             {badge != null && (
                 <span style={{
-                    background: '#ef4444',
-                    color: '#fff',
-                    borderRadius: 10,
-                    padding: '0.1rem 0.4rem',
-                    fontSize: '0.65rem',
-                    fontWeight: 700,
-                    minWidth: 18,
-                    textAlign: 'center',
+                    background: '#ef4444', color: '#fff', borderRadius: 10,
+                    padding: '0.1rem 0.4rem', fontSize: '0.65rem', fontWeight: 700,
+                    minWidth: 18, textAlign: 'center',
                 }}>
                     {badge}
                 </span>
@@ -366,9 +459,7 @@ function InfoItem({ label, value, mono }) {
                 {label}
             </span>
             <p style={{
-                color: '#e2e8f0',
-                margin: '0.2rem 0 0',
-                fontSize: '0.875rem',
+                color: '#e2e8f0', margin: '0.2rem 0 0', fontSize: '0.875rem',
                 fontFamily: mono ? 'monospace' : 'inherit',
             }}>
                 {value}
@@ -380,17 +471,11 @@ function InfoItem({ label, value, mono }) {
 function StatCard({ label, value, color }) {
     return (
         <div style={{
-            background: '#1e293b',
-            borderRadius: 12,
-            border: '1px solid #334155',
-            padding: '1.25rem',
+            background: '#1e293b', borderRadius: 12,
+            border: '1px solid #334155', padding: '1.25rem',
         }}>
-            <span style={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 500 }}>
-                {label}
-            </span>
-            <p style={{ color, fontSize: '2rem', fontWeight: 700, margin: '0.3rem 0 0' }}>
-                {value}
-            </p>
+            <span style={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 500 }}>{label}</span>
+            <p style={{ color, fontSize: '2rem', fontWeight: 700, margin: '0.3rem 0 0' }}>{value}</p>
         </div>
     );
 }

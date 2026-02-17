@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Models\Event;
 use App\Models\Machine;
+use App\Models\Rule;
 use App\Services\ElasticsearchService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -80,13 +82,42 @@ class ExchangeController extends Controller
         // Resolve machine hostname
         $machine = null;
         if (!empty($exchange['machine_id'])) {
-            $machine = Machine::select('id', 'hostname', 'os', 'department', 'assigned_user')
+            $machine = Machine::select('id', 'hostname', 'os', 'os_version', 'department', 'assigned_user', 'status', 'last_heartbeat')
                 ->find($exchange['machine_id']);
+        }
+
+        // Find the related Event in PostgreSQL for DLP metadata
+        $event = null;
+        if (!empty($exchange['event_id'])) {
+            $event = Event::with('rule:id,name,category')
+                ->find($exchange['event_id']);
+        } elseif (!empty($exchange['machine_id'])) {
+            // Fallback: try to find by elasticsearch_id
+            $event = Event::with('rule:id,name,category')
+                ->where('elasticsearch_id', $id)
+                ->first();
+        }
+
+        // Resolve matched rule names
+        $matchedRuleNames = [];
+        if (!empty($exchange['matched_rules'])) {
+            $matchedRuleNames = Rule::whereIn('id', (array) $exchange['matched_rules'])
+                ->pluck('name', 'id')
+                ->toArray();
         }
 
         return Inertia::render('Exchanges/Show', [
             'exchange' => array_merge($exchange, ['id' => $id]),
             'machine' => $machine,
+            'event' => $event ? [
+                'id' => $event->id,
+                'severity' => $event->severity,
+                'metadata' => $event->metadata,
+                'rule_name' => $event->rule?->name,
+                'rule_category' => $event->rule?->category,
+                'occurred_at' => $event->occurred_at?->toIso8601String(),
+            ] : null,
+            'matchedRuleNames' => $matchedRuleNames,
         ]);
     }
 }
