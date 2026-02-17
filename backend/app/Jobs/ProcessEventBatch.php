@@ -73,7 +73,7 @@ class ProcessEventBatch implements ShouldQueue
                 'response' => $eventData['response_excerpt'] ?? null,
                 'content_hash' => $eventData['content_hash'] ?? null,
                 'content_length' => strlen($eventData['prompt_excerpt'] ?? ''),
-                'matched_rules' => $eventData['rule_id'] ? [$eventData['rule_id']] : [],
+                'matched_rules' => !empty($eventData['rule_id']) ? [$eventData['rule_id']] : [],
                 'severity' => $eventData['severity'] ?? 'info',
                 'occurred_at' => $eventData['occurred_at'],
             ]);
