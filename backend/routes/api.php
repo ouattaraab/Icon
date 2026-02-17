@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AgentRegistrationController;
+use App\Http\Controllers\Api\DomainSyncController;
 use App\Http\Controllers\Api\EventIngestionController;
 use App\Http\Controllers\Api\HeartbeatController;
 use App\Http\Controllers\Api\RuleSyncController;
@@ -46,4 +47,7 @@ Route::middleware([ValidateAgentApiKey::class, VerifyHmacSignature::class])->gro
     // Watchdog alerts
     Route::post('/agents/watchdog-alert', WatchdogAlertController::class)
         ->middleware('throttle:watchdog-alerts');
+
+    // Domain sync (monitored AI domains list)
+    Route::get('/domains/sync', DomainSyncController::class);
 });

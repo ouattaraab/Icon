@@ -55,7 +55,12 @@ class Rule extends Model
     }
 
     /**
-     * Format the rule for agent sync (matches the Rust Rule struct)
+     * Format the rule for agent sync (matches the Rust Rule struct).
+     *
+     * The Rust agent expects:
+     * - condition.keywords as Vec<String> (not comma-separated)
+     * - condition.domains as Vec<String> (not newline-separated)
+     * - condition.max/min (not max_length)
      */
     public function toAgentFormat(): array
     {
@@ -65,13 +70,35 @@ class Rule extends Model
             'version' => $this->version,
             'category' => $this->category,
             'target' => $this->target,
-            'condition' => array_merge(
-                ['type' => $this->condition_type],
-                $this->condition_value,
-            ),
+            'condition' => $this->buildAgentCondition(),
             'action' => $this->action_config ?? ['type' => 'log'],
             'priority' => $this->priority,
             'enabled' => $this->enabled,
         ];
+    }
+
+    private function buildAgentCondition(): array
+    {
+        $base = ['type' => $this->condition_type];
+        $value = $this->condition_value;
+
+        return match ($this->condition_type) {
+            'keyword' => array_merge($base, [
+                'keywords' => is_array($value['keywords'] ?? null)
+                    ? $value['keywords']
+                    : array_values(array_filter(array_map('trim', explode(',', $value['keywords'] ?? '')))),
+                'match_all' => (bool) ($value['match_all'] ?? false),
+            ]),
+            'domain_list' => array_merge($base, [
+                'domains' => is_array($value['domains'] ?? null)
+                    ? $value['domains']
+                    : array_values(array_filter(array_map('trim', preg_split('/[\n,]+/', $value['domains'] ?? '')))),
+            ]),
+            'content_length' => array_merge($base, [
+                'min' => isset($value['min_length']) ? (int) $value['min_length'] : ($value['min'] ?? null),
+                'max' => isset($value['max_length']) ? (int) $value['max_length'] : ($value['max'] ?? null),
+            ]),
+            default => array_merge($base, $value),
+        };
     }
 }
