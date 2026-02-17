@@ -1,4 +1,4 @@
-import { router } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
 
@@ -71,8 +71,11 @@ function formatShortDate(dateStr) {
     return `${d.getDate()}/${d.getMonth() + 1}`;
 }
 
-export default function MachinesShow({ machine, stats, dailyActivity = [], eventTypes = {}, alerts = [] }) {
+export default function MachinesShow({ machine, stats, dailyActivity = [], eventTypes = {}, alerts = [], pendingCommands = [] }) {
     const [activeTab, setActiveTab] = useState('events');
+    const [confirmAction, setConfirmAction] = useState(null);
+    const { auth, flash } = usePage().props;
+    const canManage = auth?.is_manager ?? false;
 
     const machineStatus = machine.last_heartbeat &&
         new Date(machine.last_heartbeat) > new Date(Date.now() - 5 * 60 * 1000)
@@ -88,6 +91,64 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
 
     return (
         <DashboardLayout title={machine.hostname}>
+            {/* Confirmation modal */}
+            {confirmAction && (
+                <div style={{
+                    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+                }} onClick={() => setConfirmAction(null)}>
+                    <div
+                        style={{
+                            background: '#1e293b', border: '1px solid #334155', borderRadius: 12,
+                            padding: '2rem', maxWidth: 420, width: '100%',
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h3 style={{ color: '#f8fafc', margin: '0 0 0.75rem', fontSize: '1.1rem' }}>
+                            Confirmer l'action
+                        </h3>
+                        <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: '0 0 1.5rem', lineHeight: 1.5 }}>
+                            {confirmAction.label} sur <strong style={{ color: '#e2e8f0' }}>{machine.hostname}</strong> ?
+                        </p>
+                        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                            <button
+                                onClick={() => setConfirmAction(null)}
+                                style={{
+                                    background: '#334155', color: '#e2e8f0', border: 'none', borderRadius: 8,
+                                    padding: '0.6rem 1.25rem', cursor: 'pointer', fontSize: '0.85rem',
+                                }}
+                            >
+                                Annuler
+                            </button>
+                            <button
+                                onClick={() => {
+                                    router.post(confirmAction.url);
+                                    setConfirmAction(null);
+                                }}
+                                style={{
+                                    background: confirmAction.type === 'toggle' && machine.status !== 'inactive' ? '#ef4444' : '#3b82f6',
+                                    color: '#fff', border: 'none', borderRadius: 8,
+                                    padding: '0.6rem 1.25rem', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600,
+                                }}
+                            >
+                                Confirmer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Flash message */}
+            {flash?.success && (
+                <div style={{
+                    background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)',
+                    borderRadius: 8, padding: '0.75rem 1rem', marginBottom: '1rem',
+                    color: '#22c55e', fontSize: '0.85rem', fontWeight: 500,
+                }}>
+                    {flash.success}
+                </div>
+            )}
+
             {/* Back button */}
             <button
                 onClick={() => router.visit('/machines')}
@@ -122,7 +183,7 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
                             </div>
                         </div>
                     </div>
-                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
                         <button
                             onClick={() => router.visit(`/exchanges?machine_id=${machine.id}`)}
                             style={{
@@ -133,6 +194,46 @@ export default function MachinesShow({ machine, stats, dailyActivity = [], event
                         >
                             Voir les echanges
                         </button>
+                        {canManage && (
+                            <>
+                                <button
+                                    onClick={() => setConfirmAction({ type: 'sync', label: 'Forcer la synchronisation des règles', url: `/machines/${machine.id}/force-sync` })}
+                                    style={{
+                                        background: '#1e3a5f', color: '#60a5fa', border: '1px solid #2563eb40',
+                                        borderRadius: 6, padding: '0.4rem 0.75rem',
+                                        cursor: 'pointer', fontSize: '0.8rem',
+                                    }}
+                                >
+                                    Sync regles
+                                </button>
+                                <button
+                                    onClick={() => setConfirmAction({ type: 'restart', label: 'Redémarrer l\'agent', url: `/machines/${machine.id}/restart` })}
+                                    style={{
+                                        background: '#422006', color: '#fbbf24', border: '1px solid #f59e0b40',
+                                        borderRadius: 6, padding: '0.4rem 0.75rem',
+                                        cursor: 'pointer', fontSize: '0.8rem',
+                                    }}
+                                >
+                                    Redemarrer
+                                </button>
+                                <button
+                                    onClick={() => setConfirmAction({
+                                        type: 'toggle',
+                                        label: machine.status === 'inactive' ? 'Réactiver cette machine' : 'Désactiver cette machine',
+                                        url: `/machines/${machine.id}/toggle-status`,
+                                    })}
+                                    style={{
+                                        background: machine.status === 'inactive' ? '#14532d' : '#7f1d1d',
+                                        color: machine.status === 'inactive' ? '#86efac' : '#fca5a5',
+                                        border: `1px solid ${machine.status === 'inactive' ? '#22c55e40' : '#ef444440'}`,
+                                        borderRadius: 6, padding: '0.4rem 0.75rem',
+                                        cursor: 'pointer', fontSize: '0.8rem',
+                                    }}
+                                >
+                                    {machine.status === 'inactive' ? 'Reactiver' : 'Desactiver'}
+                                </button>
+                            </>
+                        )}
                         <span style={{
                             padding: '0.3rem 0.8rem', borderRadius: 20,
                             fontSize: '0.8rem', fontWeight: 600, color: '#fff',

@@ -51,8 +51,13 @@ class HeartbeatController extends Controller
             ];
         }
 
+        // Retrieve and clear pending admin commands
+        $cacheKey = "machine:{$machine->id}:commands";
+        $pendingCommands = cache()->pull($cacheKey, []);
+
         return response()->json([
-            'force_sync_rules' => $forceSyncRules,
+            'force_sync_rules' => $forceSyncRules || collect($pendingCommands)->contains('type', 'force_sync_rules'),
+            'restart_requested' => collect($pendingCommands)->contains('type', 'restart'),
             'update_available' => $updateAvailable,
         ]);
     }

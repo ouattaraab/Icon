@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\Machine;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -92,12 +94,58 @@ class MachineController extends Controller
                 'acknowledged_at' => $a->acknowledged_at?->diffForHumans(),
             ]);
 
+        // Pending commands for this machine
+        $pendingCommands = cache()->get("machine:{$machine->id}:commands", []);
+
         return Inertia::render('Machines/Show', [
             'machine' => $machine,
             'stats' => $stats,
             'dailyActivity' => $dailyActivity,
             'eventTypes' => $eventTypes,
             'alerts' => $alerts,
+            'pendingCommands' => $pendingCommands,
         ]);
+    }
+
+    public function forceSyncRules(Machine $machine): RedirectResponse
+    {
+        $commands = cache()->get("machine:{$machine->id}:commands", []);
+        $commands[] = ['type' => 'force_sync_rules', 'issued_at' => now()->toIso8601String()];
+        cache()->put("machine:{$machine->id}:commands", $commands, now()->addHours(1));
+
+        AuditLog::log('machine.force_sync', 'Machine', $machine->id, [
+            'hostname' => $machine->hostname,
+        ]);
+
+        return redirect()->back()->with('success', 'Synchronisation des règles demandée.');
+    }
+
+    public function restartAgent(Machine $machine): RedirectResponse
+    {
+        $commands = cache()->get("machine:{$machine->id}:commands", []);
+        $commands[] = ['type' => 'restart', 'issued_at' => now()->toIso8601String()];
+        cache()->put("machine:{$machine->id}:commands", $commands, now()->addHours(1));
+
+        AuditLog::log('machine.restart', 'Machine', $machine->id, [
+            'hostname' => $machine->hostname,
+        ]);
+
+        return redirect()->back()->with('success', 'Redémarrage de l\'agent demandé.');
+    }
+
+    public function toggleStatus(Machine $machine): RedirectResponse
+    {
+        $newStatus = $machine->status === 'inactive' ? 'active' : 'inactive';
+        $machine->update(['status' => $newStatus]);
+
+        AuditLog::log('machine.status_changed', 'Machine', $machine->id, [
+            'hostname' => $machine->hostname,
+            'old_status' => $machine->getOriginal('status'),
+            'new_status' => $newStatus,
+        ]);
+
+        $label = $newStatus === 'inactive' ? 'désactivée' : 'réactivée';
+
+        return redirect()->back()->with('success', "Machine {$label}.");
     }
 }

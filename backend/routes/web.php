@@ -6,6 +6,7 @@ use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\DomainController;
 use App\Http\Controllers\Dashboard\ExchangeController;
 use App\Http\Controllers\Dashboard\MachineController;
+use App\Http\Controllers\Dashboard\ProfileController;
 use App\Http\Controllers\Dashboard\ReportController;
 use App\Http\Controllers\Dashboard\RuleController;
 use App\Http\Controllers\Dashboard\SettingController;
@@ -86,12 +87,23 @@ Route::middleware(['auth'])->group(function () {
     // Audit Logs (view)
     Route::get('/audit', [AuditLogController::class, 'index'])->name('audit.index');
 
+    // Profile & Notification Preferences
+    Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
+    Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
+    Route::put('/profile/notifications', [ProfileController::class, 'updateNotifications'])->name('profile.notifications');
+
     // ── Manager actions (admin + manager) ────────────────────────────
 
     Route::middleware(['role:manager'])->group(function () {
         // Alerts actions
         Route::post('/alerts/{alert}/acknowledge', [AlertController::class, 'acknowledge'])->name('alerts.acknowledge');
         Route::post('/alerts/{alert}/resolve', [AlertController::class, 'resolve'])->name('alerts.resolve');
+
+        // Machine actions
+        Route::post('/machines/{machine}/force-sync', [MachineController::class, 'forceSyncRules'])->name('machines.forceSync');
+        Route::post('/machines/{machine}/restart', [MachineController::class, 'restartAgent'])->name('machines.restart');
+        Route::post('/machines/{machine}/toggle-status', [MachineController::class, 'toggleStatus'])->name('machines.toggleStatus');
 
         // Rules CRUD
         Route::get('/rules/create', [RuleController::class, 'create'])->name('rules.create');

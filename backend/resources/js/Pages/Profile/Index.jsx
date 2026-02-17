@@ -1,0 +1,268 @@
+import { useForm, usePage } from '@inertiajs/react';
+import DashboardLayout from '../../Layouts/DashboardLayout';
+
+const cardStyle = {
+    background: '#1e293b',
+    borderRadius: 12,
+    padding: '1.5rem',
+    border: '1px solid #334155',
+    marginBottom: '1.5rem',
+};
+
+const labelStyle = {
+    color: '#e2e8f0',
+    fontSize: '0.85rem',
+    fontWeight: 500,
+    display: 'block',
+    marginBottom: '0.35rem',
+};
+
+const inputStyle = {
+    width: '100%',
+    padding: '0.6rem 0.75rem',
+    borderRadius: 8,
+    border: '1px solid #334155',
+    background: '#0f172a',
+    color: '#f8fafc',
+    fontSize: '0.85rem',
+    outline: 'none',
+    boxSizing: 'border-box',
+};
+
+const errorStyle = {
+    color: '#ef4444',
+    fontSize: '0.7rem',
+    margin: '0.25rem 0 0',
+};
+
+const roleLabels = { admin: 'Administrateur', manager: 'Manager', viewer: 'Lecteur' };
+const roleColors = { admin: '#ef4444', manager: '#f59e0b', viewer: '#3b82f6' };
+
+export default function ProfileIndex({ user }) {
+    const { flash } = usePage().props;
+
+    const profileForm = useForm({
+        name: user.name,
+        email: user.email,
+    });
+
+    const passwordForm = useForm({
+        current_password: '',
+        password: '',
+        password_confirmation: '',
+    });
+
+    const notifForm = useForm({
+        notify_critical_alerts: user.notify_critical_alerts ?? false,
+    });
+
+    const handleProfileSubmit = (e) => {
+        e.preventDefault();
+        profileForm.put('/profile');
+    };
+
+    const handlePasswordSubmit = (e) => {
+        e.preventDefault();
+        passwordForm.put('/profile/password', {
+            onSuccess: () => passwordForm.reset(),
+        });
+    };
+
+    const handleNotifSubmit = (e) => {
+        e.preventDefault();
+        notifForm.put('/profile/notifications');
+    };
+
+    return (
+        <DashboardLayout title="Mon profil">
+            {flash?.success && (
+                <div style={{
+                    background: 'rgba(34,197,94,0.1)',
+                    border: '1px solid rgba(34,197,94,0.3)',
+                    borderRadius: 8,
+                    padding: '0.75rem 1rem',
+                    marginBottom: '1.5rem',
+                    color: '#22c55e',
+                    fontSize: '0.85rem',
+                    fontWeight: 500,
+                }}>
+                    {flash.success}
+                </div>
+            )}
+
+            {/* Info + Role badge */}
+            <div style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{
+                    width: 48, height: 48, borderRadius: '50%',
+                    background: roleColors[user.role] || '#64748b',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: '#fff', fontSize: '1.25rem', fontWeight: 700,
+                }}>
+                    {user.name?.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                    <p style={{ color: '#f8fafc', fontSize: '1.1rem', fontWeight: 600, margin: 0 }}>
+                        {user.name}
+                    </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem' }}>
+                        <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>{user.email}</span>
+                        <span style={{
+                            padding: '0.1rem 0.5rem', borderRadius: 4,
+                            fontSize: '0.65rem', fontWeight: 700,
+                            color: roleColors[user.role] || '#94a3b8',
+                            background: `${roleColors[user.role] || '#94a3b8'}20`,
+                        }}>
+                            {roleLabels[user.role] || user.role}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Profile form */}
+            <form onSubmit={handleProfileSubmit} style={cardStyle}>
+                <h3 style={{ color: '#f8fafc', fontSize: '1.1rem', fontWeight: 600, margin: '0 0 1.25rem' }}>
+                    Informations personnelles
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+                    <div>
+                        <label style={labelStyle}>Nom</label>
+                        <input
+                            type="text"
+                            style={inputStyle}
+                            value={profileForm.data.name}
+                            onChange={(e) => profileForm.setData('name', e.target.value)}
+                        />
+                        {profileForm.errors.name && <p style={errorStyle}>{profileForm.errors.name}</p>}
+                    </div>
+                    <div>
+                        <label style={labelStyle}>Email</label>
+                        <input
+                            type="email"
+                            style={inputStyle}
+                            value={profileForm.data.email}
+                            onChange={(e) => profileForm.setData('email', e.target.value)}
+                        />
+                        {profileForm.errors.email && <p style={errorStyle}>{profileForm.errors.email}</p>}
+                    </div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <button
+                        type="submit"
+                        disabled={profileForm.processing}
+                        style={{
+                            background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 8,
+                            padding: '0.6rem 1.5rem', fontSize: '0.85rem', fontWeight: 600,
+                            cursor: profileForm.processing ? 'not-allowed' : 'pointer',
+                            opacity: profileForm.processing ? 0.7 : 1,
+                        }}
+                    >
+                        Enregistrer
+                    </button>
+                </div>
+            </form>
+
+            {/* Password form */}
+            <form onSubmit={handlePasswordSubmit} style={cardStyle}>
+                <h3 style={{ color: '#f8fafc', fontSize: '1.1rem', fontWeight: 600, margin: '0 0 1.25rem' }}>
+                    Changer le mot de passe
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.25rem' }}>
+                    <div>
+                        <label style={labelStyle}>Mot de passe actuel</label>
+                        <input
+                            type="password"
+                            style={inputStyle}
+                            value={passwordForm.data.current_password}
+                            onChange={(e) => passwordForm.setData('current_password', e.target.value)}
+                        />
+                        {passwordForm.errors.current_password && <p style={errorStyle}>{passwordForm.errors.current_password}</p>}
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        <div>
+                            <label style={labelStyle}>Nouveau mot de passe</label>
+                            <input
+                                type="password"
+                                style={inputStyle}
+                                value={passwordForm.data.password}
+                                onChange={(e) => passwordForm.setData('password', e.target.value)}
+                            />
+                            {passwordForm.errors.password && <p style={errorStyle}>{passwordForm.errors.password}</p>}
+                        </div>
+                        <div>
+                            <label style={labelStyle}>Confirmer le mot de passe</label>
+                            <input
+                                type="password"
+                                style={inputStyle}
+                                value={passwordForm.data.password_confirmation}
+                                onChange={(e) => passwordForm.setData('password_confirmation', e.target.value)}
+                            />
+                        </div>
+                    </div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <button
+                        type="submit"
+                        disabled={passwordForm.processing}
+                        style={{
+                            background: '#334155', color: '#e2e8f0', border: 'none', borderRadius: 8,
+                            padding: '0.6rem 1.5rem', fontSize: '0.85rem', fontWeight: 600,
+                            cursor: passwordForm.processing ? 'not-allowed' : 'pointer',
+                            opacity: passwordForm.processing ? 0.7 : 1,
+                        }}
+                    >
+                        Modifier le mot de passe
+                    </button>
+                </div>
+            </form>
+
+            {/* Notification preferences */}
+            <form onSubmit={handleNotifSubmit} style={cardStyle}>
+                <h3 style={{ color: '#f8fafc', fontSize: '1.1rem', fontWeight: 600, margin: '0 0 1.25rem' }}>
+                    Notifications
+                </h3>
+                <div
+                    style={{
+                        display: 'flex', alignItems: 'center', gap: '0.75rem',
+                        cursor: 'pointer', marginBottom: '1.25rem',
+                    }}
+                    onClick={() => notifForm.setData('notify_critical_alerts', !notifForm.data.notify_critical_alerts)}
+                >
+                    <div style={{
+                        width: 40, height: 22, borderRadius: 11,
+                        background: notifForm.data.notify_critical_alerts ? '#3b82f6' : '#334155',
+                        position: 'relative', transition: 'background 0.2s', flexShrink: 0,
+                    }}>
+                        <div style={{
+                            width: 16, height: 16, borderRadius: '50%', background: '#f8fafc',
+                            position: 'absolute', top: 3,
+                            left: notifForm.data.notify_critical_alerts ? 21 : 3,
+                            transition: 'left 0.2s',
+                        }} />
+                    </div>
+                    <div>
+                        <span style={{ color: '#e2e8f0', fontSize: '0.85rem', fontWeight: 500 }}>
+                            Alertes critiques par email
+                        </span>
+                        <p style={{ color: '#64748b', fontSize: '0.7rem', margin: '0.2rem 0 0' }}>
+                            Recevoir un email lorsqu'une alerte critique est créée
+                        </p>
+                    </div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <button
+                        type="submit"
+                        disabled={notifForm.processing}
+                        style={{
+                            background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 8,
+                            padding: '0.6rem 1.5rem', fontSize: '0.85rem', fontWeight: 600,
+                            cursor: notifForm.processing ? 'not-allowed' : 'pointer',
+                            opacity: notifForm.processing ? 0.7 : 1,
+                        }}
+                    >
+                        Enregistrer les préférences
+                    </button>
+                </div>
+            </form>
+        </DashboardLayout>
+    );
+}

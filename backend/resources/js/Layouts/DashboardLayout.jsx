@@ -212,21 +212,40 @@ export default function DashboardLayout({ children, title }) {
                                 {roleLabels[auth.user.role] || auth.user.role}
                             </span>
                         </div>
-                        <button
-                            onClick={() => router.post('/logout')}
-                            style={{
-                                background: 'transparent',
-                                border: '1px solid #334155',
-                                borderRadius: 6,
-                                padding: '0.35rem 0.75rem',
-                                color: '#94a3b8',
-                                fontSize: '0.75rem',
-                                cursor: 'pointer',
-                                width: '100%',
-                            }}
-                        >
-                            Se déconnecter
-                        </button>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <Link
+                                href="/profile"
+                                style={{
+                                    flex: 1,
+                                    background: 'transparent',
+                                    border: '1px solid #334155',
+                                    borderRadius: 6,
+                                    padding: '0.35rem 0.75rem',
+                                    color: '#94a3b8',
+                                    fontSize: '0.75rem',
+                                    cursor: 'pointer',
+                                    textDecoration: 'none',
+                                    textAlign: 'center',
+                                }}
+                            >
+                                Mon profil
+                            </Link>
+                            <button
+                                onClick={() => router.post('/logout')}
+                                style={{
+                                    flex: 1,
+                                    background: 'transparent',
+                                    border: '1px solid #334155',
+                                    borderRadius: 6,
+                                    padding: '0.35rem 0.75rem',
+                                    color: '#94a3b8',
+                                    fontSize: '0.75rem',
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                Déconnecter
+                            </button>
+                        </div>
                     </div>
                 )}
             </aside>
