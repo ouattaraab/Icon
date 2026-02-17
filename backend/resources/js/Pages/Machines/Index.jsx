@@ -260,7 +260,7 @@ export default function MachinesIndex({ machines, filters }) {
                 background: '#1e293b',
                 borderRadius: 12,
                 border: '1px solid #334155',
-                overflow: 'hidden',
+                overflowX: 'auto',
             }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>

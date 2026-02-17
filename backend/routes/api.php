@@ -25,27 +25,32 @@ use Illuminate\Support\Facades\Route;
 Route::get('/health', fn () => response()->json(['status' => 'ok']));
 
 // Agent registration (no auth required — uses pre-shared enrollment key)
-Route::post('/agents/register', [AgentRegistrationController::class, 'register']);
+Route::post('/agents/register', [AgentRegistrationController::class, 'register'])
+    ->middleware('throttle:agent-registration');
 
 // Authenticated agent routes
 Route::middleware([ValidateAgentApiKey::class, VerifyHmacSignature::class])->group(function () {
-    // Heartbeat
-    Route::post('/agents/heartbeat', HeartbeatController::class);
+    // Heartbeat — 5 requests/minute per machine
+    Route::post('/agents/heartbeat', HeartbeatController::class)
+        ->middleware('throttle:heartbeat');
 
-    // Event ingestion (batch) — rate limited to 30 requests/minute per machine
+    // Event ingestion (batch) — 30 requests/minute per machine
     Route::post('/events', EventIngestionController::class)
         ->middleware('throttle:event-ingestion');
 
-    // Rule sync (incremental)
-    Route::get('/rules/sync', RuleSyncController::class);
+    // Rule sync (incremental) — 10 requests/minute per machine
+    Route::get('/rules/sync', RuleSyncController::class)
+        ->middleware('throttle:sync');
 
-    // Agent update check
-    Route::get('/agents/update', AgentUpdateController::class);
+    // Agent update check — 5 requests/minute per machine
+    Route::get('/agents/update', AgentUpdateController::class)
+        ->middleware('throttle:agent-update');
 
-    // Watchdog alerts
+    // Watchdog alerts — 10 requests/minute per machine
     Route::post('/agents/watchdog-alert', WatchdogAlertController::class)
         ->middleware('throttle:watchdog-alerts');
 
-    // Domain sync (monitored AI domains list)
-    Route::get('/domains/sync', DomainSyncController::class);
+    // Domain sync — 10 requests/minute per machine
+    Route::get('/domains/sync', DomainSyncController::class)
+        ->middleware('throttle:sync');
 });

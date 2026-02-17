@@ -39,7 +39,7 @@ const errorStyle = {
 const roleLabels = { admin: 'Administrateur', manager: 'Manager', viewer: 'Lecteur' };
 const roleColors = { admin: '#ef4444', manager: '#f59e0b', viewer: '#3b82f6' };
 
-export default function ProfileIndex({ user }) {
+export default function ProfileIndex({ user, sessions = [] }) {
     const { flash } = usePage().props;
     const [twoFactorSetup, setTwoFactorSetup] = useState(null);
     const [twoFactorCode, setTwoFactorCode] = useState('');
@@ -47,6 +47,8 @@ export default function ProfileIndex({ user }) {
     const [twoFactorLoading, setTwoFactorLoading] = useState(false);
     const [disablePassword, setDisablePassword] = useState('');
     const [showDisableForm, setShowDisableForm] = useState(false);
+    const [revokeAllPassword, setRevokeAllPassword] = useState('');
+    const [showRevokeAll, setShowRevokeAll] = useState(false);
 
     const profileForm = useForm({
         name: user.name,
@@ -506,6 +508,129 @@ export default function ProfileIndex({ user }) {
                     >
                         {twoFactorLoading ? 'Chargement...' : 'Activer le 2FA'}
                     </button>
+                )}
+            </div>
+
+            {/* Active sessions */}
+            <div style={cardStyle}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                    <h3 style={{ color: '#f8fafc', fontSize: '1.1rem', fontWeight: 600, margin: 0 }}>
+                        Sessions actives
+                    </h3>
+                    {sessions.length > 1 && (
+                        !showRevokeAll ? (
+                            <button
+                                onClick={() => setShowRevokeAll(true)}
+                                style={{
+                                    background: 'transparent', color: '#ef4444', border: '1px solid #7f1d1d',
+                                    borderRadius: 6, padding: '0.35rem 0.75rem', fontSize: '0.75rem',
+                                    fontWeight: 600, cursor: 'pointer',
+                                }}
+                            >
+                                Révoquer toutes les autres
+                            </button>
+                        ) : (
+                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                <input
+                                    type="password"
+                                    value={revokeAllPassword}
+                                    onChange={(e) => setRevokeAllPassword(e.target.value)}
+                                    placeholder="Mot de passe"
+                                    style={{ ...inputStyle, width: 160, fontSize: '0.8rem', padding: '0.35rem 0.5rem' }}
+                                />
+                                <button
+                                    onClick={() => {
+                                        router.delete('/profile/sessions', {
+                                            data: { password: revokeAllPassword },
+                                            onSuccess: () => { setShowRevokeAll(false); setRevokeAllPassword(''); },
+                                        });
+                                    }}
+                                    style={{
+                                        background: '#ef4444', color: '#fff', border: 'none',
+                                        borderRadius: 6, padding: '0.35rem 0.75rem', fontSize: '0.75rem',
+                                        fontWeight: 600, cursor: 'pointer',
+                                    }}
+                                >
+                                    Confirmer
+                                </button>
+                                <button
+                                    onClick={() => { setShowRevokeAll(false); setRevokeAllPassword(''); }}
+                                    style={{
+                                        background: 'transparent', color: '#94a3b8', border: '1px solid #334155',
+                                        borderRadius: 6, padding: '0.35rem 0.75rem', fontSize: '0.75rem',
+                                        cursor: 'pointer',
+                                    }}
+                                >
+                                    Annuler
+                                </button>
+                            </div>
+                        )
+                    )}
+                </div>
+
+                {sessions.length === 0 ? (
+                    <p style={{ color: '#64748b', fontSize: '0.85rem' }}>
+                        Aucune session active trouvée.
+                    </p>
+                ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        {sessions.map((session) => (
+                            <div
+                                key={session.id}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '0.75rem',
+                                    padding: '0.65rem 0.75rem', background: '#0f172a',
+                                    borderRadius: 8,
+                                    border: session.is_current ? '1px solid rgba(59,130,246,0.4)' : '1px solid transparent',
+                                }}
+                            >
+                                <div style={{
+                                    width: 32, height: 32, borderRadius: 6,
+                                    background: session.is_current ? '#1e3a5f' : '#334155',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    fontSize: '0.85rem', flexShrink: 0,
+                                }}>
+                                    {session.user_agent?.includes('Mobile') || session.user_agent?.includes('iOS') || session.user_agent?.includes('Android')
+                                        ? '\u{1f4f1}' : '\u{1f4bb}'}
+                                </div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <p style={{ color: '#e2e8f0', fontSize: '0.85rem', fontWeight: 500, margin: 0 }}>
+                                            {session.user_agent}
+                                        </p>
+                                        {session.is_current && (
+                                            <span style={{
+                                                padding: '0.1rem 0.4rem', borderRadius: 4,
+                                                fontSize: '0.6rem', fontWeight: 700,
+                                                background: 'rgba(59,130,246,0.2)', color: '#60a5fa',
+                                            }}>
+                                                Cette session
+                                            </span>
+                                        )}
+                                    </div>
+                                    <p style={{ color: '#64748b', fontSize: '0.7rem', margin: '0.15rem 0 0' }}>
+                                        {session.ip_address || 'IP inconnue'} — {session.last_activity}
+                                    </p>
+                                </div>
+                                {!session.is_current && (
+                                    <button
+                                        onClick={() => {
+                                            if (confirm('Révoquer cette session ?')) {
+                                                router.delete(`/profile/sessions/${session.id}`);
+                                            }
+                                        }}
+                                        style={{
+                                            background: 'transparent', color: '#ef4444', border: '1px solid #7f1d1d',
+                                            borderRadius: 6, padding: '0.3rem 0.6rem', fontSize: '0.7rem',
+                                            cursor: 'pointer', flexShrink: 0, fontWeight: 600,
+                                        }}
+                                    >
+                                        Révoquer
+                                    </button>
+                                )}
+                            </div>
+                        ))}
+                    </div>
                 )}
             </div>
         </DashboardLayout>

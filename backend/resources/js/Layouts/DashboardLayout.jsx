@@ -23,12 +23,35 @@ const severityColors = {
 const roleLabels = { admin: 'Admin', manager: 'Manager', viewer: 'Lecteur' };
 const roleColors = { admin: '#ef4444', manager: '#f59e0b', viewer: '#3b82f6' };
 
+const MOBILE_BREAKPOINT = 768;
+
+function useIsMobile() {
+    const [isMobile, setIsMobile] = useState(
+        typeof window !== 'undefined' ? window.innerWidth < MOBILE_BREAKPOINT : false
+    );
+
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    return isMobile;
+}
+
 export default function DashboardLayout({ children, title }) {
     const { url, props } = usePage();
     const { auth } = props;
     const isAdmin = auth?.is_admin ?? false;
+    const isMobile = useIsMobile();
+    const [sidebarOpen, setSidebarOpen] = useState(false);
     const [notifications, setNotifications] = useState([]);
     const [showNotifications, setShowNotifications] = useState(false);
+
+    // Close sidebar on navigation (mobile)
+    useEffect(() => {
+        if (isMobile) setSidebarOpen(false);
+    }, [url, isMobile]);
 
     // Dismiss a notification
     const dismissNotification = useCallback((id) => {
@@ -48,7 +71,6 @@ export default function DashboardLayout({ children, title }) {
 
     // Listen for WebSocket events (Echo/Reverb)
     useEffect(() => {
-        // If Laravel Echo is available, subscribe to dashboard channel
         if (typeof window !== 'undefined' && window.Echo) {
             const channel = window.Echo.channel('icon.dashboard');
 
@@ -63,9 +85,7 @@ export default function DashboardLayout({ children, title }) {
                         subtitle: data.machine || '',
                         time: new Date().toLocaleTimeString('fr-FR'),
                     },
-                ].slice(-10)); // Keep last 10
-
-                // Auto-refresh current page data
+                ].slice(-10));
                 router.reload({ only: ['alerts', 'stats', 'recentAlerts', 'criticalAlerts'] });
             });
 
@@ -81,8 +101,6 @@ export default function DashboardLayout({ children, title }) {
                         time: new Date().toLocaleTimeString('fr-FR'),
                     },
                 ].slice(-10));
-
-                // Auto-refresh stats on current page
                 router.reload({ only: ['stats', 'exchanges', 'events', 'machines', 'dailyEvents', 'total'] });
             });
 
@@ -98,8 +116,6 @@ export default function DashboardLayout({ children, title }) {
                         time: new Date().toLocaleTimeString('fr-FR'),
                     },
                 ].slice(-10));
-
-                // Auto-refresh machines data
                 router.reload({ only: ['machines', 'stats', 'machine'] });
             });
 
@@ -115,8 +131,6 @@ export default function DashboardLayout({ children, title }) {
                         time: new Date().toLocaleTimeString('fr-FR'),
                     },
                 ].slice(-10));
-
-                // Auto-refresh rules data
                 router.reload({ only: ['rules'] });
             });
 
@@ -199,8 +213,122 @@ export default function DashboardLayout({ children, title }) {
     const typeIcons = { machine: '\u{1f4bb}', alert: '\u{1f514}', rule: '\u{2699}\u{fe0f}' };
     const typeLabels = { machine: 'Machine', alert: 'Alerte', rule: 'Règle' };
 
+    // ── Sidebar content (shared between desktop and mobile) ──
+    const sidebarContent = (
+        <>
+            <div style={{
+                padding: '0 1.5rem 1.5rem',
+                borderBottom: '1px solid #334155',
+                marginBottom: '1rem',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+            }}>
+                <div>
+                    <h1 style={{ color: '#f8fafc', fontSize: '1.5rem', fontWeight: 700, margin: 0 }}>
+                        {'\u{1f6e1}\u{fe0f}'} Icon
+                    </h1>
+                    <p style={{ color: '#94a3b8', fontSize: '0.75rem', margin: '0.25rem 0 0' }}>
+                        Monitoring IA — GS2E
+                    </p>
+                </div>
+                {isMobile && (
+                    <button
+                        onClick={() => setSidebarOpen(false)}
+                        style={{
+                            background: 'transparent', border: 'none', color: '#94a3b8',
+                            fontSize: '1.5rem', cursor: 'pointer', padding: '0.25rem',
+                        }}
+                    >
+                        {'\u2715'}
+                    </button>
+                )}
+            </div>
+
+            <nav style={{ flex: 1 }}>
+                {navigation.filter((item) => !item.adminOnly || isAdmin).map((item) => {
+                    const isActive = url === item.href ||
+                        (item.href !== '/' && url.startsWith(item.href));
+
+                    return (
+                        <Link
+                            key={item.href}
+                            href={item.href}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.75rem',
+                                padding: '0.75rem 1.5rem',
+                                color: isActive ? '#f8fafc' : '#94a3b8',
+                                textDecoration: 'none',
+                                fontSize: '0.875rem',
+                                fontWeight: isActive ? 600 : 400,
+                                background: isActive ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+                                borderLeft: isActive ? '3px solid #3b82f6' : '3px solid transparent',
+                                transition: 'all 0.15s',
+                            }}
+                        >
+                            <span>{item.icon}</span>
+                            <span>{item.name}</span>
+                        </Link>
+                    );
+                })}
+            </nav>
+
+            {auth?.user && (
+                <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid #334155' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                        <span style={{ color: '#e2e8f0', fontSize: '0.8rem', fontWeight: 500 }}>
+                            {auth.user.name}
+                        </span>
+                        <span style={{
+                            padding: '0.1rem 0.4rem', borderRadius: 4, fontSize: '0.65rem', fontWeight: 600,
+                            background: `${roleColors[auth.user.role] || '#64748b'}20`,
+                            color: roleColors[auth.user.role] || '#64748b',
+                        }}>
+                            {roleLabels[auth.user.role] || auth.user.role}
+                        </span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <Link
+                            href="/profile"
+                            style={{
+                                flex: 1, background: 'transparent', border: '1px solid #334155',
+                                borderRadius: 6, padding: '0.35rem 0.75rem', color: '#94a3b8',
+                                fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'none', textAlign: 'center',
+                            }}
+                        >
+                            Mon profil
+                        </Link>
+                        <button
+                            onClick={() => router.post('/logout')}
+                            style={{
+                                flex: 1, background: 'transparent', border: '1px solid #334155',
+                                borderRadius: 6, padding: '0.35rem 0.75rem', color: '#94a3b8',
+                                fontSize: '0.75rem', cursor: 'pointer',
+                            }}
+                        >
+                            Déconnecter
+                        </button>
+                    </div>
+                </div>
+            )}
+        </>
+    );
+
     return (
         <div style={{ display: 'flex', minHeight: '100vh', background: '#0f172a' }}>
+            {/* Mobile backdrop */}
+            {isMobile && sidebarOpen && (
+                <div
+                    onClick={() => setSidebarOpen(false)}
+                    style={{
+                        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+                        zIndex: 998, transition: 'opacity 0.2s',
+                    }}
+                />
+            )}
+
             {/* Sidebar */}
             <aside style={{
                 width: 260,
@@ -210,267 +338,185 @@ export default function DashboardLayout({ children, title }) {
                 display: 'flex',
                 flexDirection: 'column',
                 flexShrink: 0,
+                ...(isMobile ? {
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    bottom: 0,
+                    zIndex: 999,
+                    transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
+                    transition: 'transform 0.25s ease',
+                    boxShadow: sidebarOpen ? '4px 0 24px rgba(0,0,0,0.5)' : 'none',
+                } : {}),
             }}>
-                <div style={{
-                    padding: '0 1.5rem 1.5rem',
-                    borderBottom: '1px solid #334155',
-                    marginBottom: '1rem',
-                }}>
-                    <h1 style={{
-                        color: '#f8fafc',
-                        fontSize: '1.5rem',
-                        fontWeight: 700,
-                        margin: 0,
-                    }}>
-                        {'\u{1f6e1}\u{fe0f}'} Icon
-                    </h1>
-                    <p style={{ color: '#94a3b8', fontSize: '0.75rem', margin: '0.25rem 0 0' }}>
-                        Monitoring IA — GS2E
-                    </p>
-                </div>
-
-                <nav style={{ flex: 1 }}>
-                    {navigation.filter((item) => !item.adminOnly || isAdmin).map((item) => {
-                        const isActive = url === item.href ||
-                            (item.href !== '/' && url.startsWith(item.href));
-
-                        return (
-                            <Link
-                                key={item.href}
-                                href={item.href}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.75rem',
-                                    padding: '0.75rem 1.5rem',
-                                    color: isActive ? '#f8fafc' : '#94a3b8',
-                                    textDecoration: 'none',
-                                    fontSize: '0.875rem',
-                                    fontWeight: isActive ? 600 : 400,
-                                    background: isActive ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
-                                    borderLeft: isActive ? '3px solid #3b82f6' : '3px solid transparent',
-                                    transition: 'all 0.15s',
-                                }}
-                            >
-                                <span>{item.icon}</span>
-                                <span>{item.name}</span>
-                            </Link>
-                        );
-                    })}
-                </nav>
-
-                {/* User info + logout */}
-                {auth?.user && (
-                    <div style={{
-                        padding: '1rem 1.5rem',
-                        borderTop: '1px solid #334155',
-                    }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                            <span style={{ color: '#e2e8f0', fontSize: '0.8rem', fontWeight: 500 }}>
-                                {auth.user.name}
-                            </span>
-                            <span style={{
-                                padding: '0.1rem 0.4rem',
-                                borderRadius: 4,
-                                fontSize: '0.65rem',
-                                fontWeight: 600,
-                                background: `${roleColors[auth.user.role] || '#64748b'}20`,
-                                color: roleColors[auth.user.role] || '#64748b',
-                            }}>
-                                {roleLabels[auth.user.role] || auth.user.role}
-                            </span>
-                        </div>
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                            <Link
-                                href="/profile"
-                                style={{
-                                    flex: 1,
-                                    background: 'transparent',
-                                    border: '1px solid #334155',
-                                    borderRadius: 6,
-                                    padding: '0.35rem 0.75rem',
-                                    color: '#94a3b8',
-                                    fontSize: '0.75rem',
-                                    cursor: 'pointer',
-                                    textDecoration: 'none',
-                                    textAlign: 'center',
-                                }}
-                            >
-                                Mon profil
-                            </Link>
-                            <button
-                                onClick={() => router.post('/logout')}
-                                style={{
-                                    flex: 1,
-                                    background: 'transparent',
-                                    border: '1px solid #334155',
-                                    borderRadius: 6,
-                                    padding: '0.35rem 0.75rem',
-                                    color: '#94a3b8',
-                                    fontSize: '0.75rem',
-                                    cursor: 'pointer',
-                                }}
-                            >
-                                Déconnecter
-                            </button>
-                        </div>
-                    </div>
-                )}
+                {sidebarContent}
             </aside>
 
             {/* Main content */}
-            <main style={{ flex: 1, padding: '2rem', overflow: 'auto', position: 'relative' }}>
-                {/* Top bar with notification bell */}
+            <main style={{
+                flex: 1,
+                padding: isMobile ? '1rem' : '2rem',
+                overflow: 'auto',
+                position: 'relative',
+                minWidth: 0,
+            }}>
+                {/* Top bar */}
                 <div style={{
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     marginBottom: '1.5rem',
+                    gap: '0.75rem',
+                    flexWrap: isMobile ? 'wrap' : 'nowrap',
                 }}>
-                    {title ? (
-                        <h2 style={{
-                            color: '#f8fafc',
-                            fontSize: '1.5rem',
-                            fontWeight: 700,
-                            margin: 0,
-                        }}>
-                            {title}
-                        </h2>
-                    ) : <div />}
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    {/* Search bar with autocomplete */}
-                    <div ref={searchRef} style={{ position: 'relative' }}>
-                        <input
-                            type="text"
-                            placeholder="Rechercher..."
-                            value={searchQuery}
-                            onChange={handleSearchChange}
-                            onKeyDown={handleSearch}
-                            onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-                            style={{
-                                background: '#1e293b',
-                                border: '1px solid #334155',
-                                borderRadius: 8,
-                                padding: '0.5rem 0.75rem',
-                                color: '#f8fafc',
-                                fontSize: '0.85rem',
-                                width: 260,
-                                outline: 'none',
-                            }}
-                        />
-                        {showSuggestions && suggestions.length > 0 && (
-                            <div style={{
-                                position: 'absolute',
-                                top: '100%',
-                                left: 0,
-                                right: 0,
-                                marginTop: 4,
-                                background: '#1e293b',
-                                border: '1px solid #334155',
-                                borderRadius: 10,
-                                boxShadow: '0 12px 30px rgba(0,0,0,0.4)',
-                                zIndex: 200,
-                                overflow: 'hidden',
-                            }}>
-                                {suggestions.map((s, idx) => (
-                                    <div
-                                        key={`${s.type}-${s.label}-${idx}`}
-                                        onClick={() => {
-                                            router.visit(s.href);
-                                            setShowSuggestions(false);
-                                            setSearchQuery('');
-                                        }}
-                                        style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '0.6rem',
-                                            padding: '0.55rem 0.75rem',
-                                            cursor: 'pointer',
-                                            background: idx === activeSuggestion ? 'rgba(59,130,246,0.15)' : 'transparent',
-                                            borderBottom: idx < suggestions.length - 1 ? '1px solid #0f172a' : 'none',
-                                        }}
-                                    >
-                                        <span style={{ fontSize: '0.8rem', flexShrink: 0 }}>{typeIcons[s.type] || ''}</span>
-                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                            <p style={{
-                                                color: '#e2e8f0', fontSize: '0.8rem', fontWeight: 500,
-                                                margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                                            }}>
-                                                {s.label}
-                                            </p>
-                                            {s.sub && (
-                                                <p style={{ color: '#64748b', fontSize: '0.65rem', margin: '0.1rem 0 0' }}>
-                                                    {s.sub}
-                                                </p>
-                                            )}
-                                        </div>
-                                        <span style={{
-                                            fontSize: '0.6rem', color: '#475569', fontWeight: 600,
-                                            textTransform: 'uppercase', flexShrink: 0,
-                                        }}>
-                                            {typeLabels[s.type] || ''}
-                                        </span>
-                                    </div>
-                                ))}
-                                <div
-                                    onClick={() => {
-                                        if (searchQuery.trim().length >= 2) {
-                                            router.get('/search', { q: searchQuery.trim() });
-                                            setShowSuggestions(false);
-                                        }
-                                    }}
-                                    style={{
-                                        padding: '0.5rem 0.75rem',
-                                        borderTop: '1px solid #334155',
-                                        textAlign: 'center',
-                                        cursor: 'pointer',
-                                        color: '#3b82f6',
-                                        fontSize: '0.75rem',
-                                        fontWeight: 600,
-                                    }}
-                                >
-                                    Voir tous les résultats
-                                </div>
-                            </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+                        {/* Hamburger (mobile) */}
+                        {isMobile && (
+                            <button
+                                onClick={() => setSidebarOpen(true)}
+                                style={{
+                                    background: 'transparent', border: '1px solid #334155',
+                                    borderRadius: 8, padding: '0.4rem 0.6rem', cursor: 'pointer',
+                                    color: '#e2e8f0', fontSize: '1.2rem', flexShrink: 0,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                }}
+                                aria-label="Ouvrir le menu"
+                            >
+                                {'\u2630'}
+                            </button>
                         )}
+                        {title ? (
+                            <h2 style={{
+                                color: '#f8fafc',
+                                fontSize: isMobile ? '1.15rem' : '1.5rem',
+                                fontWeight: 700,
+                                margin: 0,
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                            }}>
+                                {title}
+                            </h2>
+                        ) : <div />}
                     </div>
 
-                    {/* Notification bell */}
-                    <button
-                        onClick={() => setShowNotifications(!showNotifications)}
-                        style={{
-                            background: 'transparent',
-                            border: '1px solid #334155',
-                            borderRadius: 8,
-                            padding: '0.5rem 0.75rem',
-                            cursor: 'pointer',
-                            position: 'relative',
-                            color: '#94a3b8',
-                            fontSize: '1.1rem',
-                        }}
-                    >
-                        {'\u{1f514}'}
-                        {unreadCount > 0 && (
-                            <span style={{
-                                position: 'absolute',
-                                top: -6,
-                                right: -6,
-                                background: '#ef4444',
-                                color: '#fff',
-                                fontSize: '0.65rem',
-                                fontWeight: 700,
-                                borderRadius: '50%',
-                                width: 18,
-                                height: 18,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                            }}>
-                                {unreadCount}
-                            </span>
-                        )}
-                    </button>
+                    <div style={{
+                        display: 'flex', alignItems: 'center', gap: '0.75rem',
+                        ...(isMobile ? { width: '100%', order: 3 } : {}),
+                    }}>
+                        {/* Search bar with autocomplete */}
+                        <div ref={searchRef} style={{ position: 'relative', flex: isMobile ? 1 : 'none' }}>
+                            <input
+                                type="text"
+                                placeholder="Rechercher..."
+                                value={searchQuery}
+                                onChange={handleSearchChange}
+                                onKeyDown={handleSearch}
+                                onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                                style={{
+                                    background: '#1e293b',
+                                    border: '1px solid #334155',
+                                    borderRadius: 8,
+                                    padding: '0.5rem 0.75rem',
+                                    color: '#f8fafc',
+                                    fontSize: '0.85rem',
+                                    width: isMobile ? '100%' : 260,
+                                    outline: 'none',
+                                    boxSizing: 'border-box',
+                                }}
+                            />
+                            {showSuggestions && suggestions.length > 0 && (
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '100%',
+                                    left: 0,
+                                    right: 0,
+                                    marginTop: 4,
+                                    background: '#1e293b',
+                                    border: '1px solid #334155',
+                                    borderRadius: 10,
+                                    boxShadow: '0 12px 30px rgba(0,0,0,0.4)',
+                                    zIndex: 200,
+                                    overflow: 'hidden',
+                                }}>
+                                    {suggestions.map((s, idx) => (
+                                        <div
+                                            key={`${s.type}-${s.label}-${idx}`}
+                                            onClick={() => {
+                                                router.visit(s.href);
+                                                setShowSuggestions(false);
+                                                setSearchQuery('');
+                                            }}
+                                            style={{
+                                                display: 'flex', alignItems: 'center', gap: '0.6rem',
+                                                padding: '0.55rem 0.75rem', cursor: 'pointer',
+                                                background: idx === activeSuggestion ? 'rgba(59,130,246,0.15)' : 'transparent',
+                                                borderBottom: idx < suggestions.length - 1 ? '1px solid #0f172a' : 'none',
+                                            }}
+                                        >
+                                            <span style={{ fontSize: '0.8rem', flexShrink: 0 }}>{typeIcons[s.type] || ''}</span>
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <p style={{
+                                                    color: '#e2e8f0', fontSize: '0.8rem', fontWeight: 500,
+                                                    margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                                }}>
+                                                    {s.label}
+                                                </p>
+                                                {s.sub && (
+                                                    <p style={{ color: '#64748b', fontSize: '0.65rem', margin: '0.1rem 0 0' }}>
+                                                        {s.sub}
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <span style={{
+                                                fontSize: '0.6rem', color: '#475569', fontWeight: 600,
+                                                textTransform: 'uppercase', flexShrink: 0,
+                                            }}>
+                                                {typeLabels[s.type] || ''}
+                                            </span>
+                                        </div>
+                                    ))}
+                                    <div
+                                        onClick={() => {
+                                            if (searchQuery.trim().length >= 2) {
+                                                router.get('/search', { q: searchQuery.trim() });
+                                                setShowSuggestions(false);
+                                            }
+                                        }}
+                                        style={{
+                                            padding: '0.5rem 0.75rem', borderTop: '1px solid #334155',
+                                            textAlign: 'center', cursor: 'pointer',
+                                            color: '#3b82f6', fontSize: '0.75rem', fontWeight: 600,
+                                        }}
+                                    >
+                                        Voir tous les résultats
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Notification bell */}
+                        <button
+                            onClick={() => setShowNotifications(!showNotifications)}
+                            style={{
+                                background: 'transparent', border: '1px solid #334155',
+                                borderRadius: 8, padding: '0.5rem 0.75rem', cursor: 'pointer',
+                                position: 'relative', color: '#94a3b8', fontSize: '1.1rem', flexShrink: 0,
+                            }}
+                        >
+                            {'\u{1f514}'}
+                            {unreadCount > 0 && (
+                                <span style={{
+                                    position: 'absolute', top: -6, right: -6,
+                                    background: '#ef4444', color: '#fff',
+                                    fontSize: '0.65rem', fontWeight: 700, borderRadius: '50%',
+                                    width: 18, height: 18, display: 'flex',
+                                    alignItems: 'center', justifyContent: 'center',
+                                }}>
+                                    {unreadCount}
+                                </span>
+                            )}
+                        </button>
                     </div>
                 </div>
 
@@ -478,9 +524,9 @@ export default function DashboardLayout({ children, title }) {
                 {showNotifications && (
                     <div style={{
                         position: 'absolute',
-                        top: 60,
-                        right: 32,
-                        width: 360,
+                        top: isMobile ? 110 : 60,
+                        right: isMobile ? 16 : 32,
+                        width: isMobile ? 'calc(100% - 32px)' : 360,
                         background: '#1e293b',
                         border: '1px solid #334155',
                         borderRadius: 12,
@@ -490,11 +536,8 @@ export default function DashboardLayout({ children, title }) {
                         overflowY: 'auto',
                     }}>
                         <div style={{
-                            padding: '0.75rem 1rem',
-                            borderBottom: '1px solid #334155',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
+                            padding: '0.75rem 1rem', borderBottom: '1px solid #334155',
+                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                         }}>
                             <span style={{ color: '#f8fafc', fontSize: '0.85rem', fontWeight: 600 }}>
                                 Notifications temps réel
@@ -503,11 +546,8 @@ export default function DashboardLayout({ children, title }) {
                                 <button
                                     onClick={() => setNotifications([])}
                                     style={{
-                                        background: 'transparent',
-                                        border: 'none',
-                                        color: '#64748b',
-                                        fontSize: '0.7rem',
-                                        cursor: 'pointer',
+                                        background: 'transparent', border: 'none',
+                                        color: '#64748b', fontSize: '0.7rem', cursor: 'pointer',
                                     }}
                                 >
                                     Tout effacer
@@ -526,20 +566,14 @@ export default function DashboardLayout({ children, title }) {
                                 <div
                                     key={notif.id}
                                     style={{
-                                        padding: '0.75rem 1rem',
-                                        borderBottom: '1px solid #0f172a',
-                                        display: 'flex',
-                                        gap: '0.75rem',
-                                        alignItems: 'flex-start',
+                                        padding: '0.75rem 1rem', borderBottom: '1px solid #0f172a',
+                                        display: 'flex', gap: '0.75rem', alignItems: 'flex-start',
                                     }}
                                 >
                                     <div style={{
-                                        width: 8,
-                                        height: 8,
-                                        borderRadius: '50%',
+                                        width: 8, height: 8, borderRadius: '50%',
                                         background: severityColors[notif.severity] || '#64748b',
-                                        marginTop: 5,
-                                        flexShrink: 0,
+                                        marginTop: 5, flexShrink: 0,
                                     }} />
                                     <div style={{ flex: 1 }}>
                                         <p style={{ color: '#e2e8f0', fontSize: '0.8rem', margin: 0, fontWeight: 500 }}>

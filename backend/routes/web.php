@@ -115,6 +115,8 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
     Route::put('/profile/notifications', [ProfileController::class, 'updateNotifications'])->name('profile.notifications');
+    Route::delete('/profile/sessions/{session}', [ProfileController::class, 'revokeSession'])->name('profile.revokeSession');
+    Route::delete('/profile/sessions', [ProfileController::class, 'revokeAllSessions'])->name('profile.revokeAllSessions');
 
     // Two-Factor Authentication management
     Route::post('/two-factor/enable', [TwoFactorController::class, 'enable'])->name('two-factor.enable');
