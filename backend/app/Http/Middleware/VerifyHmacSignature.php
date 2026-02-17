@@ -10,6 +10,16 @@ class VerifyHmacSignature
 {
     public function handle(Request $request, Closure $next): Response
     {
+        // Skip HMAC verification if disabled in config
+        if (!config('icon.security.verify_signatures', true)) {
+            return $next($request);
+        }
+
+        // GET/HEAD/OPTIONS requests don't carry a body — only require API key auth
+        if (in_array($request->method(), ['GET', 'HEAD', 'OPTIONS'])) {
+            return $next($request);
+        }
+
         $signature = $request->header('X-Signature');
 
         if (!$signature) {
@@ -21,7 +31,7 @@ class VerifyHmacSignature
             return response()->json(['error' => 'Machine not authenticated'], 401);
         }
 
-        $hmacSecret = config('icon.hmac_secret');
+        $hmacSecret = config('icon.security.hmac_secret');
         $expectedSignature = hash_hmac('sha256', $request->getContent(), $hmacSecret);
 
         if (!hash_equals($expectedSignature, $signature)) {
