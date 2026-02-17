@@ -22,6 +22,7 @@ class UserController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'role' => $user->role,
+                'notify_critical_alerts' => $user->notify_critical_alerts,
                 'created_at' => $user->created_at,
             ]);
 
@@ -57,6 +58,7 @@ class UserController extends Controller
             'email' => "required|email|max:255|unique:users,email,{$user->id}",
             'password' => ['nullable', Password::min(8)],
             'role' => 'required|in:admin,manager,viewer',
+            'notify_critical_alerts' => 'boolean',
         ]);
 
         // Don't update password if not provided

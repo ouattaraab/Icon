@@ -6,6 +6,7 @@ use App\Models\Machine;
 use App\Models\MonitoredDomain;
 use App\Models\Rule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
 /**
@@ -24,6 +25,8 @@ class AgentSyncTest extends TestCase
     {
         parent::setUp();
 
+        Cache::flush();
+
         config([
             'icon.security.hmac_secret' => $this->hmacSecret,
             'icon.security.verify_signatures' => true,
@@ -36,6 +39,7 @@ class AgentSyncTest extends TestCase
             'os_version' => '11.0',
             'agent_version' => '0.1.0',
             'api_key_hash' => bcrypt($this->apiKey),
+            'api_key_prefix' => substr($this->apiKey, 0, 16),
             'status' => 'active',
             'last_heartbeat' => now(),
             'ip_address' => '192.168.1.200',

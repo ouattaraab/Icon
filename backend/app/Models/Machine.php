@@ -16,11 +16,19 @@ class Machine extends Model
         'os_version',
         'agent_version',
         'api_key_hash',
+        'api_key_prefix',
+        'hmac_secret_encrypted',
         'status',
         'last_heartbeat',
         'ip_address',
         'department',
         'assigned_user',
+    ];
+
+    protected $hidden = [
+        'api_key_hash',
+        'api_key_prefix',
+        'hmac_secret_encrypted',
     ];
 
     protected $casts = [

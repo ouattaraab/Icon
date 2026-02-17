@@ -77,7 +77,7 @@ export default function UsersIndex({ users }) {
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                         <tr style={{ borderBottom: '1px solid #334155' }}>
-                            {['Nom', 'Email', 'Rôle', 'Créé le', 'Actions'].map((h) => (
+                            {['Nom', 'Email', 'Rôle', 'Notifs', 'Créé le', 'Actions'].map((h) => (
                                 <th key={h} style={{
                                     padding: '0.75rem',
                                     textAlign: 'left',
@@ -96,7 +96,7 @@ export default function UsersIndex({ users }) {
                         {users.length > 0 ? users.map((user) => (
                             editingId === user.id ? (
                                 <tr key={user.id}>
-                                    <td colSpan={5} style={{ padding: '0.75rem' }}>
+                                    <td colSpan={6} style={{ padding: '0.75rem' }}>
                                         <UserForm
                                             user={user}
                                             onCancel={() => setEditingId(null)}
@@ -128,6 +128,13 @@ export default function UsersIndex({ users }) {
                                         }}>
                                             {roleLabels[user.role] || user.role}
                                         </span>
+                                    </td>
+                                    <td style={{ padding: '0.6rem 0.75rem', textAlign: 'center' }}>
+                                        {user.notify_critical_alerts ? (
+                                            <span style={{ color: '#22c55e', fontSize: '0.8rem' }} title="Notifications activées">Oui</span>
+                                        ) : (
+                                            <span style={{ color: '#64748b', fontSize: '0.8rem' }} title="Notifications désactivées">Non</span>
+                                        )}
                                     </td>
                                     <td style={{ padding: '0.6rem 0.75rem', color: '#64748b', fontSize: '0.8rem' }}>
                                         {new Date(user.created_at).toLocaleDateString('fr-FR')}
@@ -174,7 +181,7 @@ export default function UsersIndex({ users }) {
                             )
                         )) : (
                             <tr>
-                                <td colSpan={5} style={{ padding: '2rem', textAlign: 'center', color: '#64748b', fontSize: '0.85rem' }}>
+                                <td colSpan={6} style={{ padding: '2rem', textAlign: 'center', color: '#64748b', fontSize: '0.85rem' }}>
                                     Aucun utilisateur.
                                 </td>
                             </tr>
@@ -209,6 +216,7 @@ function UserForm({ user, onCancel, onSuccess }) {
         email: user?.email || '',
         password: '',
         role: user?.role || 'viewer',
+        notify_critical_alerts: user?.notify_critical_alerts || false,
     });
 
     const handleSubmit = (e) => {
@@ -302,6 +310,18 @@ function UserForm({ user, onCancel, onSuccess }) {
                 {form.errors.role && (
                     <span style={{ color: '#ef4444', fontSize: '0.7rem' }}>{form.errors.role}</span>
                 )}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 120 }}>
+                <input
+                    type="checkbox"
+                    id="notify_critical_alerts"
+                    checked={form.data.notify_critical_alerts}
+                    onChange={(e) => form.setData('notify_critical_alerts', e.target.checked)}
+                    style={{ accentColor: '#3b82f6', cursor: 'pointer' }}
+                />
+                <label htmlFor="notify_critical_alerts" style={{ color: '#94a3b8', fontSize: '0.75rem', cursor: 'pointer' }}>
+                    Notifs critiques
+                </label>
             </div>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <button

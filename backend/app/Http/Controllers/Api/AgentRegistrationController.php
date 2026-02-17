@@ -7,6 +7,7 @@ use App\Models\AuditLog;
 use App\Models\Machine;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
@@ -14,6 +15,15 @@ class AgentRegistrationController extends Controller
 {
     public function register(Request $request): JsonResponse
     {
+        // Validate enrollment key if configured
+        $enrollmentKey = config('icon.agent.registration_key');
+        if ($enrollmentKey) {
+            $provided = $request->header('X-Enrollment-Key');
+            if (! $provided || ! hash_equals($enrollmentKey, $provided)) {
+                return response()->json(['error' => 'Invalid enrollment key'], 403);
+            }
+        }
+
         $validated = $request->validate([
             'hostname' => 'required|string|max:255',
             'os' => 'required|string|in:windows,macos',
@@ -31,6 +41,8 @@ class AgentRegistrationController extends Controller
             'os_version' => $validated['os_version'] ?? null,
             'agent_version' => $validated['agent_version'],
             'api_key_hash' => Hash::make($apiKey),
+            'api_key_prefix' => substr($apiKey, 0, 16),
+            'hmac_secret_encrypted' => Crypt::encryptString($hmacSecret),
             'status' => 'active',
             'last_heartbeat' => now(),
             'ip_address' => $request->ip(),

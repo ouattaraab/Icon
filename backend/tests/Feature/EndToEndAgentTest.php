@@ -81,6 +81,7 @@ class EndToEndAgentTest extends TestCase
         $data = $response->json();
         $this->apiKey = $data['api_key'];
         $this->machineId = $data['machine_id'];
+        $this->hmacSecret = $data['hmac_secret'];
 
         // Machine exists in DB
         $this->assertDatabaseHas('machines', [
@@ -456,6 +457,7 @@ class EndToEndAgentTest extends TestCase
         $regResponse->assertStatus(201);
         $this->apiKey = $regResponse->json('api_key');
         $this->machineId = $regResponse->json('machine_id');
+        $this->hmacSecret = $regResponse->json('hmac_secret');
 
         // 2. Heartbeat
         $hbPayload = [
@@ -577,5 +579,6 @@ class EndToEndAgentTest extends TestCase
         $data = $response->json();
         $this->apiKey = $data['api_key'];
         $this->machineId = $data['machine_id'];
+        $this->hmacSecret = $data['hmac_secret'];
     }
 }
