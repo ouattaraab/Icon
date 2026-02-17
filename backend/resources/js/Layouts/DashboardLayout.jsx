@@ -41,12 +41,16 @@ function useIsMobile() {
 
 export default function DashboardLayout({ children, title }) {
     const { url, props } = usePage();
-    const { auth } = props;
+    const { auth, unreadNotificationCount } = props;
     const isAdmin = auth?.is_admin ?? false;
     const isMobile = useIsMobile();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [notifications, setNotifications] = useState([]);
     const [showNotifications, setShowNotifications] = useState(false);
+    const [notifTab, setNotifTab] = useState('live'); // 'live' | 'inbox'
+    const [dbNotifications, setDbNotifications] = useState([]);
+    const [dbLoading, setDbLoading] = useState(false);
+    const [dbLoaded, setDbLoaded] = useState(false);
 
     // Close sidebar on navigation (mobile)
     useEffect(() => {
@@ -143,7 +147,64 @@ export default function DashboardLayout({ children, title }) {
         }
     }, []);
 
-    const unreadCount = notifications.length;
+    // Fetch persisted notifications when inbox tab is opened
+    const fetchDbNotifications = useCallback(() => {
+        setDbLoading(true);
+        fetch('/notifications', {
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        })
+            .then((r) => r.json())
+            .then((data) => {
+                setDbNotifications(data);
+                setDbLoaded(true);
+            })
+            .catch(() => {})
+            .finally(() => setDbLoading(false));
+    }, []);
+
+    const markAsRead = useCallback((id) => {
+        fetch(`/notifications/${id}/read`, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+            },
+        }).then(() => {
+            setDbNotifications((prev) => prev.map((n) => n.id === id ? { ...n, read: true } : n));
+            router.reload({ only: ['unreadNotificationCount'] });
+        });
+    }, []);
+
+    const markAllRead = useCallback(() => {
+        fetch('/notifications/read-all', {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+            },
+        }).then(() => {
+            setDbNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+            router.reload({ only: ['unreadNotificationCount'] });
+        });
+    }, []);
+
+    // Load notifications when dropdown opens on inbox tab
+    useEffect(() => {
+        if (showNotifications && notifTab === 'inbox' && !dbLoaded) {
+            fetchDbNotifications();
+        }
+    }, [showNotifications, notifTab, dbLoaded, fetchDbNotifications]);
+
+    // Refresh DB notifications when a new alert arrives via WebSocket
+    useEffect(() => {
+        if (dbLoaded && notifications.length > 0) {
+            fetchDbNotifications();
+        }
+    }, [notifications.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const unreadCount = notifications.length + (unreadNotificationCount || 0);
     const [searchQuery, setSearchQuery] = useState('');
     const [suggestions, setSuggestions] = useState([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
@@ -526,71 +587,175 @@ export default function DashboardLayout({ children, title }) {
                         position: 'absolute',
                         top: isMobile ? 110 : 60,
                         right: isMobile ? 16 : 32,
-                        width: isMobile ? 'calc(100% - 32px)' : 360,
+                        width: isMobile ? 'calc(100% - 32px)' : 380,
                         background: '#1e293b',
                         border: '1px solid #334155',
                         borderRadius: 12,
                         boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
                         zIndex: 100,
-                        maxHeight: 400,
-                        overflowY: 'auto',
+                        maxHeight: 450,
+                        display: 'flex',
+                        flexDirection: 'column',
                     }}>
+                        {/* Tabs */}
                         <div style={{
-                            padding: '0.75rem 1rem', borderBottom: '1px solid #334155',
-                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                            display: 'flex', borderBottom: '1px solid #334155',
                         }}>
-                            <span style={{ color: '#f8fafc', fontSize: '0.85rem', fontWeight: 600 }}>
-                                Notifications temps réel
-                            </span>
-                            {notifications.length > 0 && (
+                            {[
+                                { key: 'live', label: 'En direct', count: notifications.length },
+                                { key: 'inbox', label: 'Notifications', count: unreadNotificationCount || 0 },
+                            ].map((tab) => (
                                 <button
-                                    onClick={() => setNotifications([])}
+                                    key={tab.key}
+                                    onClick={() => setNotifTab(tab.key)}
                                     style={{
+                                        flex: 1, padding: '0.65rem 0.75rem',
                                         background: 'transparent', border: 'none',
-                                        color: '#64748b', fontSize: '0.7rem', cursor: 'pointer',
+                                        borderBottom: notifTab === tab.key ? '2px solid #3b82f6' : '2px solid transparent',
+                                        color: notifTab === tab.key ? '#f8fafc' : '#64748b',
+                                        fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
                                     }}
                                 >
-                                    Tout effacer
+                                    {tab.label}
+                                    {tab.count > 0 && (
+                                        <span style={{
+                                            background: tab.key === 'inbox' ? '#3b82f6' : '#64748b',
+                                            color: '#fff', fontSize: '0.6rem', fontWeight: 700,
+                                            borderRadius: 8, padding: '0.1rem 0.4rem', minWidth: 16, textAlign: 'center',
+                                        }}>
+                                            {tab.count}
+                                        </span>
+                                    )}
                                 </button>
-                            )}
+                            ))}
                         </div>
 
-                        {notifications.length === 0 ? (
-                            <div style={{ padding: '2rem 1rem', textAlign: 'center' }}>
-                                <p style={{ color: '#64748b', fontSize: '0.8rem' }}>
-                                    Aucune notification récente
-                                </p>
-                            </div>
-                        ) : (
-                            notifications.slice().reverse().map((notif) => (
-                                <div
-                                    key={notif.id}
-                                    style={{
-                                        padding: '0.75rem 1rem', borderBottom: '1px solid #0f172a',
-                                        display: 'flex', gap: '0.75rem', alignItems: 'flex-start',
-                                    }}
-                                >
-                                    <div style={{
-                                        width: 8, height: 8, borderRadius: '50%',
-                                        background: severityColors[notif.severity] || '#64748b',
-                                        marginTop: 5, flexShrink: 0,
-                                    }} />
-                                    <div style={{ flex: 1 }}>
-                                        <p style={{ color: '#e2e8f0', fontSize: '0.8rem', margin: 0, fontWeight: 500 }}>
-                                            {notif.title}
-                                        </p>
-                                        {notif.subtitle && (
-                                            <p style={{ color: '#64748b', fontSize: '0.7rem', margin: '0.15rem 0 0' }}>
-                                                {notif.subtitle}
+                        {/* Tab content */}
+                        <div style={{ overflowY: 'auto', flex: 1 }}>
+                            {notifTab === 'live' ? (
+                                <>
+                                    {notifications.length > 0 && (
+                                        <div style={{
+                                            padding: '0.4rem 1rem', display: 'flex', justifyContent: 'flex-end',
+                                        }}>
+                                            <button
+                                                onClick={() => setNotifications([])}
+                                                style={{
+                                                    background: 'transparent', border: 'none',
+                                                    color: '#64748b', fontSize: '0.7rem', cursor: 'pointer',
+                                                }}
+                                            >
+                                                Tout effacer
+                                            </button>
+                                        </div>
+                                    )}
+                                    {notifications.length === 0 ? (
+                                        <div style={{ padding: '2rem 1rem', textAlign: 'center' }}>
+                                            <p style={{ color: '#64748b', fontSize: '0.8rem' }}>
+                                                Aucune notification en direct
                                             </p>
-                                        )}
-                                    </div>
-                                    <span style={{ color: '#475569', fontSize: '0.65rem', flexShrink: 0 }}>
-                                        {notif.time}
-                                    </span>
-                                </div>
-                            ))
-                        )}
+                                        </div>
+                                    ) : (
+                                        notifications.slice().reverse().map((notif) => (
+                                            <div
+                                                key={notif.id}
+                                                style={{
+                                                    padding: '0.65rem 1rem', borderBottom: '1px solid #0f172a',
+                                                    display: 'flex', gap: '0.75rem', alignItems: 'flex-start',
+                                                }}
+                                            >
+                                                <div style={{
+                                                    width: 8, height: 8, borderRadius: '50%',
+                                                    background: severityColors[notif.severity] || '#64748b',
+                                                    marginTop: 5, flexShrink: 0,
+                                                }} />
+                                                <div style={{ flex: 1 }}>
+                                                    <p style={{ color: '#e2e8f0', fontSize: '0.8rem', margin: 0, fontWeight: 500 }}>
+                                                        {notif.title}
+                                                    </p>
+                                                    {notif.subtitle && (
+                                                        <p style={{ color: '#64748b', fontSize: '0.7rem', margin: '0.15rem 0 0' }}>
+                                                            {notif.subtitle}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                <span style={{ color: '#475569', fontSize: '0.65rem', flexShrink: 0 }}>
+                                                    {notif.time}
+                                                </span>
+                                            </div>
+                                        ))
+                                    )}
+                                </>
+                            ) : (
+                                <>
+                                    {dbNotifications.some((n) => !n.read) && (
+                                        <div style={{
+                                            padding: '0.4rem 1rem', display: 'flex', justifyContent: 'flex-end',
+                                        }}>
+                                            <button
+                                                onClick={markAllRead}
+                                                style={{
+                                                    background: 'transparent', border: 'none',
+                                                    color: '#3b82f6', fontSize: '0.7rem', cursor: 'pointer', fontWeight: 600,
+                                                }}
+                                            >
+                                                Tout marquer comme lu
+                                            </button>
+                                        </div>
+                                    )}
+                                    {dbLoading && !dbLoaded ? (
+                                        <div style={{ padding: '2rem 1rem', textAlign: 'center' }}>
+                                            <p style={{ color: '#64748b', fontSize: '0.8rem' }}>Chargement...</p>
+                                        </div>
+                                    ) : dbNotifications.length === 0 ? (
+                                        <div style={{ padding: '2rem 1rem', textAlign: 'center' }}>
+                                            <p style={{ color: '#64748b', fontSize: '0.8rem' }}>
+                                                Aucune notification
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        dbNotifications.map((notif) => (
+                                            <div
+                                                key={notif.id}
+                                                onClick={() => !notif.read && markAsRead(notif.id)}
+                                                style={{
+                                                    padding: '0.65rem 1rem', borderBottom: '1px solid #0f172a',
+                                                    display: 'flex', gap: '0.75rem', alignItems: 'flex-start',
+                                                    cursor: notif.read ? 'default' : 'pointer',
+                                                    background: notif.read ? 'transparent' : 'rgba(59, 130, 246, 0.05)',
+                                                }}
+                                            >
+                                                <div style={{
+                                                    width: 8, height: 8, borderRadius: '50%',
+                                                    background: notif.read
+                                                        ? '#334155'
+                                                        : severityColors[notif.data?.severity] || '#3b82f6',
+                                                    marginTop: 5, flexShrink: 0,
+                                                }} />
+                                                <div style={{ flex: 1 }}>
+                                                    <p style={{
+                                                        color: notif.read ? '#94a3b8' : '#e2e8f0',
+                                                        fontSize: '0.8rem', margin: 0,
+                                                        fontWeight: notif.read ? 400 : 500,
+                                                    }}>
+                                                        {notif.data?.title || 'Notification'}
+                                                    </p>
+                                                    {notif.data?.machine && (
+                                                        <p style={{ color: '#64748b', fontSize: '0.7rem', margin: '0.15rem 0 0' }}>
+                                                            Machine : {notif.data.machine}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                <span style={{ color: '#475569', fontSize: '0.65rem', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                                                    {notif.time_ago}
+                                                </span>
+                                            </div>
+                                        ))
+                                    )}
+                                </>
+                            )}
+                        </div>
                     </div>
                 )}
 

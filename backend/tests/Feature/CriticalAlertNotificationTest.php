@@ -7,6 +7,7 @@ use App\Listeners\SendCriticalAlertNotifications;
 use App\Models\Alert;
 use App\Models\Machine;
 use App\Models\User;
+use App\Notifications\AlertNotification;
 use App\Notifications\CriticalAlertNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
@@ -64,16 +65,15 @@ class CriticalAlertNotificationTest extends TestCase
         Notification::assertSentTo($subscriber, CriticalAlertNotification::class);
     }
 
-    public function test_warning_alert_does_not_send_notification(): void
+    public function test_warning_alert_sends_db_only_notification(): void
     {
         Notification::fake();
 
-        User::create([
-            'name' => 'Subscriber',
+        $manager = User::create([
+            'name' => 'Manager',
             'email' => 'sub@gs2e.ci',
             'password' => 'password',
             'role' => 'manager',
-            'notify_critical_alerts' => true,
         ]);
 
         $alert = Alert::create([
@@ -86,7 +86,9 @@ class CriticalAlertNotificationTest extends TestCase
         $listener = new SendCriticalAlertNotifications();
         $listener->handle(new AlertCreated($alert));
 
-        Notification::assertNothingSent();
+        // Warning alerts send AlertNotification (database-only) to admins and managers
+        Notification::assertSentTo([$this->admin, $manager], AlertNotification::class);
+        Notification::assertNotSentTo([$this->admin, $manager], CriticalAlertNotification::class);
     }
 
     public function test_fallback_to_admins_when_no_opted_in_users(): void
