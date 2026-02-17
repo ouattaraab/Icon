@@ -84,6 +84,7 @@ export default function DashboardIndex({
     platformUsage: initialPlatformUsage = [],
     recentAlerts: initialAlerts = [],
     topMachines = [],
+    dailyEvents = [],
 }) {
     const [stats, setStats] = useState(initialStats);
     const [recentAlerts, setRecentAlerts] = useState(initialAlerts);
@@ -243,6 +244,17 @@ export default function DashboardIndex({
                     href="/alerts"
                     pulse={(stats.critical_alerts ?? 0) > 0}
                 />
+                <StatCard
+                    label="Aujourd'hui"
+                    value={stats.events_today ?? 0}
+                    color="#8b5cf6"
+                    subtitle={`${stats.blocked_today ?? 0} bloqués`}
+                />
+                <StatCard
+                    label="Version agent"
+                    value={stats.agent_version ?? '-'}
+                    color="#94a3b8"
+                />
             </div>
 
             {/* Charts row */}
@@ -388,6 +400,97 @@ export default function DashboardIndex({
                     )}
                 </div>
             </div>
+
+            {/* 7-day activity trend */}
+            {dailyEvents.length > 0 && (() => {
+                const maxDaily = Math.max(1, ...dailyEvents.map((d) => d.total));
+                return (
+                    <div style={{ ...cardStyle, marginBottom: '1.5rem' }}>
+                        <h3 style={{ color: '#f8fafc', fontSize: '1rem', margin: '0 0 1.25rem', fontWeight: 600 }}>
+                            Tendance sur 7 jours
+                        </h3>
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'flex-end',
+                            gap: 6,
+                            height: 140,
+                        }}>
+                            {dailyEvents.map((item) => {
+                                const totalPct = Math.max(4, (item.total / maxDaily) * 100);
+                                const blockedPct = item.total > 0 ? (item.blocked / item.total) * totalPct : 0;
+                                const normalPct = totalPct - blockedPct;
+                                const dayLabel = new Date(item.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' });
+                                return (
+                                    <div
+                                        key={item.date}
+                                        style={{
+                                            flex: 1,
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            alignItems: 'center',
+                                            height: '100%',
+                                            justifyContent: 'flex-end',
+                                        }}
+                                    >
+                                        <span style={{
+                                            color: '#94a3b8',
+                                            fontSize: '0.65rem',
+                                            marginBottom: 4,
+                                        }}>
+                                            {item.total}
+                                        </span>
+                                        <div style={{
+                                            width: '100%',
+                                            maxWidth: 40,
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            justifyContent: 'flex-end',
+                                        }}>
+                                            <div style={{
+                                                height: `${normalPct}%`,
+                                                minHeight: normalPct > 0 ? 2 : 0,
+                                                background: 'linear-gradient(to top, #3b82f6, #60a5fa)',
+                                                borderRadius: blockedPct > 0 ? '4px 4px 0 0' : 4,
+                                            }} />
+                                            {blockedPct > 0 && (
+                                                <div style={{
+                                                    height: `${blockedPct}%`,
+                                                    minHeight: 2,
+                                                    background: '#ef4444',
+                                                    borderRadius: '0 0 4px 4px',
+                                                }} />
+                                            )}
+                                        </div>
+                                        <span style={{
+                                            color: '#64748b',
+                                            fontSize: '0.65rem',
+                                            marginTop: 6,
+                                            whiteSpace: 'nowrap',
+                                        }}>
+                                            {dayLabel}
+                                        </span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        <div style={{
+                            display: 'flex',
+                            gap: '1.5rem',
+                            marginTop: '0.75rem',
+                            justifyContent: 'center',
+                        }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#94a3b8', fontSize: '0.7rem' }}>
+                                <span style={{ width: 10, height: 10, borderRadius: 2, background: '#3b82f6', display: 'inline-block' }} />
+                                Normal
+                            </span>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#94a3b8', fontSize: '0.7rem' }}>
+                                <span style={{ width: 10, height: 10, borderRadius: 2, background: '#ef4444', display: 'inline-block' }} />
+                                Bloqué
+                            </span>
+                        </div>
+                    </div>
+                );
+            })()}
 
             {/* Bottom row: Recent alerts + Live feed / Top machines */}
             <div style={{

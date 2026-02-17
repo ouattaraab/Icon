@@ -454,11 +454,27 @@ class AgentApiTest extends TestCase
 
     // ── Agent Update Check ──────────────────────────────────────────────
 
-    public function test_agent_update_check(): void
+    public function test_agent_update_check_no_update(): void
     {
         $this->withAgentAuth()
-            ->getJson('/api/agents/update')
-            ->assertStatus(204);
+            ->getJson('/api/agents/update?current_version=99.0.0&os=windows')
+            ->assertOk()
+            ->assertJson(['update_available' => false]);
+    }
+
+    public function test_agent_update_check_update_available(): void
+    {
+        \App\Models\Setting::setValue('agent_current_version', '2.0.0');
+        \App\Models\Setting::setValue('agent_update_url', 'https://example.com/agent.exe');
+
+        $this->withAgentAuth()
+            ->getJson('/api/agents/update?current_version=1.0.0&os=windows')
+            ->assertOk()
+            ->assertJson([
+                'update_available' => true,
+                'version' => '2.0.0',
+                'download_url' => 'https://example.com/agent.exe',
+            ]);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────

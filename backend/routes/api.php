@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AgentRegistrationController;
+use App\Http\Controllers\Api\AgentUpdateController;
 use App\Http\Controllers\Api\DomainSyncController;
 use App\Http\Controllers\Api\EventIngestionController;
 use App\Http\Controllers\Api\HeartbeatController;
@@ -39,10 +40,7 @@ Route::middleware([ValidateAgentApiKey::class, VerifyHmacSignature::class])->gro
     Route::get('/rules/sync', RuleSyncController::class);
 
     // Agent update check
-    Route::get('/agents/update', function () {
-        // Returns 204 if no update available
-        return response()->noContent();
-    });
+    Route::get('/agents/update', AgentUpdateController::class);
 
     // Watchdog alerts
     Route::post('/agents/watchdog-alert', WatchdogAlertController::class)

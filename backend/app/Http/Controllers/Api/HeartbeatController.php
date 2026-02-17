@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Events\MachineStatusChanged;
 use App\Http\Controllers\Controller;
+use App\Models\Setting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -39,13 +40,14 @@ class HeartbeatController extends Controller
         $latestRuleVersion = \App\Models\Rule::max('version') ?? 0;
         $forceSyncRules = false; // Could be triggered by admin action via Redis flag
 
-        // Check for available updates
-        $currentAgentVersion = config('icon.agent.current_version');
+        // Check for available updates (from admin settings)
+        $currentAgentVersion = Setting::getValue('agent_current_version', config('icon.agent.current_version', '0.1.0'));
         $updateAvailable = null;
         if ($currentAgentVersion && version_compare($validated['agent_version'], $currentAgentVersion, '<')) {
             $updateAvailable = [
                 'version' => $currentAgentVersion,
-                'download_url' => config('icon.agent.update_url'),
+                'download_url' => Setting::getValue('agent_update_url', config('icon.agent.update_url', '')),
+                'verify_signature' => Setting::getValue('verify_signatures', '1') === '1',
             ];
         }
 

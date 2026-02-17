@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Alert;
 use App\Models\Event;
 use App\Models\Machine;
+use App\Models\Setting;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -16,15 +17,21 @@ class DashboardController extends Controller
     {
         $now = now();
 
+        $offlineThreshold = (int) Setting::getValue('offline_threshold_seconds', 300);
+
         // Summary stats
         $stats = [
             'total_machines' => Machine::count(),
-            'online_machines' => Machine::where('last_heartbeat', '>', $now->copy()->subMinutes(5))->count(),
+            'online_machines' => Machine::where('last_heartbeat', '>', $now->copy()->subSeconds($offlineThreshold))->count(),
             'total_events' => Event::where('created_at', '>', $now->copy()->subDays(30))->count(),
             'blocked_events' => Event::where('event_type', 'block')
                 ->where('created_at', '>', $now->copy()->subDays(30))->count(),
             'open_alerts' => Alert::where('status', 'open')->count(),
             'critical_alerts' => Alert::where('status', 'open')->where('severity', 'critical')->count(),
+            'events_today' => Event::where('occurred_at', '>=', $now->copy()->startOfDay())->count(),
+            'blocked_today' => Event::where('event_type', 'block')
+                ->where('occurred_at', '>=', $now->copy()->startOfDay())->count(),
+            'agent_version' => Setting::getValue('agent_current_version', '0.1.0'),
         ];
 
         // Activity last 24h — hourly event counts
@@ -85,12 +92,33 @@ class DashboardController extends Controller
                 ];
             });
 
+        // 7-day daily event trend
+        $dateExpr = $driver === 'sqlite'
+            ? "DATE(occurred_at)"
+            : "DATE(occurred_at)";
+
+        $dailyEvents = Event::where('occurred_at', '>=', $now->copy()->subDays(7)->startOfDay())
+            ->select(
+                DB::raw("{$dateExpr} as date"),
+                DB::raw('COUNT(*) as total'),
+                DB::raw("SUM(CASE WHEN event_type = 'block' THEN 1 ELSE 0 END) as blocked"),
+            )
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get()
+            ->map(fn ($row) => [
+                'date' => $row->date,
+                'total' => (int) $row->total,
+                'blocked' => (int) $row->blocked,
+            ]);
+
         return Inertia::render('Dashboard/Index', [
             'stats' => $stats,
             'activity24h' => $activity24h,
             'platformUsage' => $platformUsage,
             'recentAlerts' => $recentAlerts,
             'topMachines' => $topMachines,
+            'dailyEvents' => $dailyEvents,
         ]);
     }
 }

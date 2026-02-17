@@ -11,6 +11,7 @@ const navigation = [
     { name: 'Rapports', href: '/reports', icon: '\u{1f4c8}' },
     { name: 'Audit', href: '/audit', icon: '\u{1f4dc}' },
     { name: 'Utilisateurs', href: '/users', icon: '\u{1f465}', adminOnly: true },
+    { name: 'Paramètres', href: '/settings', icon: '\u{2699}\u{fe0f}', adminOnly: true },
 ];
 
 const severityColors = {
