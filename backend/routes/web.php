@@ -11,6 +11,7 @@ use App\Http\Controllers\Dashboard\ReportController;
 use App\Http\Controllers\Dashboard\RuleController;
 use App\Http\Controllers\Dashboard\SearchController;
 use App\Http\Controllers\Dashboard\SettingController;
+use App\Http\Controllers\Dashboard\TwoFactorController;
 use App\Http\Controllers\Dashboard\UserController;
 use App\Models\AuditLog;
 use App\Models\User;
@@ -34,9 +35,20 @@ Route::post('/login', function (Request $request) {
     ]);
 
     if (Auth::attempt($credentials, $request->boolean('remember'))) {
+        $user = Auth::user();
+
+        // If 2FA is enabled, redirect to challenge page
+        if ($user->hasTwoFactorEnabled()) {
+            Auth::logout();
+            $request->session()->put('2fa_user_id', $user->id);
+            $request->session()->put('2fa_remember', $request->boolean('remember'));
+
+            return redirect()->route('two-factor.challenge');
+        }
+
         $request->session()->regenerate();
-        AuditLog::log('auth.login', 'User', (string) Auth::id(), [
-            'email' => Auth::user()->email,
+        AuditLog::log('auth.login', 'User', (string) $user->id, [
+            'email' => $user->email,
         ]);
         return redirect()->intended('/');
     }
@@ -51,6 +63,12 @@ Route::post('/logout', function (Request $request) {
     $request->session()->regenerateToken();
     return redirect('/login');
 })->name('logout');
+
+// 2FA verification (during login, before full auth)
+Route::get('/two-factor-challenge', fn () => Inertia::render('Auth/TwoFactorChallenge', [
+    'user_id' => session('2fa_user_id'),
+]))->name('two-factor.challenge');
+Route::post('/two-factor-challenge', [TwoFactorController::class, 'verify'])->name('two-factor.verify');
 
 /*
 |--------------------------------------------------------------------------
@@ -90,12 +108,18 @@ Route::middleware(['auth'])->group(function () {
 
     // Global search
     Route::get('/search', SearchController::class)->name('search');
+    Route::get('/search/suggestions', [SearchController::class, 'suggestions'])->name('search.suggestions');
 
     // Profile & Notification Preferences
     Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
     Route::put('/profile/notifications', [ProfileController::class, 'updateNotifications'])->name('profile.notifications');
+
+    // Two-Factor Authentication management
+    Route::post('/two-factor/enable', [TwoFactorController::class, 'enable'])->name('two-factor.enable');
+    Route::post('/two-factor/confirm', [TwoFactorController::class, 'confirm'])->name('two-factor.confirm');
+    Route::delete('/two-factor/disable', [TwoFactorController::class, 'disable'])->name('two-factor.disable');
 
     // ── Manager actions (admin + manager) ────────────────────────────
 
@@ -105,6 +129,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/alerts/{alert}/resolve', [AlertController::class, 'resolve'])->name('alerts.resolve');
 
         // Machine actions
+        Route::post('/machines/bulk-action', [MachineController::class, 'bulkAction'])->name('machines.bulkAction');
         Route::post('/machines/{machine}/force-sync', [MachineController::class, 'forceSyncRules'])->name('machines.forceSync');
         Route::post('/machines/{machine}/restart', [MachineController::class, 'restartAgent'])->name('machines.restart');
         Route::post('/machines/{machine}/toggle-status', [MachineController::class, 'toggleStatus'])->name('machines.toggleStatus');

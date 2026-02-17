@@ -1,5 +1,5 @@
 import { Link, router, usePage } from '@inertiajs/react';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 const navigation = [
     { name: 'Tableau de bord', href: '/', icon: '\u{1f4ca}' },
@@ -131,12 +131,73 @@ export default function DashboardLayout({ children, title }) {
 
     const unreadCount = notifications.length;
     const [searchQuery, setSearchQuery] = useState('');
+    const [suggestions, setSuggestions] = useState([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const [activeSuggestion, setActiveSuggestion] = useState(-1);
+    const searchRef = useRef(null);
+    const debounceRef = useRef(null);
+
+    const fetchSuggestions = useCallback((q) => {
+        if (q.length < 2) {
+            setSuggestions([]);
+            setShowSuggestions(false);
+            return;
+        }
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(() => {
+            fetch(`/search/suggestions?q=${encodeURIComponent(q)}`, {
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            })
+                .then((r) => r.json())
+                .then((data) => {
+                    setSuggestions(data);
+                    setShowSuggestions(data.length > 0);
+                    setActiveSuggestion(-1);
+                })
+                .catch(() => {});
+        }, 250);
+    }, []);
+
+    const handleSearchChange = (e) => {
+        const val = e.target.value;
+        setSearchQuery(val);
+        fetchSuggestions(val);
+    };
 
     const handleSearch = (e) => {
-        if (e.key === 'Enter' && searchQuery.trim().length >= 2) {
-            router.get('/search', { q: searchQuery.trim() });
+        if (e.key === 'Enter') {
+            if (activeSuggestion >= 0 && suggestions[activeSuggestion]) {
+                router.visit(suggestions[activeSuggestion].href);
+                setShowSuggestions(false);
+                setSearchQuery('');
+            } else if (searchQuery.trim().length >= 2) {
+                router.get('/search', { q: searchQuery.trim() });
+                setShowSuggestions(false);
+            }
+        } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setActiveSuggestion((prev) => Math.min(prev + 1, suggestions.length - 1));
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setActiveSuggestion((prev) => Math.max(prev - 1, -1));
+        } else if (e.key === 'Escape') {
+            setShowSuggestions(false);
         }
     };
+
+    // Close suggestions on outside click
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (searchRef.current && !searchRef.current.contains(e.target)) {
+                setShowSuggestions(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const typeIcons = { machine: '\u{1f4bb}', alert: '\u{1f514}', rule: '\u{2699}\u{fe0f}' };
+    const typeLabels = { machine: 'Machine', alert: 'Alerte', rule: 'Règle' };
 
     return (
         <div style={{ display: 'flex', minHeight: '100vh', background: '#0f172a' }}>
@@ -278,24 +339,102 @@ export default function DashboardLayout({ children, title }) {
                     ) : <div />}
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    {/* Search bar */}
-                    <input
-                        type="text"
-                        placeholder="Rechercher..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        onKeyDown={handleSearch}
-                        style={{
-                            background: '#1e293b',
-                            border: '1px solid #334155',
-                            borderRadius: 8,
-                            padding: '0.5rem 0.75rem',
-                            color: '#f8fafc',
-                            fontSize: '0.85rem',
-                            width: 220,
-                            outline: 'none',
-                        }}
-                    />
+                    {/* Search bar with autocomplete */}
+                    <div ref={searchRef} style={{ position: 'relative' }}>
+                        <input
+                            type="text"
+                            placeholder="Rechercher..."
+                            value={searchQuery}
+                            onChange={handleSearchChange}
+                            onKeyDown={handleSearch}
+                            onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                            style={{
+                                background: '#1e293b',
+                                border: '1px solid #334155',
+                                borderRadius: 8,
+                                padding: '0.5rem 0.75rem',
+                                color: '#f8fafc',
+                                fontSize: '0.85rem',
+                                width: 260,
+                                outline: 'none',
+                            }}
+                        />
+                        {showSuggestions && suggestions.length > 0 && (
+                            <div style={{
+                                position: 'absolute',
+                                top: '100%',
+                                left: 0,
+                                right: 0,
+                                marginTop: 4,
+                                background: '#1e293b',
+                                border: '1px solid #334155',
+                                borderRadius: 10,
+                                boxShadow: '0 12px 30px rgba(0,0,0,0.4)',
+                                zIndex: 200,
+                                overflow: 'hidden',
+                            }}>
+                                {suggestions.map((s, idx) => (
+                                    <div
+                                        key={`${s.type}-${s.label}-${idx}`}
+                                        onClick={() => {
+                                            router.visit(s.href);
+                                            setShowSuggestions(false);
+                                            setSearchQuery('');
+                                        }}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '0.6rem',
+                                            padding: '0.55rem 0.75rem',
+                                            cursor: 'pointer',
+                                            background: idx === activeSuggestion ? 'rgba(59,130,246,0.15)' : 'transparent',
+                                            borderBottom: idx < suggestions.length - 1 ? '1px solid #0f172a' : 'none',
+                                        }}
+                                    >
+                                        <span style={{ fontSize: '0.8rem', flexShrink: 0 }}>{typeIcons[s.type] || ''}</span>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <p style={{
+                                                color: '#e2e8f0', fontSize: '0.8rem', fontWeight: 500,
+                                                margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                            }}>
+                                                {s.label}
+                                            </p>
+                                            {s.sub && (
+                                                <p style={{ color: '#64748b', fontSize: '0.65rem', margin: '0.1rem 0 0' }}>
+                                                    {s.sub}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <span style={{
+                                            fontSize: '0.6rem', color: '#475569', fontWeight: 600,
+                                            textTransform: 'uppercase', flexShrink: 0,
+                                        }}>
+                                            {typeLabels[s.type] || ''}
+                                        </span>
+                                    </div>
+                                ))}
+                                <div
+                                    onClick={() => {
+                                        if (searchQuery.trim().length >= 2) {
+                                            router.get('/search', { q: searchQuery.trim() });
+                                            setShowSuggestions(false);
+                                        }
+                                    }}
+                                    style={{
+                                        padding: '0.5rem 0.75rem',
+                                        borderTop: '1px solid #334155',
+                                        textAlign: 'center',
+                                        cursor: 'pointer',
+                                        color: '#3b82f6',
+                                        fontSize: '0.75rem',
+                                        fontWeight: 600,
+                                    }}
+                                >
+                                    Voir tous les résultats
+                                </div>
+                            </div>
+                        )}
+                    </div>
 
                     {/* Notification bell */}
                     <button

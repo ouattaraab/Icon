@@ -14,8 +14,13 @@ class ProfileController extends Controller
 {
     public function index(Request $request): Response
     {
+        $user = $request->user();
+
         return Inertia::render('Profile/Index', [
-            'user' => $request->user()->only('id', 'name', 'email', 'role', 'notify_critical_alerts'),
+            'user' => [
+                ...$user->only('id', 'name', 'email', 'role', 'notify_critical_alerts'),
+                'two_factor_enabled' => $user->hasTwoFactorEnabled(),
+            ],
         ]);
     }
 

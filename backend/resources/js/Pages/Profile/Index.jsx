@@ -1,4 +1,5 @@
-import { useForm, usePage } from '@inertiajs/react';
+import { useForm, usePage, router } from '@inertiajs/react';
+import { useState } from 'react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
 
 const cardStyle = {
@@ -40,6 +41,12 @@ const roleColors = { admin: '#ef4444', manager: '#f59e0b', viewer: '#3b82f6' };
 
 export default function ProfileIndex({ user }) {
     const { flash } = usePage().props;
+    const [twoFactorSetup, setTwoFactorSetup] = useState(null);
+    const [twoFactorCode, setTwoFactorCode] = useState('');
+    const [twoFactorError, setTwoFactorError] = useState('');
+    const [twoFactorLoading, setTwoFactorLoading] = useState(false);
+    const [disablePassword, setDisablePassword] = useState('');
+    const [showDisableForm, setShowDisableForm] = useState(false);
 
     const profileForm = useForm({
         name: user.name,
@@ -263,6 +270,244 @@ export default function ProfileIndex({ user }) {
                     </button>
                 </div>
             </form>
+
+            {/* Two-Factor Authentication */}
+            <div style={cardStyle}>
+                <h3 style={{ color: '#f8fafc', fontSize: '1.1rem', fontWeight: 600, margin: '0 0 0.5rem' }}>
+                    Authentification à deux facteurs (2FA)
+                </h3>
+                <p style={{ color: '#64748b', fontSize: '0.8rem', margin: '0 0 1.25rem' }}>
+                    Ajoutez une couche de sécurité supplémentaire à votre compte avec un code TOTP.
+                </p>
+
+                {user.two_factor_enabled ? (
+                    // 2FA is enabled
+                    <div>
+                        <div style={{
+                            display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem',
+                            padding: '0.6rem 0.75rem', background: 'rgba(34,197,94,0.1)',
+                            border: '1px solid rgba(34,197,94,0.3)', borderRadius: 8,
+                        }}>
+                            <span style={{ color: '#22c55e', fontWeight: 600, fontSize: '0.85rem' }}>
+                                2FA activé
+                            </span>
+                        </div>
+
+                        {!showDisableForm ? (
+                            <button
+                                onClick={() => setShowDisableForm(true)}
+                                style={{
+                                    background: '#334155', color: '#e2e8f0', border: 'none', borderRadius: 8,
+                                    padding: '0.6rem 1.5rem', fontSize: '0.85rem', fontWeight: 600,
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                Désactiver le 2FA
+                            </button>
+                        ) : (
+                            <div>
+                                <p style={{ color: '#94a3b8', fontSize: '0.8rem', marginBottom: '0.75rem' }}>
+                                    Confirmez votre mot de passe pour désactiver le 2FA :
+                                </p>
+                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+                                    <div>
+                                        <input
+                                            type="password"
+                                            value={disablePassword}
+                                            onChange={(e) => setDisablePassword(e.target.value)}
+                                            placeholder="Mot de passe"
+                                            style={{ ...inputStyle, width: 250 }}
+                                        />
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            router.delete('/two-factor/disable', {
+                                                data: { password: disablePassword },
+                                                onSuccess: () => {
+                                                    setShowDisableForm(false);
+                                                    setDisablePassword('');
+                                                },
+                                            });
+                                        }}
+                                        style={{
+                                            background: '#ef4444', color: '#fff', border: 'none', borderRadius: 8,
+                                            padding: '0.6rem 1rem', fontSize: '0.85rem', fontWeight: 600,
+                                            cursor: 'pointer',
+                                        }}
+                                    >
+                                        Confirmer
+                                    </button>
+                                    <button
+                                        onClick={() => { setShowDisableForm(false); setDisablePassword(''); }}
+                                        style={{
+                                            background: 'transparent', color: '#94a3b8', border: '1px solid #334155',
+                                            borderRadius: 8, padding: '0.6rem 1rem', fontSize: '0.85rem',
+                                            cursor: 'pointer',
+                                        }}
+                                    >
+                                        Annuler
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                ) : twoFactorSetup ? (
+                    // Setup in progress
+                    <div>
+                        <p style={{ color: '#e2e8f0', fontSize: '0.85rem', marginBottom: '0.75rem' }}>
+                            1. Scannez ce QR code avec votre application (Google Authenticator, Authy, etc.) :
+                        </p>
+
+                        <div style={{
+                            background: '#fff', padding: 16, borderRadius: 8,
+                            display: 'inline-block', marginBottom: '1rem',
+                        }}>
+                            <img
+                                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(twoFactorSetup.otpauth_url)}`}
+                                alt="QR Code 2FA"
+                                width={200}
+                                height={200}
+                            />
+                        </div>
+
+                        <div style={{ marginBottom: '1rem' }}>
+                            <p style={{ color: '#94a3b8', fontSize: '0.75rem', marginBottom: '0.35rem' }}>
+                                Ou entrez cette clé manuellement :
+                            </p>
+                            <code style={{
+                                background: '#0f172a', color: '#f59e0b', padding: '0.4rem 0.75rem',
+                                borderRadius: 6, fontSize: '0.85rem', fontFamily: 'monospace',
+                                letterSpacing: '0.15em', wordBreak: 'break-all',
+                            }}>
+                                {twoFactorSetup.secret}
+                            </code>
+                        </div>
+
+                        <p style={{ color: '#e2e8f0', fontSize: '0.85rem', marginBottom: '0.5rem' }}>
+                            2. Entrez le code à 6 chiffres pour confirmer :
+                        </p>
+                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                            <div>
+                                <input
+                                    type="text"
+                                    value={twoFactorCode}
+                                    onChange={(e) => {
+                                        setTwoFactorCode(e.target.value.replace(/\D/g, '').slice(0, 6));
+                                        setTwoFactorError('');
+                                    }}
+                                    placeholder="000000"
+                                    maxLength={6}
+                                    style={{
+                                        ...inputStyle, width: 160, fontSize: '1.25rem',
+                                        letterSpacing: '0.3em', textAlign: 'center', fontFamily: 'monospace',
+                                    }}
+                                />
+                                {twoFactorError && <p style={errorStyle}>{twoFactorError}</p>}
+                            </div>
+                            <button
+                                onClick={() => {
+                                    if (twoFactorCode.length !== 6) return;
+                                    setTwoFactorLoading(true);
+                                    fetch('/two-factor/confirm', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'Accept': 'application/json',
+                                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                                            'X-Requested-With': 'XMLHttpRequest',
+                                        },
+                                        body: JSON.stringify({ code: twoFactorCode }),
+                                    })
+                                        .then((r) => r.json())
+                                        .then((data) => {
+                                            setTwoFactorLoading(false);
+                                            if (data.success) {
+                                                router.reload();
+                                            } else {
+                                                setTwoFactorError(data.error || 'Code invalide.');
+                                            }
+                                        })
+                                        .catch(() => {
+                                            setTwoFactorLoading(false);
+                                            setTwoFactorError('Erreur réseau.');
+                                        });
+                                }}
+                                disabled={twoFactorLoading || twoFactorCode.length !== 6}
+                                style={{
+                                    background: '#22c55e', color: '#fff', border: 'none', borderRadius: 8,
+                                    padding: '0.6rem 1.25rem', fontSize: '0.85rem', fontWeight: 600,
+                                    cursor: twoFactorLoading ? 'not-allowed' : 'pointer',
+                                    opacity: twoFactorLoading || twoFactorCode.length !== 6 ? 0.6 : 1,
+                                }}
+                            >
+                                {twoFactorLoading ? 'Vérification...' : 'Confirmer'}
+                            </button>
+                        </div>
+
+                        {/* Recovery codes */}
+                        <div style={{
+                            background: '#0f172a', border: '1px solid #334155', borderRadius: 8,
+                            padding: '1rem', marginBottom: '1rem',
+                        }}>
+                            <p style={{ color: '#f59e0b', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+                                Codes de récupération (à conserver en lieu sûr) :
+                            </p>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.35rem' }}>
+                                {twoFactorSetup.recovery_codes?.map((code, i) => (
+                                    <code key={i} style={{
+                                        color: '#e2e8f0', fontSize: '0.8rem', fontFamily: 'monospace',
+                                    }}>
+                                        {code}
+                                    </code>
+                                ))}
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={() => { setTwoFactorSetup(null); setTwoFactorCode(''); setTwoFactorError(''); }}
+                            style={{
+                                background: 'transparent', color: '#94a3b8', border: '1px solid #334155',
+                                borderRadius: 8, padding: '0.5rem 1rem', fontSize: '0.8rem', cursor: 'pointer',
+                            }}
+                        >
+                            Annuler
+                        </button>
+                    </div>
+                ) : (
+                    // 2FA not enabled, show enable button
+                    <button
+                        onClick={() => {
+                            setTwoFactorLoading(true);
+                            fetch('/two-factor/enable', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Accept': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                },
+                            })
+                                .then((r) => r.json())
+                                .then((data) => {
+                                    setTwoFactorLoading(false);
+                                    if (data.secret) {
+                                        setTwoFactorSetup(data);
+                                    }
+                                })
+                                .catch(() => setTwoFactorLoading(false));
+                        }}
+                        disabled={twoFactorLoading}
+                        style={{
+                            background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 8,
+                            padding: '0.6rem 1.5rem', fontSize: '0.85rem', fontWeight: 600,
+                            cursor: twoFactorLoading ? 'not-allowed' : 'pointer',
+                            opacity: twoFactorLoading ? 0.7 : 1,
+                        }}
+                    >
+                        {twoFactorLoading ? 'Chargement...' : 'Activer le 2FA'}
+                    </button>
+                )}
+            </div>
         </DashboardLayout>
     );
 }

@@ -1,4 +1,4 @@
-import { Link, router } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import { useState, useCallback } from 'react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
 
@@ -24,15 +24,55 @@ const inputStyle = {
 };
 
 export default function MachinesIndex({ machines, filters }) {
+    const { auth, flash } = usePage().props;
+    const isManager = auth?.user?.role === 'admin' || auth?.user?.role === 'manager';
     const [search, setSearch] = useState(filters?.search || '');
+    const [selected, setSelected] = useState([]);
+    const [bulkProcessing, setBulkProcessing] = useState(false);
+
+    const allIds = machines?.data?.map((m) => m.id) || [];
+    const allSelected = allIds.length > 0 && allIds.every((id) => selected.includes(id));
+
+    const toggleSelect = (id) => {
+        setSelected((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+    };
+
+    const toggleAll = () => {
+        if (allSelected) {
+            setSelected((prev) => prev.filter((id) => !allIds.includes(id)));
+        } else {
+            setSelected((prev) => [...new Set([...prev, ...allIds])]);
+        }
+    };
+
+    const handleBulkAction = (action) => {
+        if (selected.length === 0) return;
+        const labels = {
+            force_sync: 'synchroniser les règles',
+            restart: 'redémarrer l\'agent',
+            disable: 'désactiver',
+        };
+        if (!confirm(`Voulez-vous ${labels[action]} pour ${selected.length} machine(s) ?`)) return;
+
+        setBulkProcessing(true);
+        router.post('/machines/bulk-action', {
+            machine_ids: selected,
+            action,
+        }, {
+            preserveState: true,
+            onSuccess: () => {
+                setSelected([]);
+                setBulkProcessing(false);
+            },
+            onError: () => setBulkProcessing(false),
+        });
+    };
 
     const applyFilters = useCallback((overrides = {}) => {
         const params = { ...filters, search, ...overrides };
-        // Remove empty values
         Object.keys(params).forEach((k) => {
             if (!params[k]) delete params[k];
         });
-        // Reset to page 1 when filtering
         delete params.page;
         router.get('/machines', params, { preserveState: true, replace: true });
     }, [filters, search]);
@@ -71,6 +111,88 @@ export default function MachinesIndex({ machines, filters }) {
 
     return (
         <DashboardLayout title="Parc machines">
+            {flash?.success && (
+                <div style={{
+                    background: 'rgba(34,197,94,0.1)',
+                    border: '1px solid rgba(34,197,94,0.3)',
+                    borderRadius: 8,
+                    padding: '0.75rem 1rem',
+                    marginBottom: '1rem',
+                    color: '#22c55e',
+                    fontSize: '0.85rem',
+                    fontWeight: 500,
+                }}>
+                    {flash.success}
+                </div>
+            )}
+
+            {/* Bulk action bar */}
+            {isManager && selected.length > 0 && (
+                <div style={{
+                    background: '#1e3a5f',
+                    border: '1px solid #3b82f6',
+                    borderRadius: 10,
+                    padding: '0.65rem 1rem',
+                    marginBottom: '1rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    flexWrap: 'wrap',
+                }}>
+                    <span style={{ color: '#93c5fd', fontSize: '0.85rem', fontWeight: 600 }}>
+                        {selected.length} machine(s) sélectionnée(s)
+                    </span>
+                    <div style={{ display: 'flex', gap: '0.5rem', marginLeft: 'auto' }}>
+                        <button
+                            onClick={() => handleBulkAction('force_sync')}
+                            disabled={bulkProcessing}
+                            style={{
+                                background: '#3b82f6', color: '#fff', border: 'none',
+                                borderRadius: 6, padding: '0.4rem 0.85rem', fontSize: '0.8rem',
+                                fontWeight: 600, cursor: bulkProcessing ? 'not-allowed' : 'pointer',
+                                opacity: bulkProcessing ? 0.6 : 1,
+                            }}
+                        >
+                            Sync règles
+                        </button>
+                        <button
+                            onClick={() => handleBulkAction('restart')}
+                            disabled={bulkProcessing}
+                            style={{
+                                background: '#f59e0b', color: '#fff', border: 'none',
+                                borderRadius: 6, padding: '0.4rem 0.85rem', fontSize: '0.8rem',
+                                fontWeight: 600, cursor: bulkProcessing ? 'not-allowed' : 'pointer',
+                                opacity: bulkProcessing ? 0.6 : 1,
+                            }}
+                        >
+                            Redémarrer
+                        </button>
+                        <button
+                            onClick={() => handleBulkAction('disable')}
+                            disabled={bulkProcessing}
+                            style={{
+                                background: '#ef4444', color: '#fff', border: 'none',
+                                borderRadius: 6, padding: '0.4rem 0.85rem', fontSize: '0.8rem',
+                                fontWeight: 600, cursor: bulkProcessing ? 'not-allowed' : 'pointer',
+                                opacity: bulkProcessing ? 0.6 : 1,
+                            }}
+                        >
+                            Désactiver
+                        </button>
+                        <button
+                            onClick={() => setSelected([])}
+                            style={{
+                                background: 'transparent', color: '#94a3b8', border: '1px solid #475569',
+                                borderRadius: 6, padding: '0.4rem 0.85rem', fontSize: '0.8rem',
+                                cursor: 'pointer',
+                            }}
+                        >
+                            Annuler
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Filters */}
             <div style={{
                 display: 'flex', gap: '0.75rem', marginBottom: '1.5rem',
@@ -143,6 +265,16 @@ export default function MachinesIndex({ machines, filters }) {
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                         <tr style={{ borderBottom: '1px solid #334155' }}>
+                            {isManager && (
+                                <th style={{ padding: '0.75rem 0.5rem 0.75rem 1rem', width: 36 }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={allSelected}
+                                        onChange={toggleAll}
+                                        style={{ accentColor: '#3b82f6', cursor: 'pointer' }}
+                                    />
+                                </th>
+                            )}
                             {['Hostname', 'OS', 'Agent', 'Statut', 'Dernier contact', 'Département', 'Utilisateur'].map((h) => (
                                 <th key={h} style={{
                                     padding: '0.75rem 1rem', textAlign: 'left',
@@ -157,7 +289,7 @@ export default function MachinesIndex({ machines, filters }) {
                     <tbody>
                         {machines?.data?.length === 0 && (
                             <tr>
-                                <td colSpan={7} style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
+                                <td colSpan={isManager ? 8 : 7} style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
                                     {hasFilters ? 'Aucune machine ne correspond aux filtres.' : 'Aucune machine enregistrée.'}
                                 </td>
                             </tr>
@@ -165,13 +297,36 @@ export default function MachinesIndex({ machines, filters }) {
                         {machines?.data?.map((machine) => (
                             <tr
                                 key={machine.id}
-                                style={{ borderBottom: '1px solid #1e293b', cursor: 'pointer' }}
-                                onClick={() => router.visit(`/machines/${machine.id}`)}
+                                style={{
+                                    borderBottom: '1px solid #1e293b',
+                                    cursor: 'pointer',
+                                    background: selected.includes(machine.id) ? 'rgba(59,130,246,0.08)' : 'transparent',
+                                }}
                             >
-                                <td style={{ padding: '0.75rem 1rem', color: '#f8fafc', fontSize: '0.875rem', fontWeight: 500 }}>
+                                {isManager && (
+                                    <td style={{ padding: '0.75rem 0.5rem 0.75rem 1rem', width: 36 }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={selected.includes(machine.id)}
+                                            onChange={(e) => {
+                                                e.stopPropagation();
+                                                toggleSelect(machine.id);
+                                            }}
+                                            onClick={(e) => e.stopPropagation()}
+                                            style={{ accentColor: '#3b82f6', cursor: 'pointer' }}
+                                        />
+                                    </td>
+                                )}
+                                <td
+                                    style={{ padding: '0.75rem 1rem', color: '#f8fafc', fontSize: '0.875rem', fontWeight: 500 }}
+                                    onClick={() => router.visit(`/machines/${machine.id}`)}
+                                >
                                     {machine.hostname}
                                 </td>
-                                <td style={{ padding: '0.75rem 1rem', color: '#94a3b8', fontSize: '0.875rem' }}>
+                                <td
+                                    style={{ padding: '0.75rem 1rem', color: '#94a3b8', fontSize: '0.875rem' }}
+                                    onClick={() => router.visit(`/machines/${machine.id}`)}
+                                >
                                     <span style={{
                                         display: 'inline-block', width: 20, height: 20, borderRadius: 4,
                                         background: machine.os === 'windows' ? '#0078d4' : '#333',
@@ -182,10 +337,16 @@ export default function MachinesIndex({ machines, filters }) {
                                     </span>
                                     {machine.os} {machine.os_version}
                                 </td>
-                                <td style={{ padding: '0.75rem 1rem', color: '#94a3b8', fontSize: '0.875rem' }}>
+                                <td
+                                    style={{ padding: '0.75rem 1rem', color: '#94a3b8', fontSize: '0.875rem' }}
+                                    onClick={() => router.visit(`/machines/${machine.id}`)}
+                                >
                                     v{machine.agent_version}
                                 </td>
-                                <td style={{ padding: '0.75rem 1rem' }}>
+                                <td
+                                    style={{ padding: '0.75rem 1rem' }}
+                                    onClick={() => router.visit(`/machines/${machine.id}`)}
+                                >
                                     <span style={{
                                         display: 'inline-block',
                                         padding: '0.2rem 0.6rem',
@@ -198,14 +359,23 @@ export default function MachinesIndex({ machines, filters }) {
                                         {machine.status}
                                     </span>
                                 </td>
-                                <td style={{ padding: '0.75rem 1rem', color: '#94a3b8', fontSize: '0.875rem' }}>
-                                    {machine.last_heartbeat || '—'}
+                                <td
+                                    style={{ padding: '0.75rem 1rem', color: '#94a3b8', fontSize: '0.875rem' }}
+                                    onClick={() => router.visit(`/machines/${machine.id}`)}
+                                >
+                                    {machine.last_heartbeat || '\u2014'}
                                 </td>
-                                <td style={{ padding: '0.75rem 1rem', color: '#94a3b8', fontSize: '0.875rem' }}>
-                                    {machine.department || '—'}
+                                <td
+                                    style={{ padding: '0.75rem 1rem', color: '#94a3b8', fontSize: '0.875rem' }}
+                                    onClick={() => router.visit(`/machines/${machine.id}`)}
+                                >
+                                    {machine.department || '\u2014'}
                                 </td>
-                                <td style={{ padding: '0.75rem 1rem', color: '#94a3b8', fontSize: '0.875rem' }}>
-                                    {machine.assigned_user || '—'}
+                                <td
+                                    style={{ padding: '0.75rem 1rem', color: '#94a3b8', fontSize: '0.875rem' }}
+                                    onClick={() => router.visit(`/machines/${machine.id}`)}
+                                >
+                                    {machine.assigned_user || '\u2014'}
                                 </td>
                             </tr>
                         ))}

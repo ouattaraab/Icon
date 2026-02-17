@@ -148,4 +148,61 @@ class MachineController extends Controller
 
         return redirect()->back()->with('success', "Machine {$label}.");
     }
+
+    public function bulkAction(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'machine_ids' => 'required|array|min:1',
+            'machine_ids.*' => 'uuid|exists:machines,id',
+            'action' => 'required|string|in:force_sync,restart,disable',
+        ]);
+
+        $machines = Machine::whereIn('id', $validated['machine_ids'])->get();
+        $count = $machines->count();
+
+        foreach ($machines as $machine) {
+            match ($validated['action']) {
+                'force_sync' => $this->queueCommand($machine, 'force_sync_rules', 'machine.force_sync'),
+                'restart' => $this->queueCommand($machine, 'restart', 'machine.restart'),
+                'disable' => $this->disableMachine($machine),
+            };
+        }
+
+        $actionLabel = match ($validated['action']) {
+            'force_sync' => 'Synchronisation demandée',
+            'restart' => 'Redémarrage demandé',
+            'disable' => 'Désactivation effectuée',
+        };
+
+        return redirect()->back()->with('success', "{$actionLabel} pour {$count} machine(s).");
+    }
+
+    private function queueCommand(Machine $machine, string $type, string $auditAction): void
+    {
+        $commands = cache()->get("machine:{$machine->id}:commands", []);
+        $commands[] = ['type' => $type, 'issued_at' => now()->toIso8601String()];
+        cache()->put("machine:{$machine->id}:commands", $commands, now()->addHours(1));
+
+        AuditLog::log($auditAction, 'Machine', $machine->id, [
+            'hostname' => $machine->hostname,
+            'bulk' => true,
+        ]);
+    }
+
+    private function disableMachine(Machine $machine): void
+    {
+        if ($machine->status === 'inactive') {
+            return;
+        }
+
+        $oldStatus = $machine->status;
+        $machine->update(['status' => 'inactive']);
+
+        AuditLog::log('machine.status_changed', 'Machine', $machine->id, [
+            'hostname' => $machine->hostname,
+            'old_status' => $oldStatus,
+            'new_status' => 'inactive',
+            'bulk' => true,
+        ]);
+    }
 }
