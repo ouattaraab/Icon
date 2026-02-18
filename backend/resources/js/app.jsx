@@ -4,6 +4,7 @@ import '../css/app.css';
 import { createRoot } from 'react-dom/client';
 import { createInertiaApp } from '@inertiajs/react';
 import { ThemeProvider } from './Contexts/ThemeContext';
+import ErrorBoundary from './Components/ErrorBoundary';
 
 createInertiaApp({
     title: (title) => title ? `${title} — Icon` : 'Icon',
@@ -13,9 +14,11 @@ createInertiaApp({
     },
     setup({ el, App, props }) {
         createRoot(el).render(
-            <ThemeProvider>
-                <App {...props} />
-            </ThemeProvider>
+            <ErrorBoundary>
+                <ThemeProvider>
+                    <App {...props} />
+                </ThemeProvider>
+            </ErrorBoundary>
         );
     },
 });
