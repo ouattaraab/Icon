@@ -129,7 +129,7 @@ async fn connect_and_listen(
     };
     let json = serde_json::to_string(&subscribe_msg)?;
     write
-        .send(tokio_tungstenite::tungstenite::Message::Text(json.into()))
+        .send(tokio_tungstenite::tungstenite::Message::Text(json))
         .await?;
     info!(%channel, "Subscribed to Reverb channel");
 
@@ -141,7 +141,7 @@ async fn connect_and_listen(
 
                 if let Some(pong) = handle_frame(&text, channel, rule_engine).await {
                     write
-                        .send(tokio_tungstenite::tungstenite::Message::Text(pong.into()))
+                        .send(tokio_tungstenite::tungstenite::Message::Text(pong))
                         .await?;
                 }
             }

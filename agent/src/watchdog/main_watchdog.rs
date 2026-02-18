@@ -7,7 +7,6 @@
 /// 2. Ensure the system proxy configuration hasn't been tampered with
 /// 3. Verify agent binary integrity (detect tampering)
 /// 4. Alert the server when anomalies are detected
-
 mod monitor;
 
 use std::collections::HashMap;
@@ -206,11 +205,7 @@ fn check_data_directory() {
     {
         use std::os::unix::fs::MetadataExt;
 
-        let data_dir = if cfg!(target_os = "macos") {
-            PathBuf::from("/var/lib/icon")
-        } else {
-            PathBuf::from("/var/lib/icon")
-        };
+        let data_dir = PathBuf::from("/var/lib/icon");
 
         if let Ok(meta) = std::fs::metadata(&data_dir) {
             let mode = meta.mode() & 0o777;
@@ -238,7 +233,7 @@ fn reapply_proxy_config() -> bool {
         let mut success = false;
 
         for service in &services {
-            let pac_url = format!("http://127.0.0.1:8443/proxy.pac");
+            let pac_url = "http://127.0.0.1:8443/proxy.pac".to_string();
             let result = std::process::Command::new("networksetup")
                 .args(["-setautoproxyurl", service, &pac_url])
                 .output();
@@ -308,8 +303,6 @@ fn compute_agent_binary_hash() -> Option<String> {
 fn agent_binary_path() -> PathBuf {
     if cfg!(target_os = "windows") {
         PathBuf::from(r"C:\Program Files\Icon\icon-agent.exe")
-    } else if cfg!(target_os = "macos") {
-        PathBuf::from("/usr/local/bin/icon-agent")
     } else {
         PathBuf::from("/usr/local/bin/icon-agent")
     }

@@ -109,6 +109,7 @@ impl Database {
     }
 
     /// Queue an event for later sync to server
+    #[allow(clippy::too_many_arguments)]
     pub fn queue_event(
         &self,
         event_type: &str,

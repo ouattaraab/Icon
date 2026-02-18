@@ -26,6 +26,7 @@ pub async fn start_proxy(
     domain_filter: Arc<DomainFilter>,
 ) -> anyhow::Result<()> {
     let bind_addr = format!("127.0.0.1:{}", config.proxy_port);
+    let proxy_port = config.proxy_port;
     let listener = TcpListener::bind(&bind_addr).await?;
     info!(addr = %bind_addr, "MITM proxy listening");
 
@@ -43,28 +44,48 @@ pub async fn start_proxy(
         let ca = ca_manager.clone();
 
         tokio::spawn(async move {
-            if let Err(e) = handle_connection(stream, re, eq, df, ca).await {
+            if let Err(e) = handle_connection(stream, re, eq, df, ca, proxy_port).await {
                 debug!(error = %e, "Connection handling error");
             }
         });
     }
 }
 
-/// Handle a single proxied connection (HTTP CONNECT tunnel)
+/// Handle a single proxied connection (HTTP CONNECT tunnel or plain HTTP)
 async fn handle_connection(
     mut client_stream: tokio::net::TcpStream,
     rule_engine: Arc<RuleEngine>,
     event_queue: Arc<EventQueue>,
     domain_filter: Arc<DomainFilter>,
     ca_manager: Arc<CaManager>,
+    proxy_port: u16,
 ) -> anyhow::Result<()> {
-    // Read the initial CONNECT request
+    // Read the initial request (CONNECT for HTTPS, or plain HTTP)
     let mut buf = vec![0u8; 8192];
     let n = client_stream.read(&mut buf).await?;
     if n == 0 {
         return Ok(());
     }
     let request_line = String::from_utf8_lossy(&buf[..n]);
+
+    // --- Serve PAC file for direct HTTP GET /proxy.pac requests ---
+    if is_pac_request(&request_line) {
+        let pac_body = domain_filter.generate_pac(proxy_port).await;
+        let response = format!(
+            "HTTP/1.1 200 OK\r\n\
+             Content-Type: application/x-ns-proxy-autoconfig\r\n\
+             Content-Length: {}\r\n\
+             Connection: close\r\n\
+             \r\n\
+             {}",
+            pac_body.len(),
+            pac_body,
+        );
+        client_stream.write_all(response.as_bytes()).await?;
+        client_stream.shutdown().await?;
+        debug!("Served PAC file");
+        return Ok(());
+    }
 
     // Parse CONNECT host:port
     let (host, port) = parse_connect_target(&request_line)
@@ -264,40 +285,38 @@ async fn handle_connection(
         };
 
         // If this was an API endpoint, try to extract and log the response
-        if is_api {
-            if parsed_request.is_some() {
-                let response_text = request_parser::extract_response(&response_data, platform);
-                if let Some(ref resp_text) = response_text {
-                    let hash = request_parser::content_hash(&response_data);
+        if is_api && parsed_request.is_some() {
+            let response_text = request_parser::extract_response(&response_data, platform);
+            if let Some(ref resp_text) = response_text {
+                let hash = request_parser::content_hash(&response_data);
 
-                    // Evaluate the response against rules too
-                    let result = rule_engine.evaluate(resp_text, RuleTarget::Response).await;
-                    let (event_type, rule_id, severity) = match result {
-                        EvaluationResult::Alerted {
-                            rule_id, severity, ..
-                        } => {
-                            let sev = format!("{:?}", severity).to_lowercase();
-                            ("response_alert", Some(rule_id), sev)
-                        }
-                        EvaluationResult::Logged { rule_id } => {
-                            ("response", rule_id, "info".to_string())
-                        }
-                        _ => ("response", None, "info".to_string()),
-                    };
+                // Evaluate the response against rules too
+                let result = rule_engine.evaluate(resp_text, RuleTarget::Response).await;
+                let (event_type, rule_id, severity) = match result {
+                    EvaluationResult::Alerted {
+                        rule_id, severity, ..
+                    } => {
+                        let sev = format!("{:?}", severity).to_lowercase();
+                        ("response_alert", Some(rule_id), sev)
+                    }
+                    EvaluationResult::Logged { rule_id } => {
+                        ("response", rule_id, "info".to_string())
+                    }
+                    _ => ("response", None, "info".to_string()),
+                };
 
-                    event_queue
-                        .log_event(
-                            event_type,
-                            Some(platform),
-                            Some(&host),
-                            Some(&hash),
-                            None,
-                            Some(&request_parser::truncate(resp_text, 500)),
-                            rule_id.as_deref(),
-                            Some(&severity),
-                        )
-                        .await;
-                }
+                event_queue
+                    .log_event(
+                        event_type,
+                        Some(platform),
+                        Some(&host),
+                        Some(&hash),
+                        None,
+                        Some(&request_parser::truncate(resp_text, 500)),
+                        rule_id.as_deref(),
+                        Some(&severity),
+                    )
+                    .await;
             }
         }
 
@@ -438,6 +457,16 @@ fn is_chunked_complete(body: &[u8]) -> bool {
     }
 }
 
+/// Check if the request is a plain HTTP GET for the PAC file
+fn is_pac_request(request: &str) -> bool {
+    let first_line = match request.lines().next() {
+        Some(line) => line,
+        None => return false,
+    };
+    let parts: Vec<&str> = first_line.split_whitespace().collect();
+    parts.len() >= 2 && parts[0] == "GET" && parts[1] == "/proxy.pac"
+}
+
 /// Parse CONNECT target, returns (host, port)
 fn parse_connect_target(request: &str) -> Option<(String, u16)> {
     let first_line = request.lines().next()?;
@@ -521,5 +550,13 @@ mod tests {
         assert!(is_chunked_complete(b"hello\r\n0\r\n\r\n"));
         assert!(!is_chunked_complete(b"hello\r\n"));
         assert!(!is_chunked_complete(b""));
+    }
+
+    #[test]
+    fn test_is_pac_request() {
+        assert!(is_pac_request("GET /proxy.pac HTTP/1.1\r\nHost: 127.0.0.1:8443\r\n\r\n"));
+        assert!(!is_pac_request("CONNECT api.openai.com:443 HTTP/1.1\r\n\r\n"));
+        assert!(!is_pac_request("GET /other HTTP/1.1\r\n\r\n"));
+        assert!(!is_pac_request("POST /proxy.pac HTTP/1.1\r\n\r\n"));
     }
 }

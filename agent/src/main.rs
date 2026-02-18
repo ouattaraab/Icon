@@ -84,8 +84,8 @@ async fn main() -> anyhow::Result<()> {
     }
 
     // Register with server or use existing credentials
-    if config.machine_id.is_some() {
-        info!(machine_id = %config.machine_id.as_ref().unwrap(), "Using persisted credentials");
+    if let Some(mid) = &config.machine_id {
+        info!(machine_id = %mid, "Using persisted credentials");
     } else {
         match api_client.register().await {
             Ok(resp) => {

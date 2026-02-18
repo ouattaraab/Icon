@@ -80,7 +80,8 @@ function api_request(
         $headers[] = 'X-Api-Key: ' . $apiKey;
     }
 
-    $headers[] = 'X-Timestamp: ' . time();
+    $timestamp = (string) time();
+    $headers[] = 'X-Timestamp: ' . $timestamp;
 
     foreach ($extraHeaders as $h) {
         $headers[] = $h;
@@ -90,7 +91,7 @@ function api_request(
     if ($method === 'POST' && $data !== null) {
         $body = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         if ($hmacSecret !== null) {
-            $headers[] = 'X-Signature: ' . hmac_sign($body, $hmacSecret);
+            $headers[] = 'X-Signature: ' . hmac_sign($timestamp . '.' . $body, $hmacSecret);
         }
         curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
     }

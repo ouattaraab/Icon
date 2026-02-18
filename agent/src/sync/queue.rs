@@ -18,6 +18,7 @@ impl EventQueue {
     }
 
     /// Log an event to the local queue (non-blocking)
+    #[allow(clippy::too_many_arguments)]
     pub async fn log_event(
         &self,
         event_type: &str,
@@ -38,6 +39,7 @@ impl EventQueue {
     }
 
     /// Log an event with additional metadata (e.g. DLP match details)
+    #[allow(clippy::too_many_arguments)]
     pub async fn log_event_with_metadata(
         &self,
         event_type: &str,
@@ -70,6 +72,12 @@ impl EventQueue {
 
     /// Attempt to send all pending events to the server
     async fn flush_pending(&self) {
+        // Quick connectivity check before attempting to flush batches
+        if !self.api_client.is_server_reachable().await {
+            debug!("Server unreachable, skipping event flush");
+            return;
+        }
+
         let batch_size = self.batch_size;
 
         loop {

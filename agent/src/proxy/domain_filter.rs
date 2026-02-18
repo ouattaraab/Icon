@@ -74,7 +74,6 @@ impl DomainFilter {
 
     /// Generate a PAC (Proxy Auto-Config) file content
     /// that redirects only monitored domains to the local proxy
-    #[allow(dead_code)]
     pub async fn generate_pac(&self, proxy_port: u16) -> String {
         let domains = self.domains.read().await;
 

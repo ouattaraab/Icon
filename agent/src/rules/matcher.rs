@@ -4,9 +4,12 @@ use std::sync::Mutex;
 use regex::Regex;
 use crate::rules::models::RuleCondition;
 
+/// Type alias for the regex cache to reduce complexity.
+type RegexCache = Mutex<HashMap<(String, bool), Result<Regex, String>>>;
+
 /// Global regex cache to avoid recompiling patterns on every evaluation.
 /// Key: (pattern, case_insensitive) → compiled Regex
-static REGEX_CACHE: std::sync::LazyLock<Mutex<HashMap<(String, bool), Result<Regex, String>>>> =
+static REGEX_CACHE: std::sync::LazyLock<RegexCache> =
     std::sync::LazyLock::new(|| Mutex::new(HashMap::new()));
 
 /// Évalue si un contenu matche une condition de règle
@@ -42,8 +45,8 @@ pub fn matches_condition(content: &str, condition: &RuleCondition) -> bool {
         // If neither min nor max is set, no match.
         RuleCondition::ContentLength { min, max } => {
             let len = content.len();
-            let exceeds_max = max.map_or(false, |m| len > m);
-            let below_min = min.map_or(false, |m| len < m);
+            let exceeds_max = max.is_some_and(|m| len > m);
+            let below_min = min.is_some_and(|m| len < m);
             exceeds_max || below_min
         }
     }

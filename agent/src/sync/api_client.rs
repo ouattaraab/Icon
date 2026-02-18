@@ -274,7 +274,6 @@ impl ApiClient {
     }
 
     /// Check server connectivity (used by queue to determine online/offline status)
-    #[allow(dead_code)]
     pub async fn is_server_reachable(&self) -> bool {
         let url = format!("{}/api/health", self.server_url);
         match self.client.get(&url).timeout(Duration::from_secs(5)).send().await {

@@ -14,8 +14,11 @@ info:
     - **Endpoints authentifiés** : requièrent un header `X-Api-Key` contenant
       la clé API retournée lors de l'enregistrement.
     - **Signature HMAC** : les requêtes POST doivent inclure un header
-      `X-Signature` contenant la signature HMAC-SHA256 du body, calculée
-      avec le `hmac_secret` retourné lors de l'enregistrement.
+      `X-Signature` contenant la signature HMAC-SHA256 de `{timestamp}.{body}`,
+      calculée avec le `hmac_secret` retourné lors de l'enregistrement.
+      Le header `X-Timestamp` (epoch seconds) est obligatoire sur chaque
+      requête POST authentifiée. Les timestamps décalés de plus de
+      5 minutes sont rejetés.
   contact:
     name: GS2E - Équipe Icon
     email: icon@gs2e.ci
@@ -39,6 +42,8 @@ tags:
     description: Vérification des mises à jour de l'agent
   - name: Watchdog
     description: Alertes du processus watchdog
+  - name: Deployment
+    description: Signalement des événements de déploiement de l'agent
 
 components:
   securitySchemes:
@@ -52,9 +57,16 @@ components:
       in: header
       name: X-Signature
       description: |
-        Signature HMAC-SHA256 du body de la requête.
+        Signature HMAC-SHA256 calculée sur `{timestamp}.{body}` où
+        `timestamp` est la valeur du header `X-Timestamp` (epoch seconds)
+        et `body` est le corps JSON de la requête.
         Calculée avec le `hmac_secret` retourné à l'enregistrement.
         Obligatoire pour les requêtes POST uniquement.
+
+        Le header `X-Timestamp` doit accompagner chaque requête POST
+        authentifiée. Le serveur rejette les requêtes dont le timestamp
+        est décalé de plus de 5 minutes (passé ou futur) par rapport
+        à l'horloge serveur, afin de prévenir les attaques par rejeu.
     EnrollmentKey:
       type: apiKey
       in: header
@@ -610,6 +622,87 @@ paths:
                   received:
                     type: boolean
                     example: true
+        "401":
+          description: Clé API invalide
+        "422":
+          description: Données invalides
+
+  /agents/deployment:
+    post:
+      summary: Signaler un événement de déploiement
+      description: |
+        Reçoit un rapport de déploiement de l'agent.
+        Permet de tracer les mises à jour (succès, échec, rollback)
+        et la méthode de déploiement utilisée.
+        Throttle : 5 requêtes/minute.
+      operationId: reportDeployment
+      tags: [Deployment]
+      security:
+        - ApiKeyAuth: []
+          HmacSignature: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - version
+                - status
+              properties:
+                version:
+                  type: string
+                  maxLength: 50
+                  description: Version de l'agent déployée
+                  example: "0.3.0"
+                previous_version:
+                  type: string
+                  nullable: true
+                  maxLength: 50
+                  description: Version précédente de l'agent (avant déploiement)
+                  example: "0.2.0"
+                status:
+                  type: string
+                  enum:
+                    - success
+                    - failed
+                    - pending
+                    - rolled_back
+                  description: Résultat du déploiement
+                  example: "success"
+                deployment_method:
+                  type: string
+                  nullable: true
+                  enum:
+                    - auto_update
+                    - manual
+                    - gpo
+                    - mdm
+                  description: Méthode de déploiement utilisée
+                  example: "auto_update"
+                error_message:
+                  type: string
+                  nullable: true
+                  maxLength: 2000
+                  description: Message d'erreur en cas d'échec
+                deployed_at:
+                  type: string
+                  format: date-time
+                  nullable: true
+                  description: Date/heure du déploiement (ISO 8601)
+                  example: "2026-02-18T10:30:00Z"
+      responses:
+        "201":
+          description: Événement de déploiement enregistré
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    description: Identifiant unique de l'événement de déploiement
         "401":
           description: Clé API invalide
         "422":

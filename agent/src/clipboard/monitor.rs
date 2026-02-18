@@ -60,6 +60,7 @@ impl ClipboardMonitorConfig {
 /// Polls the system clipboard every N ms, checks content against:
 ///   1. Server-synced DLP rules (via RuleEngine)
 ///   2. Built-in DLP patterns (credit cards, SSN, API keys, etc.)
+///
 /// Logs events with matched pattern metadata.
 pub async fn start_monitoring(
     rule_engine: Arc<RuleEngine>,
