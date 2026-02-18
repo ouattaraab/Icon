@@ -7,6 +7,7 @@ use std::time::Duration;
 
 use crate::config::AppConfig;
 use crate::rules::models::Rule;
+use crate::sync::cert_pinning;
 
 type HmacSha256 = Hmac<Sha256>;
 
@@ -16,8 +17,6 @@ pub struct ApiClient {
     server_url: String,
     api_key: Option<String>,
     hmac_secret: Option<String>,
-    /// SHA-256 hash of the expected server certificate (certificate pinning)
-    cert_pin_hash: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -114,12 +113,20 @@ impl ApiClient {
             .gzip(true)
             .connect_timeout(Duration::from_secs(10));
 
-        // Certificate pinning: if a pin hash is configured, add a custom
-        // certificate verifier that checks the server cert's SHA-256 hash.
+        // Certificate pinning: if a pin hash is configured, build a custom
+        // rustls ClientConfig with a PinnedCertVerifier that checks the server
+        // cert's SHA-256 hash at the TLS layer. Otherwise, use a default
+        // rustls config with webpki-roots.
         if let Some(ref pin) = config.server_cert_pin {
-            let pin_hash = pin.clone();
-            builder = builder.danger_accept_invalid_certs(false);
-            info!("Certificate pinning enabled (hash: {}...)", &pin_hash[..16.min(pin_hash.len())]);
+            let tls_config = cert_pinning::create_pinned_tls_config(pin);
+            builder = builder.use_preconfigured_tls(tls_config);
+            info!(
+                "Certificate pinning enabled (hash: {}...)",
+                &pin[..16.min(pin.len())]
+            );
+        } else {
+            let tls_config = cert_pinning::create_default_tls_config();
+            builder = builder.use_preconfigured_tls(tls_config);
         }
 
         let client = builder.build()?;
@@ -129,7 +136,6 @@ impl ApiClient {
             server_url: config.server_url.clone(),
             api_key: config.api_key.clone(),
             hmac_secret: config.hmac_secret.clone(),
-            cert_pin_hash: config.server_cert_pin.clone(),
         })
     }
 
@@ -152,9 +158,6 @@ impl ApiClient {
             .json(&req)
             .send()
             .await?;
-
-        // Verify certificate pin on first connection
-        self.verify_cert_pin(&resp)?;
 
         let resp = resp
             .error_for_status()?
@@ -303,9 +306,6 @@ impl ApiClient {
 
         let resp = req.send().await?;
 
-        // Verify certificate pin on every request
-        self.verify_cert_pin(&resp)?;
-
         Ok(resp)
     }
 
@@ -320,7 +320,6 @@ impl ApiClient {
         }
 
         let resp = req.send().await?;
-        self.verify_cert_pin(&resp)?;
 
         resp.error_for_status().map_err(Into::into)
     }
@@ -330,26 +329,6 @@ impl ApiClient {
         let mut mac = HmacSha256::new_from_slice(secret.as_bytes()).ok()?;
         mac.update(payload.as_bytes());
         Some(hex::encode(mac.finalize().into_bytes()))
-    }
-
-    /// Verify certificate pinning against the response.
-    /// This provides defense against MITM attacks even if a rogue CA is trusted.
-    fn verify_cert_pin(&self, _resp: &reqwest::Response) -> anyhow::Result<()> {
-        // Note: reqwest does not expose the peer certificate directly.
-        // In production, use rustls with a custom ServerCertVerifier that checks
-        // the certificate's SHA-256 hash against self.cert_pin_hash.
-        //
-        // For now, the pin hash is logged at startup, and the reqwest client
-        // already enforces standard TLS verification via rustls + webpki-roots.
-        //
-        // A full implementation would involve:
-        // 1. Creating a custom rustls::client::danger::ServerCertVerifier
-        // 2. Comparing sha2::Sha256::digest(cert_der) with self.cert_pin_hash
-        // 3. Returning CertificateError::Other if mismatch
-        //
-        // This is left as a compile-time-configurable feature since it requires
-        // coordination with the server's TLS certificate rotation schedule.
-        Ok(())
     }
 }
 

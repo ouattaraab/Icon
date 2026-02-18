@@ -294,6 +294,39 @@ class ReportController extends Controller
             ->limit(20)
             ->get();
 
+        // Alert severity breakdown
+        $alertSeverity = Alert::whereBetween('created_at', [$dateFrom, $dateTo])
+            ->select('severity', DB::raw('COUNT(*) as count'))
+            ->groupBy('severity')
+            ->pluck('count', 'severity')
+            ->toArray();
+
+        // Department breakdown
+        $departmentStats = Machine::whereNotNull('department')
+            ->where('department', '!=', '')
+            ->select('department', DB::raw('COUNT(*) as machine_count'))
+            ->groupBy('department')
+            ->orderByDesc('machine_count')
+            ->limit(10)
+            ->get()
+            ->map(function ($row) use ($dateFrom, $dateTo) {
+                $machineIds = Machine::where('department', $row->department)->pluck('id');
+                $eventCount = Event::whereIn('machine_id', $machineIds)
+                    ->whereBetween('occurred_at', [$dateFrom, $dateTo])
+                    ->count();
+                $blockedCount = Event::whereIn('machine_id', $machineIds)
+                    ->whereBetween('occurred_at', [$dateFrom, $dateTo])
+                    ->where('event_type', 'block')
+                    ->count();
+
+                return [
+                    'department' => $row->department,
+                    'machine_count' => (int) $row->machine_count,
+                    'event_count' => $eventCount,
+                    'blocked_count' => $blockedCount,
+                ];
+            });
+
         AuditLog::log('report.export_pdf', 'Report', null, [
             'date_from' => $dateFrom,
             'date_to' => $dateTo,
@@ -304,6 +337,8 @@ class ReportController extends Controller
             'platformUsage' => $platformUsage,
             'topMachines' => $topMachines,
             'recentAlerts' => $recentAlerts,
+            'alertSeverity' => $alertSeverity,
+            'departmentStats' => $departmentStats,
             'dateFrom' => $dateFrom,
             'dateTo' => $dateTo,
             'generatedAt' => now()->format('d/m/Y H:i'),

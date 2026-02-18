@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AgentDeploymentController;
 use App\Http\Controllers\Api\AgentRegistrationController;
 use App\Http\Controllers\Api\AgentUpdateController;
 use App\Http\Controllers\Api\DomainSyncController;
@@ -52,5 +53,9 @@ Route::middleware([ValidateAgentApiKey::class, VerifyHmacSignature::class])->gro
 
     // Domain sync — 10 requests/minute per machine
     Route::get('/domains/sync', DomainSyncController::class)
+        ->middleware('throttle:sync');
+
+    // Agent deployment reports — 10 requests/minute per machine
+    Route::post('/agents/deployment', [AgentDeploymentController::class, 'report'])
         ->middleware('throttle:sync');
 });

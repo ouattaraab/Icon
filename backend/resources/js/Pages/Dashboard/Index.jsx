@@ -82,6 +82,20 @@ function StatCard({ label, value, color = '#3b82f6', subtitle, href, pulse, comp
     return content;
 }
 
+const deploymentStatusColors = {
+    success: '#22c55e',
+    failed: '#ef4444',
+    pending: '#f59e0b',
+    rolled_back: '#f97316',
+};
+
+const deploymentStatusLabels = {
+    success: 'Succes',
+    failed: 'Echec',
+    pending: 'En attente',
+    rolled_back: 'Restaure',
+};
+
 const defaultWidgets = [
     { id: 'stats', visible: true, order: 0 },
     { id: 'activity24h', visible: true, order: 1 },
@@ -90,16 +104,18 @@ const defaultWidgets = [
     { id: 'departmentStats', visible: true, order: 4 },
     { id: 'recentAlerts', visible: true, order: 5 },
     { id: 'topMachines', visible: true, order: 6 },
+    { id: 'recentDeployments', visible: true, order: 7 },
 ];
 
 const widgetLabels = {
     stats: 'Statistiques',
-    activity24h: 'Activité 24h',
+    activity24h: 'Activit\u00e9 24h',
     platformUsage: 'Plateformes IA',
     dailyEvents: 'Tendance 7 jours',
-    departmentStats: 'Départements',
-    recentAlerts: 'Alertes récentes',
+    departmentStats: 'D\u00e9partements',
+    recentAlerts: 'Alertes r\u00e9centes',
     topMachines: 'Top machines',
+    recentDeployments: 'D\u00e9ploiements r\u00e9cents',
 };
 
 export default function DashboardIndex({
@@ -110,6 +126,7 @@ export default function DashboardIndex({
     topMachines = [],
     dailyEvents = [],
     departmentStats = [],
+    recentDeployments = [],
     dashboardConfig = null,
 }) {
     const { theme: t } = useTheme();
@@ -1049,6 +1066,107 @@ export default function DashboardIndex({
                     </div>
                 </div>
             </div>}
+
+            {/* Recent deployments widget */}
+            {isWidgetVisible('recentDeployments') && (
+                <div style={{ ...cardStyle, marginTop: '1.5rem' }}>
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: '1rem',
+                    }}>
+                        <h3 style={{ color: t.text, fontSize: '1rem', margin: 0, fontWeight: 600 }}>
+                            Deploiements recents
+                        </h3>
+                        <Link
+                            href="/deployments"
+                            style={{
+                                color: t.accent,
+                                fontSize: '0.75rem',
+                                textDecoration: 'none',
+                                fontWeight: 500,
+                            }}
+                        >
+                            Voir tout
+                        </Link>
+                    </div>
+                    {recentDeployments.length > 0 ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            {recentDeployments.map((dep) => (
+                                <Link
+                                    key={dep.id}
+                                    href="/deployments"
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.75rem',
+                                        padding: '0.6rem 0.75rem',
+                                        background: t.bg,
+                                        borderRadius: 8,
+                                        textDecoration: 'none',
+                                        border: '1px solid transparent',
+                                        transition: 'border-color 0.15s',
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.borderColor = t.border}
+                                    onMouseLeave={(e) => e.currentTarget.style.borderColor = 'transparent'}
+                                >
+                                    <div style={{
+                                        width: 8,
+                                        height: 8,
+                                        borderRadius: '50%',
+                                        background: deploymentStatusColors[dep.status] || t.textFaint,
+                                        flexShrink: 0,
+                                    }} />
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <p style={{
+                                            color: t.textSecondary,
+                                            fontSize: '0.8rem',
+                                            margin: 0,
+                                            fontWeight: 500,
+                                            whiteSpace: 'nowrap',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                        }}>
+                                            {dep.hostname || 'Machine inconnue'} &mdash; v{dep.version}
+                                            {dep.previous_version ? ` (depuis v${dep.previous_version})` : ''}
+                                        </p>
+                                        <p style={{
+                                            color: t.textFaint,
+                                            fontSize: '0.7rem',
+                                            margin: '0.15rem 0 0',
+                                        }}>
+                                            {dep.deployment_method || ''} &middot; {dep.deployed_at}
+                                        </p>
+                                    </div>
+                                    <span style={{
+                                        fontSize: '0.6rem',
+                                        fontWeight: 700,
+                                        textTransform: 'uppercase',
+                                        letterSpacing: 0.5,
+                                        padding: '0.2rem 0.5rem',
+                                        borderRadius: 4,
+                                        color: '#fff',
+                                        background: deploymentStatusColors[dep.status] || '#94a3b8',
+                                        flexShrink: 0,
+                                    }}>
+                                        {deploymentStatusLabels[dep.status] || dep.status}
+                                    </span>
+                                </Link>
+                            ))}
+                        </div>
+                    ) : (
+                        <div style={{
+                            padding: '2rem 0',
+                            textAlign: 'center',
+                        }}>
+                            <p style={{ color: t.textSubtle, fontSize: '0.85rem', margin: 0 }}>
+                                Aucun deploiement recent
+                            </p>
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* CSS animation for pulse */}
             <style>{`

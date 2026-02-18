@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -23,6 +24,7 @@ class Machine extends Model
         'last_heartbeat',
         'ip_address',
         'department',
+        'department_id',
         'assigned_user',
         'notes',
     ];
@@ -37,6 +39,11 @@ class Machine extends Model
         'last_heartbeat' => 'datetime',
     ];
 
+    public function departmentRelation(): BelongsTo
+    {
+        return $this->belongsTo(Department::class);
+    }
+
     public function events(): HasMany
     {
         return $this->hasMany(Event::class);
@@ -50,6 +57,11 @@ class Machine extends Model
     public function tags(): BelongsToMany
     {
         return $this->belongsToMany(Tag::class);
+    }
+
+    public function deployments(): HasMany
+    {
+        return $this->hasMany(AgentDeployment::class);
     }
 
     public function isOnline(): bool

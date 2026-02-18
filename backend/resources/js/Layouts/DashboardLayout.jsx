@@ -6,14 +6,16 @@ import { useIsMobile } from '../hooks/useIsMobile';
 const navigation = [
     { name: 'Tableau de bord', href: '/', icon: '\u{1f4ca}' },
     { name: 'Machines', href: '/machines', icon: '\u{1f4bb}' },
+    { name: 'D\u00e9partements', href: '/departments', icon: '\u{1f3e2}' },
+    { name: 'D\u00e9ploiements', href: '/deployments', icon: '\u{1f680}' },
     { name: 'Alertes', href: '/alerts', icon: '\u{1f514}' },
-    { name: 'Échanges', href: '/exchanges', icon: '\u{1f4ac}' },
-    { name: 'Règles', href: '/rules', icon: '\u{2699}\u{fe0f}' },
+    { name: '\u00c9changes', href: '/exchanges', icon: '\u{1f4ac}' },
+    { name: 'R\u00e8gles', href: '/rules', icon: '\u{2699}\u{fe0f}' },
     { name: 'Domaines', href: '/domains', icon: '\u{1f310}' },
     { name: 'Rapports', href: '/reports', icon: '\u{1f4c8}' },
     { name: 'Audit', href: '/audit', icon: '\u{1f4dc}' },
     { name: 'Utilisateurs', href: '/users', icon: '\u{1f465}', adminOnly: true },
-    { name: 'Paramètres', href: '/settings', icon: '\u{2699}\u{fe0f}', adminOnly: true },
+    { name: 'Param\u00e8tres', href: '/settings', icon: '\u{2699}\u{fe0f}', adminOnly: true },
 ];
 
 const severityColors = {

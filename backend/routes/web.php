@@ -1,8 +1,11 @@
 <?php
 
+use App\Http\Controllers\Api\ApiDocController;
 use App\Http\Controllers\Dashboard\AlertController;
 use App\Http\Controllers\Dashboard\AuditLogController;
 use App\Http\Controllers\Dashboard\DashboardController;
+use App\Http\Controllers\Dashboard\DeploymentController;
+use App\Http\Controllers\Dashboard\DepartmentController;
 use App\Http\Controllers\Dashboard\DomainController;
 use App\Http\Controllers\Dashboard\ExchangeController;
 use App\Http\Controllers\Dashboard\MachineController;
@@ -21,6 +24,15 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+
+/*
+|--------------------------------------------------------------------------
+| API Documentation
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/api/docs', [ApiDocController::class, 'index'])->name('api.docs');
+Route::get('/api/docs/spec', [ApiDocController::class, 'spec'])->name('api.docs.spec');
 
 /*
 |--------------------------------------------------------------------------
@@ -104,6 +116,12 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/exchanges/export', [ExchangeController::class, 'exportCsv'])->name('exchanges.export');
     Route::get('/exchanges/{id}', [ExchangeController::class, 'show'])->name('exchanges.show');
 
+    // Departments (view only)
+    Route::get('/departments', [DepartmentController::class, 'index'])->name('departments.index');
+
+    // Deployments (view only)
+    Route::get('/deployments', [DeploymentController::class, 'index'])->name('deployments.index');
+
     // Rules (view only)
     Route::get('/rules', [RuleController::class, 'index'])->name('rules.index');
 
@@ -159,6 +177,12 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/tags/{tag}', [TagController::class, 'destroy'])->name('tags.destroy');
         Route::post('/machines/{machine}/restart', [MachineController::class, 'restartAgent'])->name('machines.restart');
         Route::post('/machines/{machine}/toggle-status', [MachineController::class, 'toggleStatus'])->name('machines.toggleStatus');
+
+        // Departments CRUD
+        Route::post('/departments', [DepartmentController::class, 'store'])->name('departments.store');
+        Route::put('/departments/{department}', [DepartmentController::class, 'update'])->name('departments.update');
+        Route::delete('/departments/{department}', [DepartmentController::class, 'destroy'])->name('departments.destroy');
+        Route::post('/departments/{department}/assign-machines', [DepartmentController::class, 'assignMachines'])->name('departments.assignMachines');
 
         // Rules CRUD
         Route::get('/rules/create', [RuleController::class, 'create'])->name('rules.create');

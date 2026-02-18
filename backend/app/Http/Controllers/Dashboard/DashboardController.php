@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Models\AgentDeployment;
 use App\Models\Alert;
 use App\Models\Event;
 use App\Models\Machine;
@@ -144,6 +145,22 @@ class DashboardController extends Controller
                 ];
             });
 
+        // Recent deployments (last 5)
+        $recentDeployments = AgentDeployment::with('machine:id,hostname')
+            ->orderByDesc('deployed_at')
+            ->limit(5)
+            ->get()
+            ->map(fn (AgentDeployment $d) => [
+                'id' => $d->id,
+                'version' => $d->version,
+                'previous_version' => $d->previous_version,
+                'status' => $d->status,
+                'deployment_method' => $d->deployment_method,
+                'hostname' => $d->machine?->hostname,
+                'deployed_at' => $d->deployed_at?->diffForHumans(),
+                'deployed_at_full' => $d->deployed_at?->toIso8601String(),
+            ]);
+
         $dashboardConfig = auth()->user()->dashboard_config ?? self::defaultConfig();
 
         return Inertia::render('Dashboard/Index', [
@@ -154,6 +171,7 @@ class DashboardController extends Controller
             'topMachines' => $topMachines,
             'dailyEvents' => $dailyEvents,
             'departmentStats' => $departmentStats,
+            'recentDeployments' => $recentDeployments,
             'dashboardConfig' => $dashboardConfig,
         ]);
     }
@@ -217,6 +235,7 @@ class DashboardController extends Controller
                 ['id' => 'departmentStats', 'visible' => true, 'order' => 4],
                 ['id' => 'recentAlerts', 'visible' => true, 'order' => 5],
                 ['id' => 'topMachines', 'visible' => true, 'order' => 6],
+                ['id' => 'recentDeployments', 'visible' => true, 'order' => 7],
             ],
         ];
     }
