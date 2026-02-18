@@ -95,7 +95,7 @@ wait_for_service() {
 
 wait_for_service "PostgreSQL" "docker compose exec -T postgres pg_isready -U icon" 30
 wait_for_service "Redis" "docker compose exec -T redis redis-cli ping" 20
-wait_for_service "Elasticsearch" "curl -sf http://localhost:9200/_cluster/health" 60
+wait_for_service "Elasticsearch" "curl -sf http://localhost:${ES_PORT:-9201}/_cluster/health" 60
 wait_for_service "Application PHP" "docker compose exec -T app php -v" 30
 
 # ── 5. Initialisation Laravel ──────────────────────────────
@@ -119,7 +119,7 @@ log "Vérifications de santé post-déploiement..."
 HEALTH_OK=true
 
 # API health check
-if curl -sf http://localhost/api/health >/dev/null 2>&1; then
+if curl -sf http://localhost:${NGINX_PORT:-8888}/api/health >/dev/null 2>&1; then
     ok "API /health opérationnelle"
 else
     warn "API /health non accessible (Nginx peut nécessiter un certificat SSL)"
@@ -135,7 +135,7 @@ else
 fi
 
 # Elasticsearch
-ES_STATUS=$(curl -sf http://localhost:9200/_cluster/health 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin)['status'])" 2>/dev/null)
+ES_STATUS=$(curl -sf http://localhost:${ES_PORT:-9201}/_cluster/health 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin)['status'])" 2>/dev/null)
 if [ -n "$ES_STATUS" ]; then
     ok "Elasticsearch: cluster status = ${ES_STATUS}"
 else
@@ -175,10 +175,10 @@ fi
 
 echo ""
 echo -e "${CYAN}Accès:${NC}"
-echo "  Dashboard:      https://localhost (ou https://icon.gs2e.ci)"
+echo "  Dashboard:      http://localhost:${NGINX_PORT:-8888}"
 echo "  Admin:          admin@gs2e.ci / changeme"
-echo "  API Health:     curl http://localhost/api/health"
-echo "  Elasticsearch:  http://localhost:9200"
+echo "  API Health:     curl http://localhost:${NGINX_PORT:-8888}/api/health"
+echo "  Elasticsearch:  http://localhost:${ES_PORT:-9201}"
 echo ""
 echo -e "${CYAN}Commandes utiles:${NC}"
 echo "  make logs           Voir les logs en temps réel"

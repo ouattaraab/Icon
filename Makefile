@@ -124,7 +124,7 @@ setup: setup-env up ## Setup complet: env + démarrage Docker
 	@echo "    PostgreSQL:    localhost:$${POSTGRES_PORT:-5433}"
 	@echo "    Elasticsearch: http://localhost:$${ES_PORT:-9201}"
 	@echo "    Redis:         localhost:$${REDIS_PORT:-6380}"
-	@echo "    Reverb (WS):   ws://localhost:$${REVERB_PORT:-6001}"
+	@echo "    Reverb (WS):   ws://localhost:$${REVERB_PORT:-8080}"
 
 # ── Installeurs ─────────────────────────────────────────────
 .PHONY: pkg-macos msi-windows
