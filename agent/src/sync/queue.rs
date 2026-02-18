@@ -8,11 +8,13 @@ use crate::sync::api_client::{ApiClient, EventBatch, EventPayload};
 pub struct EventQueue {
     db: Arc<Database>,
     api_client: Arc<ApiClient>,
+    sync_interval_secs: u64,
+    batch_size: usize,
 }
 
 impl EventQueue {
-    pub fn new(db: Arc<Database>, api_client: Arc<ApiClient>) -> Self {
-        Self { db, api_client }
+    pub fn new(db: Arc<Database>, api_client: Arc<ApiClient>, sync_interval_secs: u64, batch_size: usize) -> Self {
+        Self { db, api_client, sync_interval_secs, batch_size }
     }
 
     /// Log an event to the local queue (non-blocking)
@@ -58,7 +60,7 @@ impl EventQueue {
 
     /// Main sync loop: periodically sends pending events to the server
     pub async fn run_sync_loop(&self) {
-        let mut sync_interval = interval(Duration::from_secs(30));
+        let mut sync_interval = interval(Duration::from_secs(self.sync_interval_secs));
 
         loop {
             sync_interval.tick().await;
@@ -68,7 +70,7 @@ impl EventQueue {
 
     /// Attempt to send all pending events to the server
     async fn flush_pending(&self) {
-        let batch_size = 100;
+        let batch_size = self.batch_size;
 
         loop {
             let events = match self.db.get_pending_events(batch_size) {

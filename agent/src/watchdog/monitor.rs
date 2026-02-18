@@ -1,7 +1,6 @@
 use tracing::info;
 
 const AGENT_PROCESS_NAME: &str = "icon-agent";
-const CHECK_INTERVAL_SECS: u64 = 10;
 
 /// Check if the main agent process is running
 pub fn is_agent_running() -> bool {

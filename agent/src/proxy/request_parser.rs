@@ -3,6 +3,7 @@ use sha2::{Digest, Sha256};
 
 /// A parsed HTTP request extracted from the decrypted TLS stream
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct ParsedHttpRequest {
     pub method: String,
     pub path: String,
@@ -14,6 +15,7 @@ pub struct ParsedHttpRequest {
 
 /// A parsed HTTP response extracted from the decrypted upstream stream
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct ParsedHttpResponse {
     pub status_code: u16,
     pub headers: Vec<(String, String)>,
@@ -78,6 +80,7 @@ pub fn parse_raw_request(data: &[u8]) -> Option<ParsedHttpRequest> {
 }
 
 /// Parse a raw HTTP response from bytes
+#[allow(dead_code)]
 pub fn parse_raw_response(data: &[u8]) -> Option<ParsedHttpResponse> {
     let text = String::from_utf8_lossy(data);
 
@@ -160,6 +163,7 @@ pub fn is_api_endpoint(path: &str, platform: &str) -> bool {
 
 /// Reconstruct the raw HTTP request bytes from a ParsedHttpRequest
 /// (used to forward the request to the upstream server)
+#[allow(dead_code)]
 pub fn serialize_request(req: &ParsedHttpRequest) -> Vec<u8> {
     let mut out = format!("{} {} HTTP/1.1\r\n", req.method, req.path);
     for (key, value) in &req.headers {
@@ -173,6 +177,7 @@ pub fn serialize_request(req: &ParsedHttpRequest) -> Vec<u8> {
 }
 
 /// Reconstruct raw HTTP response bytes from a ParsedHttpResponse
+#[allow(dead_code)]
 pub fn serialize_response(resp: &ParsedHttpResponse) -> Vec<u8> {
     let reason = match resp.status_code {
         200 => "OK",

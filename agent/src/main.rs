@@ -5,7 +5,6 @@ mod rules;
 mod storage;
 mod sync;
 mod update;
-mod watchdog;
 
 use tracing::{info, warn, error};
 use std::sync::Arc;
@@ -77,7 +76,12 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let api_client = Arc::new(api_client);
-    let event_queue = Arc::new(EventQueue::new(db.clone(), api_client.clone()));
+    let event_queue = Arc::new(EventQueue::new(
+        db.clone(),
+        api_client.clone(),
+        config.event_sync_interval_secs,
+        config.event_batch_size,
+    ));
 
     // Initialize domain filter with defaults
     let domain_filter = Arc::new(DomainFilter::with_defaults());

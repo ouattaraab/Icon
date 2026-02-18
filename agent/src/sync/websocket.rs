@@ -49,6 +49,7 @@ fn default_activity_timeout() -> u64 {
 
 /// Payload for the `rule.changed` event
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct RuleChangedPayload {
     action: String,
     rule: Option<Rule>,

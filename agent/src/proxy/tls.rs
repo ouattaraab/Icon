@@ -13,6 +13,7 @@ use tracing::{debug, info};
 const CERT_CACHE_SIZE: usize = 256;
 
 /// Manages the local CA certificate and per-domain cert generation for MITM
+#[allow(dead_code)]
 pub struct CaManager {
     ca_cert_pem: String,
     ca_key_pem: String,
@@ -194,15 +195,18 @@ impl CaManager {
         Ok(PrivateKeyDer::Pkcs8(key))
     }
 
+    #[allow(dead_code)]
     pub fn cert_path(&self) -> &Path {
         &self.cert_path
     }
 
+    #[allow(dead_code)]
     pub fn ca_cert_pem(&self) -> &str {
         &self.ca_cert_pem
     }
 
     /// Install the CA certificate in the system trust store
+    #[allow(dead_code)]
     pub fn install_in_trust_store(&self) -> anyhow::Result<()> {
         let cert_path_str = self.cert_path.to_string_lossy();
 

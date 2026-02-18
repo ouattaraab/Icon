@@ -10,6 +10,7 @@ use crate::rules::models::Rule;
 
 type HmacSha256 = Hmac<Sha256>;
 
+#[allow(dead_code)]
 pub struct ApiClient {
     client: Client,
     server_url: String,
@@ -36,6 +37,7 @@ pub struct RegisterResponse {
 
 /// Domain entry from the /api/domains/sync endpoint
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 pub struct DomainEntry {
     pub domain: String,
     pub platform_name: Option<String>,
@@ -97,6 +99,7 @@ pub struct RuleSyncResponse {
 
 /// Watchdog alert payload (sent by the watchdog binary)
 #[derive(Debug, Serialize)]
+#[allow(dead_code)]
 pub struct WatchdogAlert {
     pub alert_type: String,
     pub message: String,
@@ -208,6 +211,7 @@ impl ApiClient {
     }
 
     /// Check for agent updates
+    #[allow(dead_code)]
     pub async fn check_update(&self) -> anyhow::Result<Option<UpdateInfo>> {
         let url = format!(
             "{}/api/agents/update?version={}",
@@ -242,6 +246,7 @@ impl ApiClient {
     }
 
     /// Send a watchdog alert to the server
+    #[allow(dead_code)]
     pub async fn send_watchdog_alert(&self, alert_type: &str, message: &str) -> anyhow::Result<()> {
         let alert = WatchdogAlert {
             alert_type: alert_type.to_string(),
@@ -258,6 +263,7 @@ impl ApiClient {
     }
 
     /// Check server connectivity (used by queue to determine online/offline status)
+    #[allow(dead_code)]
     pub async fn is_server_reachable(&self) -> bool {
         let url = format!("{}/api/health", self.server_url);
         match self.client.get(&url).timeout(Duration::from_secs(5)).send().await {
