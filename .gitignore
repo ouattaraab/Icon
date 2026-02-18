@@ -1,19 +1,15 @@
-# Rust
-agent/target/
-agent/**/*.rs.bk
-
-# Laravel / PHP
-backend/vendor/
-backend/node_modules/
-backend/.env
-backend/storage/*.key
-backend/storage/logs/
-backend/bootstrap/cache/
-backend/.phpunit.result.cache
-backend/database/database.sqlite
-
-# Node
+# Dependencies
 node_modules/
+vendor/
+
+# Environment
+.env
+*.env.local
+
+# Build artifacts
+/agent/target/
+/backend/public/build/
+/backend/public/hot
 
 # IDE
 .idea/
@@ -26,14 +22,12 @@ node_modules/
 .DS_Store
 Thumbs.db
 
-# Docker
-docker/data/
+# Logs
+*.log
+npm-debug.log*
 
-# Build artifacts
-installer/windows/*.msi
-installer/macos/*.pkg
-
-# Env files
-.env
-.env.*
-!.env.example
+# Laravel
+/backend/storage/framework/cache/data/*
+/backend/storage/framework/sessions/*
+/backend/storage/framework/views/*
+/backend/bootstrap/cache/*

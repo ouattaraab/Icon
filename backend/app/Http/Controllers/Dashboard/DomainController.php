@@ -19,7 +19,7 @@ class DomainController extends Controller
             $search = $request->query('search');
             $query->where(function ($q) use ($search) {
                 $q->where('domain', 'ilike', "%{$search}%")
-                  ->orWhere('platform_name', 'ilike', "%{$search}%");
+                    ->orWhere('platform_name', 'ilike', "%{$search}%");
             });
         }
 
@@ -100,7 +100,7 @@ class DomainController extends Controller
 
     public function toggleBlocked(MonitoredDomain $domain)
     {
-        $domain->update(['is_blocked' => !$domain->is_blocked]);
+        $domain->update(['is_blocked' => ! $domain->is_blocked]);
 
         $action = $domain->is_blocked ? 'domain.blocked' : 'domain.unblocked';
         AuditLog::log($action, 'MonitoredDomain', $domain->id, [
@@ -108,6 +108,7 @@ class DomainController extends Controller
         ]);
 
         $status = $domain->is_blocked ? 'bloqué' : 'surveillé';
+
         return back()->with('success', "Domaine « {$domain->domain} » : {$status}.");
     }
 }

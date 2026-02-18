@@ -4,8 +4,8 @@ use App\Http\Controllers\Api\ApiDocController;
 use App\Http\Controllers\Dashboard\AlertController;
 use App\Http\Controllers\Dashboard\AuditLogController;
 use App\Http\Controllers\Dashboard\DashboardController;
-use App\Http\Controllers\Dashboard\DeploymentController;
 use App\Http\Controllers\Dashboard\DepartmentController;
+use App\Http\Controllers\Dashboard\DeploymentController;
 use App\Http\Controllers\Dashboard\DomainController;
 use App\Http\Controllers\Dashboard\ExchangeController;
 use App\Http\Controllers\Dashboard\MachineController;
@@ -64,6 +64,7 @@ Route::post('/login', function (Request $request) {
         AuditLog::log('auth.login', 'User', (string) $user->id, [
             'email' => $user->email,
         ]);
+
         return redirect()->intended('/');
     }
 
@@ -75,6 +76,7 @@ Route::post('/logout', function (Request $request) {
     Auth::logout();
     $request->session()->invalidate();
     $request->session()->regenerateToken();
+
     return redirect('/login');
 })->name('logout');
 

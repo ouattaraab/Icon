@@ -19,12 +19,10 @@ class MachineController extends Controller
             ->with('tags:id,name,color')
             ->when($request->query('status'), fn ($q, $status) => $q->where('status', $status))
             ->when($request->query('os'), fn ($q, $os) => $q->where('os', $os))
-            ->when($request->query('tag'), fn ($q, $tagId) =>
-                $q->whereHas('tags', fn ($tq) => $tq->where('tags.id', $tagId))
+            ->when($request->query('tag'), fn ($q, $tagId) => $q->whereHas('tags', fn ($tq) => $tq->where('tags.id', $tagId))
             )
-            ->when($request->query('search'), fn ($q, $search) =>
-                $q->where('hostname', 'ilike', "%{$search}%")
-                  ->orWhere('assigned_user', 'ilike', "%{$search}%")
+            ->when($request->query('search'), fn ($q, $search) => $q->where('hostname', 'ilike', "%{$search}%")
+                ->orWhere('assigned_user', 'ilike', "%{$search}%")
             )
             ->orderBy('last_heartbeat', 'desc')
             ->paginate(25)
@@ -123,7 +121,7 @@ class MachineController extends Controller
         // Hourly activity heatmap (last 7 days, grouped by hour of day)
         $hourlyActivity = $machine->events()
             ->where('occurred_at', '>=', now()->subDays(7))
-            ->selectRaw("EXTRACT(HOUR FROM occurred_at)::integer as hour, COUNT(*) as count")
+            ->selectRaw('EXTRACT(HOUR FROM occurred_at)::integer as hour, COUNT(*) as count')
             ->groupByRaw('EXTRACT(HOUR FROM occurred_at)')
             ->orderBy('hour')
             ->pluck('count', 'hour')
@@ -154,14 +152,14 @@ class MachineController extends Controller
 
         $changes = [];
         foreach (['department', 'assigned_user', 'notes'] as $field) {
-            if (array_key_exists($field, $validated) && $machine->$field !== $validated[$field]) {
+            if (array_key_exists($field, $validated) && $validated[$field] !== $machine->$field) {
                 $changes[$field] = ['old' => $machine->$field, 'new' => $validated[$field]];
             }
         }
 
         $machine->update($validated);
 
-        if (!empty($changes)) {
+        if (! empty($changes)) {
             AuditLog::log('machine.updated', 'Machine', $machine->id, [
                 'hostname' => $machine->hostname,
                 'changes' => $changes,

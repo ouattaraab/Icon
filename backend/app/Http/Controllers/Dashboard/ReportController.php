@@ -7,11 +7,11 @@ use App\Models\Alert;
 use App\Models\AuditLog;
 use App\Models\Event;
 use App\Models\Machine;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportController extends Controller
@@ -32,7 +32,7 @@ class ReportController extends Controller
         // Alerts over time (daily)
         $alertsTrend = Alert::whereBetween('created_at', [$dateFrom, $dateTo])
             ->select(
-                DB::raw("DATE(created_at) as date"),
+                DB::raw('DATE(created_at) as date'),
                 'severity',
                 DB::raw('COUNT(*) as count')
             )
@@ -59,7 +59,7 @@ class ReportController extends Controller
         // Daily events timeline
         $dailyEvents = Event::whereBetween('occurred_at', [$dateFrom, $dateTo])
             ->select(
-                DB::raw("DATE(occurred_at) as date"),
+                DB::raw('DATE(occurred_at) as date'),
                 DB::raw('COUNT(*) as total'),
                 DB::raw("COUNT(CASE WHEN event_type = 'block' THEN 1 END) as blocked"),
                 DB::raw("COUNT(CASE WHEN severity = 'critical' THEN 1 END) as critical")
@@ -275,6 +275,7 @@ class ReportController extends Controller
                 $item->hostname = $machine?->hostname ?? 'Inconnu';
                 $item->assigned_user = $machine?->assigned_user ?? '';
                 $item->department = $machine?->department ?? '';
+
                 return $item;
             });
 

@@ -28,7 +28,7 @@ class CriticalAlertNotification extends Notification implements ShouldQueue
 
         return (new MailMessage)
             ->subject("[Icon] Alerte critique : {$this->alert->title}")
-            ->greeting("Alerte critique détectée")
+            ->greeting('Alerte critique détectée')
             ->line("**Machine** : {$machine}")
             ->line("**Titre** : {$this->alert->title}")
             ->line("**Règle** : {$rule}")

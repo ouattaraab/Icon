@@ -88,6 +88,7 @@ class DashboardController extends Controller
             ->get()
             ->map(function ($row) {
                 $machine = Machine::find($row->machine_id);
+
                 return [
                     'machine_id' => $row->machine_id,
                     'hostname' => $machine?->hostname ?? $row->machine_id,
@@ -97,8 +98,8 @@ class DashboardController extends Controller
 
         // 7-day daily event trend
         $dateExpr = $driver === 'sqlite'
-            ? "DATE(occurred_at)"
-            : "DATE(occurred_at)";
+            ? 'DATE(occurred_at)'
+            : 'DATE(occurred_at)';
 
         $dailyEvents = Event::where('occurred_at', '>=', $now->copy()->subDays(7)->startOfDay())
             ->select(

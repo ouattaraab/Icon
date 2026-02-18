@@ -60,7 +60,7 @@ class ProfileController extends Controller
 
         $user->update($validated);
 
-        if (!empty($changes)) {
+        if (! empty($changes)) {
             AuditLog::log('profile.updated', 'User', $user->id, $changes);
         }
 
@@ -76,7 +76,7 @@ class ProfileController extends Controller
 
         $user = $request->user();
 
-        if (!Hash::check($validated['current_password'], $user->password)) {
+        if (! Hash::check($validated['current_password'], $user->password)) {
             return redirect()->back()->withErrors(['current_password' => 'Mot de passe actuel incorrect.']);
         }
 
@@ -140,7 +140,7 @@ class ProfileController extends Controller
 
         $user = $request->user();
 
-        if (!Hash::check($request->input('password'), $user->password)) {
+        if (! Hash::check($request->input('password'), $user->password)) {
             return redirect()->back()->withErrors(['password' => 'Mot de passe incorrect.']);
         }
 
@@ -162,7 +162,7 @@ class ProfileController extends Controller
 
     private function parseUserAgent(?string $userAgent): string
     {
-        if (!$userAgent) {
+        if (! $userAgent) {
             return 'Inconnu';
         }
 

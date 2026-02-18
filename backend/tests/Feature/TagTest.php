@@ -13,7 +13,9 @@ class TagTest extends TestCase
     use RefreshDatabase;
 
     private User $admin;
+
     private User $manager;
+
     private User $viewer;
 
     protected function setUp(): void

@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\Alert;
-use App\Models\AuditLog;
 use App\Models\Machine;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;

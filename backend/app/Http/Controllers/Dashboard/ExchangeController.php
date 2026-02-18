@@ -8,7 +8,6 @@ use App\Models\Machine;
 use App\Models\Rule;
 use App\Services\ElasticsearchService;
 use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -43,7 +42,7 @@ class ExchangeController extends Controller
         // Resolve machine hostnames for display
         $machineIds = array_unique(array_filter(array_column($results['hits'], 'machine_id')));
         $machineNames = [];
-        if (!empty($machineIds)) {
+        if (! empty($machineIds)) {
             $machineNames = Machine::whereIn('id', $machineIds)
                 ->pluck('hostname', 'id')
                 ->toArray();
@@ -51,6 +50,7 @@ class ExchangeController extends Controller
 
         $exchanges = array_map(function ($hit) use ($machineNames) {
             $hit['machine_hostname'] = $machineNames[$hit['machine_id'] ?? ''] ?? null;
+
             return $hit;
         }, $results['hits']);
 
@@ -77,23 +77,23 @@ class ExchangeController extends Controller
     {
         $exchange = $this->elasticsearch->getExchange($id);
 
-        if (!$exchange) {
+        if (! $exchange) {
             abort(404);
         }
 
         // Resolve machine hostname
         $machine = null;
-        if (!empty($exchange['machine_id'])) {
+        if (! empty($exchange['machine_id'])) {
             $machine = Machine::select('id', 'hostname', 'os', 'os_version', 'department', 'assigned_user', 'status', 'last_heartbeat')
                 ->find($exchange['machine_id']);
         }
 
         // Find the related Event in PostgreSQL for DLP metadata
         $event = null;
-        if (!empty($exchange['event_id'])) {
+        if (! empty($exchange['event_id'])) {
             $event = Event::with('rule:id,name,category')
                 ->find($exchange['event_id']);
-        } elseif (!empty($exchange['machine_id'])) {
+        } elseif (! empty($exchange['machine_id'])) {
             // Fallback: try to find by elasticsearch_id
             $event = Event::with('rule:id,name,category')
                 ->where('elasticsearch_id', $id)
@@ -102,7 +102,7 @@ class ExchangeController extends Controller
 
         // Resolve matched rule names
         $matchedRuleNames = [];
-        if (!empty($exchange['matched_rules'])) {
+        if (! empty($exchange['matched_rules'])) {
             $matchedRuleNames = Rule::whereIn('id', (array) $exchange['matched_rules'])
                 ->pluck('name', 'id')
                 ->toArray();
@@ -145,7 +145,7 @@ class ExchangeController extends Controller
 
         $machineIds = array_unique(array_filter(array_column($results['hits'], 'machine_id')));
         $machineNames = [];
-        if (!empty($machineIds)) {
+        if (! empty($machineIds)) {
             $machineNames = Machine::whereIn('id', $machineIds)
                 ->pluck('hostname', 'id')
                 ->toArray();

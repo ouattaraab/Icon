@@ -22,6 +22,7 @@ class PurgeOldEventsJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 1;
+
     public int $timeout = 600; // 10 minutes max
 
     public function handle(ElasticsearchService $elasticsearch): void
@@ -64,7 +65,7 @@ class PurgeOldEventsJob implements ShouldQueue
             'alert_retention_days' => $alertRetentionDays,
         ];
 
-        Log::info("Purge completed", $summary);
+        Log::info('Purge completed', $summary);
 
         AuditLog::log('system.purge', 'System', null, $summary);
     }

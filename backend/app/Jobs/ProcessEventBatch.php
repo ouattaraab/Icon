@@ -21,6 +21,7 @@ class ProcessEventBatch implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 3;
+
     public int $backoff = 30;
 
     public function __construct(
@@ -60,11 +61,11 @@ class ProcessEventBatch implements ShouldQueue
     private function processEvent(array $eventData, ElasticsearchService $elasticsearch, DlpPatternService $dlp): void
     {
         // Server-side DLP scan on prompt content
-        if (config('icon.dlp.enabled') && !empty($eventData['prompt_excerpt'])) {
+        if (config('icon.dlp.enabled') && ! empty($eventData['prompt_excerpt'])) {
             $scanContent = mb_substr($eventData['prompt_excerpt'], 0, config('icon.dlp.max_scan_length', 50000));
             $dlpResults = $dlp->scan($scanContent);
 
-            if (!empty($dlpResults)) {
+            if (! empty($dlpResults)) {
                 $eventData['metadata'] = json_encode(array_merge(
                     json_decode($eventData['metadata'] ?? '{}', true) ?: [],
                     ['dlp_matches' => $dlpResults],
@@ -79,7 +80,7 @@ class ProcessEventBatch implements ShouldQueue
 
         // Index in Elasticsearch for full-text search
         $esId = null;
-        if (!empty($eventData['prompt_excerpt']) || !empty($eventData['response_excerpt'])) {
+        if (! empty($eventData['prompt_excerpt']) || ! empty($eventData['response_excerpt'])) {
             $esId = $elasticsearch->indexExchange([
                 'machine_id' => $this->machineId,
                 'platform' => $eventData['platform'] ?? null,
@@ -89,7 +90,7 @@ class ProcessEventBatch implements ShouldQueue
                 'response' => $eventData['response_excerpt'] ?? null,
                 'content_hash' => $eventData['content_hash'] ?? null,
                 'content_length' => strlen($eventData['prompt_excerpt'] ?? ''),
-                'matched_rules' => !empty($eventData['rule_id']) ? [$eventData['rule_id']] : [],
+                'matched_rules' => ! empty($eventData['rule_id']) ? [$eventData['rule_id']] : [],
                 'severity' => $eventData['severity'] ?? 'info',
                 'occurred_at' => $eventData['occurred_at'],
             ]);
@@ -104,7 +105,7 @@ class ProcessEventBatch implements ShouldQueue
             'rule_id' => $eventData['rule_id'] ?? null,
             'severity' => $eventData['severity'] ?? 'info',
             'elasticsearch_id' => $esId,
-            'metadata' => !empty($eventData['metadata']) ? json_decode($eventData['metadata'], true) : null,
+            'metadata' => ! empty($eventData['metadata']) ? json_decode($eventData['metadata'], true) : null,
             'occurred_at' => $eventData['occurred_at'],
         ]);
 
@@ -132,8 +133,8 @@ class ProcessEventBatch implements ShouldQueue
 
         return match ($type) {
             'block' => "Requête bloquée sur {$platform}",
-            'clipboard_block' => "Contenu sensible détecté dans le presse-papier",
-            'clipboard_alert' => "Alerte presse-papier : pattern sensible détecté",
+            'clipboard_block' => 'Contenu sensible détecté dans le presse-papier',
+            'clipboard_alert' => 'Alerte presse-papier : pattern sensible détecté',
             default => "Activité {$type} détectée sur {$platform}",
         };
     }

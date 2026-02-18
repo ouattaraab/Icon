@@ -10,7 +10,7 @@ class DefaultRuleSeeder extends Seeder
 {
     public function run(): void
     {
-        $dlp = new DlpPatternService();
+        $dlp = new DlpPatternService;
         $defaultRules = $dlp->toDefaultRules();
 
         foreach ($defaultRules as $ruleData) {

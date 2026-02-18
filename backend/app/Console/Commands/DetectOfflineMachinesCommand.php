@@ -15,6 +15,7 @@ use Illuminate\Console\Command;
 class DetectOfflineMachinesCommand extends Command
 {
     protected $signature = 'icon:detect-offline';
+
     protected $description = 'Detect machines that have gone offline and create alerts';
 
     public function handle(): int

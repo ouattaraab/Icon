@@ -19,7 +19,7 @@ Schedule::command('icon:detect-offline')
     ->runInBackground();
 
 // Purge old events based on retention policy (daily at 3:00 AM)
-Schedule::job(new PurgeOldEventsJob())
+Schedule::job(new PurgeOldEventsJob)
     ->dailyAt('03:00')
     ->withoutOverlapping();
 

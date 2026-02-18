@@ -18,6 +18,7 @@ class CriticalAlertNotificationTest extends TestCase
     use RefreshDatabase;
 
     private Machine $machine;
+
     private User $admin;
 
     protected function setUp(): void
@@ -59,7 +60,7 @@ class CriticalAlertNotificationTest extends TestCase
             'status' => 'open',
         ]);
 
-        $listener = new SendCriticalAlertNotifications();
+        $listener = new SendCriticalAlertNotifications;
         $listener->handle(new AlertCreated($alert));
 
         Notification::assertSentTo($subscriber, CriticalAlertNotification::class);
@@ -83,7 +84,7 @@ class CriticalAlertNotificationTest extends TestCase
             'status' => 'open',
         ]);
 
-        $listener = new SendCriticalAlertNotifications();
+        $listener = new SendCriticalAlertNotifications;
         $listener->handle(new AlertCreated($alert));
 
         // Warning alerts send AlertNotification (database-only) to admins and managers
@@ -103,7 +104,7 @@ class CriticalAlertNotificationTest extends TestCase
             'status' => 'open',
         ]);
 
-        $listener = new SendCriticalAlertNotifications();
+        $listener = new SendCriticalAlertNotifications;
         $listener->handle(new AlertCreated($alert));
 
         // Should fall back to admin
@@ -137,7 +138,7 @@ class CriticalAlertNotificationTest extends TestCase
             'status' => 'open',
         ]);
 
-        $listener = new SendCriticalAlertNotifications();
+        $listener = new SendCriticalAlertNotifications;
         $listener->handle(new AlertCreated($alert));
 
         Notification::assertSentTo($subscriber, CriticalAlertNotification::class);

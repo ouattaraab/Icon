@@ -17,14 +17,11 @@ class DeploymentController extends Controller
             ->when($request->query('status'), fn ($q, $status) => $q->where('status', $status))
             ->when($request->query('version'), fn ($q, $version) => $q->where('version', $version))
             ->when($request->query('method'), fn ($q, $method) => $q->where('deployment_method', $method))
-            ->when($request->query('date_from'), fn ($q, $from) =>
-                $q->where('deployed_at', '>=', $from)
+            ->when($request->query('date_from'), fn ($q, $from) => $q->where('deployed_at', '>=', $from)
             )
-            ->when($request->query('date_to'), fn ($q, $to) =>
-                $q->where('deployed_at', '<=', $to . ' 23:59:59')
+            ->when($request->query('date_to'), fn ($q, $to) => $q->where('deployed_at', '<=', $to . ' 23:59:59')
             )
-            ->when($request->query('search'), fn ($q, $search) =>
-                $q->whereHas('machine', fn ($mq) => $mq->where('hostname', 'ilike', "%{$search}%"))
+            ->when($request->query('search'), fn ($q, $search) => $q->whereHas('machine', fn ($mq) => $mq->where('hostname', 'ilike', "%{$search}%"))
             )
             ->orderByDesc('deployed_at')
             ->paginate(25)

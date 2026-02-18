@@ -1,5 +1,6 @@
 #!/usr/bin/env php
 <?php
+
 /**
  * Icon Agent E2E Simulation Script
  *
@@ -18,16 +19,16 @@
 // Configuration
 // ---------------------------------------------------------------------------
 
-$serverUrl     = rtrim($argv[1] ?? 'http://localhost:8000', '/');
+$serverUrl = rtrim($argv[1] ?? 'http://localhost:8000', '/');
 $enrollmentKey = $argv[2] ?? '';
-$agentVersion  = '0.2.0';
-$hostname      = 'E2E-TEST-' . strtoupper(substr(md5(uniqid()), 0, 6));
-$os            = PHP_OS_FAMILY === 'Darwin' ? 'macos' : 'windows';
-$osVersion     = php_uname('r');
+$agentVersion = '0.2.0';
+$hostname = 'E2E-TEST-' . strtoupper(substr(md5(uniqid()), 0, 6));
+$os = PHP_OS_FAMILY === 'Darwin' ? 'macos' : 'windows';
+$osVersion = php_uname('r');
 
 // Credentials populated after registration
-$machineId  = null;
-$apiKey     = null;
+$machineId = null;
+$apiKey = null;
 $hmacSecret = null;
 
 // Results tracker
@@ -53,13 +54,13 @@ function hmac_sign(string $payload, string $secret): string
  *
  * For GET requests, $data is ignored (query params should be in the URL).
  *
- * @param  string      $method     HTTP method (GET|POST)
- * @param  string      $url        Full URL
- * @param  array|null  $data       Request body (POST only)
- * @param  string|null $apiKey     X-Api-Key value
- * @param  string|null $hmacSecret HMAC secret for signature
- * @param  array       $extraHeaders Additional headers
- * @return array{int, array|null}  [httpCode, decodedBody]
+ * @param  string  $method  HTTP method (GET|POST)
+ * @param  string  $url  Full URL
+ * @param  array|null  $data  Request body (POST only)
+ * @param  string|null  $apiKey  X-Api-Key value
+ * @param  string|null  $hmacSecret  HMAC secret for signature
+ * @param  array  $extraHeaders  Additional headers
+ * @return array{int, array|null} [httpCode, decodedBody]
  */
 function api_request(
     string $method,
@@ -97,11 +98,11 @@ function api_request(
     }
 
     curl_setopt_array($ch, [
-        CURLOPT_URL            => $url,
-        CURLOPT_CUSTOMREQUEST  => $method,
-        CURLOPT_HTTPHEADER     => $headers,
+        CURLOPT_URL => $url,
+        CURLOPT_CUSTOMREQUEST => $method,
+        CURLOPT_HTTPHEADER => $headers,
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT        => 30,
+        CURLOPT_TIMEOUT => 30,
         CURLOPT_FOLLOWLOCATION => true,
     ]);
 
@@ -132,7 +133,7 @@ function print_result(string $step, bool $success, string $message): void
     fprintf(STDOUT, "%s%s%s %s: %s\n", $color, $icon, $reset, $step, $message);
 
     $results[] = [
-        'step'    => $step,
+        'step' => $step,
         'success' => $success,
         'message' => $message,
     ];
@@ -170,9 +171,9 @@ if ($code === 200 && isset($body['status']) && $body['status'] === 'ok') {
 section('Step 1: Agent Registration');
 
 $regPayload = [
-    'hostname'      => $hostname,
-    'os'            => $os,
-    'os_version'    => $osVersion,
+    'hostname' => $hostname,
+    'os' => $os,
+    'os_version' => $osVersion,
     'agent_version' => $agentVersion,
 ];
 
@@ -184,8 +185,8 @@ if ($enrollmentKey !== '') {
 [$code, $body] = api_request('POST', "$serverUrl/api/agents/register", $regPayload, null, null, $regHeaders);
 
 if ($code === 201 && isset($body['machine_id'], $body['api_key'], $body['hmac_secret'])) {
-    $machineId  = $body['machine_id'];
-    $apiKey     = $body['api_key'];
+    $machineId = $body['machine_id'];
+    $apiKey = $body['api_key'];
     $hmacSecret = $body['hmac_secret'];
 
     print_result('Registration', true, "Registered as $hostname (machine_id: $machineId)");
@@ -205,21 +206,21 @@ if ($code === 201 && isset($body['machine_id'], $body['api_key'], $body['hmac_se
 section('Step 2: Initial Heartbeat');
 
 $hbPayload = [
-    'machine_id'    => $machineId,
-    'status'        => 'running',
+    'machine_id' => $machineId,
+    'status' => 'running',
     'agent_version' => $agentVersion,
-    'queue_size'    => 0,
-    'uptime_secs'   => 10,
+    'queue_size' => 0,
+    'uptime_secs' => 10,
 ];
 
 [$code, $body] = api_request('POST', "$serverUrl/api/agents/heartbeat", $hbPayload, $apiKey, $hmacSecret);
 
 if ($code === 200) {
-    $forceSyncRules  = $body['force_sync_rules'] ?? false;
-    $restartReq      = $body['restart_requested'] ?? false;
+    $forceSyncRules = $body['force_sync_rules'] ?? false;
+    $restartReq = $body['restart_requested'] ?? false;
     $updateAvailable = $body['update_available'] ?? null;
 
-    print_result('Heartbeat #1', true, "Accepted (HTTP 200)");
+    print_result('Heartbeat #1', true, 'Accepted (HTTP 200)');
     fprintf(STDOUT, "    force_sync_rules : %s\n", $forceSyncRules ? 'true' : 'false');
     fprintf(STDOUT, "    restart_requested: %s\n", $restartReq ? 'true' : 'false');
     fprintf(STDOUT, "    update_available : %s\n", $updateAvailable ? json_encode($updateAvailable) : 'null');
@@ -237,7 +238,7 @@ section('Step 3: Rule Sync');
 [$code, $body] = api_request('GET', "$serverUrl/api/rules/sync?version=0", null, $apiKey, $hmacSecret);
 
 if ($code === 200 && isset($body['rules'])) {
-    $rulesCount   = count($body['rules']);
+    $rulesCount = count($body['rules']);
     $deletedCount = count($body['deleted_ids'] ?? []);
 
     print_result('Rule Sync', true, "Received $rulesCount rule(s), $deletedCount deleted ID(s)");
@@ -294,65 +295,65 @@ $now = date('c');
 
 $events = [
     [
-        'event_type'      => 'prompt',
-        'platform'        => 'chatgpt',
-        'domain'          => 'chat.openai.com',
-        'content_hash'    => hash('sha256', 'e2e-test-prompt-content'),
-        'prompt_excerpt'  => 'Explain how to optimize a PostgreSQL query with partitioned tables.',
+        'event_type' => 'prompt',
+        'platform' => 'chatgpt',
+        'domain' => 'chat.openai.com',
+        'content_hash' => hash('sha256', 'e2e-test-prompt-content'),
+        'prompt_excerpt' => 'Explain how to optimize a PostgreSQL query with partitioned tables.',
         'response_excerpt' => null,
-        'severity'        => 'info',
-        'metadata'        => json_encode(['browser' => 'chrome', 'tab_id' => 42]),
-        'occurred_at'     => $now,
+        'severity' => 'info',
+        'metadata' => json_encode(['browser' => 'chrome', 'tab_id' => 42]),
+        'occurred_at' => $now,
     ],
     [
-        'event_type'       => 'response',
-        'platform'         => 'claude',
-        'domain'           => 'claude.ai',
-        'content_hash'     => hash('sha256', 'e2e-test-response-content'),
-        'prompt_excerpt'   => null,
+        'event_type' => 'response',
+        'platform' => 'claude',
+        'domain' => 'claude.ai',
+        'content_hash' => hash('sha256', 'e2e-test-response-content'),
+        'prompt_excerpt' => null,
         'response_excerpt' => 'To optimize a PostgreSQL query with partitions, ensure the query planner can prune...',
-        'severity'         => 'info',
-        'metadata'         => json_encode(['model' => 'claude-3', 'tokens' => 512]),
-        'occurred_at'      => $now,
+        'severity' => 'info',
+        'metadata' => json_encode(['model' => 'claude-3', 'tokens' => 512]),
+        'occurred_at' => $now,
     ],
     [
-        'event_type'      => 'clipboard',
-        'platform'        => null,
-        'domain'          => null,
-        'content_hash'    => hash('sha256', 'e2e-test-clipboard-content'),
-        'prompt_excerpt'  => 'SSN: 123-45-6789 Credit Card: 4111-1111-1111-1111',
+        'event_type' => 'clipboard',
+        'platform' => null,
+        'domain' => null,
+        'content_hash' => hash('sha256', 'e2e-test-clipboard-content'),
+        'prompt_excerpt' => 'SSN: 123-45-6789 Credit Card: 4111-1111-1111-1111',
         'response_excerpt' => null,
-        'severity'        => 'warning',
-        'metadata'        => json_encode(['dlp_pattern' => 'ssn,credit_card', 'source_app' => 'notepad']),
-        'occurred_at'     => $now,
+        'severity' => 'warning',
+        'metadata' => json_encode(['dlp_pattern' => 'ssn,credit_card', 'source_app' => 'notepad']),
+        'occurred_at' => $now,
     ],
     [
-        'event_type'      => 'block',
-        'platform'        => 'chatgpt',
-        'domain'          => 'chat.openai.com',
-        'content_hash'    => hash('sha256', 'e2e-test-blocked-content'),
-        'prompt_excerpt'  => 'Attempting to paste internal API credentials into ChatGPT',
+        'event_type' => 'block',
+        'platform' => 'chatgpt',
+        'domain' => 'chat.openai.com',
+        'content_hash' => hash('sha256', 'e2e-test-blocked-content'),
+        'prompt_excerpt' => 'Attempting to paste internal API credentials into ChatGPT',
         'response_excerpt' => null,
-        'severity'        => 'critical',
-        'metadata'        => json_encode(['rule_name' => 'Block credentials', 'action' => 'blocked']),
-        'occurred_at'     => $now,
+        'severity' => 'critical',
+        'metadata' => json_encode(['rule_name' => 'Block credentials', 'action' => 'blocked']),
+        'occurred_at' => $now,
     ],
     [
-        'event_type'      => 'alert',
-        'platform'        => 'chatgpt',
-        'domain'          => 'chat.openai.com',
-        'content_hash'    => hash('sha256', 'e2e-test-alert-content'),
-        'prompt_excerpt'  => 'Production database connection string: postgresql://admin:s3cret@prod-db...',
+        'event_type' => 'alert',
+        'platform' => 'chatgpt',
+        'domain' => 'chat.openai.com',
+        'content_hash' => hash('sha256', 'e2e-test-alert-content'),
+        'prompt_excerpt' => 'Production database connection string: postgresql://admin:s3cret@prod-db...',
         'response_excerpt' => null,
-        'severity'        => 'critical',
-        'metadata'        => json_encode(['dlp_pattern' => 'db_connection_string', 'escalated' => true]),
-        'occurred_at'     => $now,
+        'severity' => 'critical',
+        'metadata' => json_encode(['dlp_pattern' => 'db_connection_string', 'escalated' => true]),
+        'occurred_at' => $now,
     ],
 ];
 
 $eventPayload = [
     'machine_id' => $machineId,
-    'events'     => $events,
+    'events' => $events,
 ];
 
 [$code, $body] = api_request('POST', "$serverUrl/api/events", $eventPayload, $apiKey, $hmacSecret);
@@ -380,11 +381,11 @@ for ($i = 1; $i <= 3; $i++) {
     $uptime = $baseUptime + ($i * 60);
 
     $hbPayload = [
-        'machine_id'    => $machineId,
-        'status'        => 'running',
+        'machine_id' => $machineId,
+        'status' => 'running',
         'agent_version' => $agentVersion,
-        'queue_size'    => max(0, 5 - $i), // queue draining
-        'uptime_secs'   => $uptime,
+        'queue_size' => max(0, 5 - $i), // queue draining
+        'uptime_secs' => $uptime,
     ];
 
     [$code, $body] = api_request('POST', "$serverUrl/api/agents/heartbeat", $hbPayload, $apiKey, $hmacSecret);
@@ -411,7 +412,7 @@ print_result('Sustained Heartbeats', $allHbPassed, $allHbPassed
 
 section('Summary');
 
-$totalSteps  = count($results);
+$totalSteps = count($results);
 $passedSteps = count(array_filter($results, fn ($r) => $r['success']));
 $failedSteps = $totalSteps - $passedSteps;
 

@@ -121,7 +121,7 @@ class RuleController extends Controller
 
     public function toggleEnabled(Rule $rule): RedirectResponse
     {
-        $rule->update(['enabled' => !$rule->enabled]);
+        $rule->update(['enabled' => ! $rule->enabled]);
 
         broadcast(new RuleUpdated($rule, 'toggled'))->toOthers();
 
@@ -175,7 +175,7 @@ class RuleController extends Controller
         $content = file_get_contents($request->file('file')->getRealPath());
         $data = json_decode($content, true);
 
-        if (!$data || !isset($data['rules']) || !is_array($data['rules'])) {
+        if (! $data || ! isset($data['rules']) || ! is_array($data['rules'])) {
             return back()->with('error', 'Format de fichier invalide. Le fichier doit contenir une clé "rules".');
         }
 
@@ -193,17 +193,19 @@ class RuleController extends Controller
             foreach ($data['rules'] as $i => $ruleData) {
                 // Validate required fields
                 if (empty($ruleData['name']) || empty($ruleData['category']) || empty($ruleData['target'])
-                    || empty($ruleData['condition_type']) || !isset($ruleData['condition_value'])) {
+                    || empty($ruleData['condition_type']) || ! isset($ruleData['condition_value'])) {
                     $errors[] = "Règle #{$i}: champs requis manquants.";
                     $skipped++;
+
                     continue;
                 }
 
-                if (!in_array($ruleData['category'], $validCategories)
-                    || !in_array($ruleData['target'], $validTargets)
-                    || !in_array($ruleData['condition_type'], $validConditionTypes)) {
+                if (! in_array($ruleData['category'], $validCategories)
+                    || ! in_array($ruleData['target'], $validTargets)
+                    || ! in_array($ruleData['condition_type'], $validConditionTypes)) {
                     $errors[] = "Règle #{$i} ({$ruleData['name']}): valeur de catégorie, cible ou type invalide.";
                     $skipped++;
+
                     continue;
                 }
 
@@ -226,6 +228,7 @@ class RuleController extends Controller
             DB::commit();
         } catch (\Throwable $e) {
             DB::rollBack();
+
             return back()->with('error', "Erreur lors de l'import : {$e->getMessage()}");
         }
 

@@ -79,7 +79,7 @@ class SettingController extends Controller
             Setting::setValue($key, $newValue);
         }
 
-        if (!empty($changes)) {
+        if (! empty($changes)) {
             AuditLog::log('settings.updated', 'Settings', null, $changes);
         }
 
@@ -109,22 +109,22 @@ class SettingController extends Controller
 
         // Machines with outdated agents (details)
         $outdatedMachines = Machine::where(function ($q) use ($targetVersion) {
-                $q->where('agent_version', '!=', $targetVersion)
-                  ->orWhereNull('agent_version');
-            })
+            $q->where('agent_version', '!=', $targetVersion)
+                ->orWhereNull('agent_version');
+        })
             ->select('id', 'hostname', 'os', 'agent_version', 'status', 'last_heartbeat', 'department')
             ->orderBy('hostname')
             ->limit(50)
             ->get()
             ->map(fn ($m) => [
-                'id' => $m->id,
-                'hostname' => $m->hostname,
-                'os' => $m->os,
-                'agent_version' => $m->agent_version,
-                'status' => $m->isOnline() ? 'online' : $m->status,
-                'last_heartbeat' => $m->last_heartbeat?->diffForHumans(),
-                'department' => $m->department,
-            ]);
+            'id' => $m->id,
+            'hostname' => $m->hostname,
+            'os' => $m->os,
+            'agent_version' => $m->agent_version,
+            'status' => $m->isOnline() ? 'online' : $m->status,
+            'last_heartbeat' => $m->last_heartbeat?->diffForHumans(),
+            'department' => $m->department,
+        ]);
 
         return Inertia::render('Settings/AgentVersions', [
             'targetVersion' => $targetVersion,

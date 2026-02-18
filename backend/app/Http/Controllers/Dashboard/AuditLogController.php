@@ -32,7 +32,7 @@ class AuditLogController extends Controller
             $search = $request->query('search');
             $query->where(function ($q) use ($search) {
                 $q->where('target_type', 'ilike', "%{$search}%")
-                  ->orWhereRaw("CAST(details AS TEXT) ILIKE ?", ["%{$search}%"]);
+                    ->orWhereRaw('CAST(details AS TEXT) ILIKE ?', ["%{$search}%"]);
             });
         }
 

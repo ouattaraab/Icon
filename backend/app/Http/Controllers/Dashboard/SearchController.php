@@ -85,9 +85,9 @@ class SearchController extends Controller
             $results['machines'] = Machine::query()
                 ->where(function ($q) use ($like) {
                     $q->where('hostname', 'like', $like)
-                      ->orWhere('assigned_user', 'like', $like)
-                      ->orWhere('department', 'like', $like)
-                      ->orWhere('ip_address', 'like', $like);
+                        ->orWhere('assigned_user', 'like', $like)
+                        ->orWhere('department', 'like', $like)
+                        ->orWhere('ip_address', 'like', $like);
                 })
                 ->orderByDesc('last_heartbeat')
                 ->limit(10)
@@ -105,7 +105,7 @@ class SearchController extends Controller
             $results['alerts'] = Alert::with('machine:id,hostname')
                 ->where(function ($q) use ($like) {
                     $q->where('title', 'like', $like)
-                      ->orWhere('description', 'like', $like);
+                        ->orWhere('description', 'like', $like);
                 })
                 ->orderByDesc('created_at')
                 ->limit(15)

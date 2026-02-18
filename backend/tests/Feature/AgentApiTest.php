@@ -17,7 +17,9 @@ class AgentApiTest extends TestCase
     use RefreshDatabase;
 
     private string $apiKey;
+
     private string $hmacSecret;
+
     private Machine $machine;
 
     protected function setUp(): void

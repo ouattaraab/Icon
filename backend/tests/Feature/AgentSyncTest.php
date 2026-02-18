@@ -18,7 +18,9 @@ class AgentSyncTest extends TestCase
     use RefreshDatabase;
 
     private string $hmacSecret = 'sync-test-hmac-secret';
+
     private string $apiKey;
+
     private Machine $machine;
 
     protected function setUp(): void

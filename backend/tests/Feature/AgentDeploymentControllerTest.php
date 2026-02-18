@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\AgentDeployment;
 use App\Models\Machine;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Crypt;
@@ -15,7 +14,9 @@ class AgentDeploymentControllerTest extends TestCase
     use RefreshDatabase;
 
     private string $apiKey;
+
     private string $hmacSecret;
+
     private Machine $machine;
 
     protected function setUp(): void

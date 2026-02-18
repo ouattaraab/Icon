@@ -17,8 +17,11 @@ class RuleSyncControllerTest extends TestCase
     use RefreshDatabase;
 
     private string $apiKey;
+
     private string $hmacSecret;
+
     private Machine $machine;
+
     private User $admin;
 
     protected function setUp(): void

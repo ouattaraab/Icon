@@ -12,7 +12,7 @@ class DlpPatternServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new DlpPatternService();
+        $this->service = new DlpPatternService;
     }
 
     // ── scan() ────────────────────────────────────────────────────────────
@@ -202,7 +202,7 @@ CODE;
 
     public function test_scan_detects_source_code_sql(): void
     {
-        $content = "CREATE TABLE users (id INT PRIMARY KEY, name VARCHAR(255))";
+        $content = 'CREATE TABLE users (id INT PRIMARY KEY, name VARCHAR(255))';
 
         $result = $this->service->scan($content);
 

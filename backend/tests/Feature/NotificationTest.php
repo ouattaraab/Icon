@@ -17,6 +17,7 @@ class NotificationTest extends TestCase
     use RefreshDatabase;
 
     private User $admin;
+
     private Machine $machine;
 
     protected function setUp(): void

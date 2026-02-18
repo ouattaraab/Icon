@@ -125,7 +125,7 @@ class DlpPatternService
                 }
             }
 
-            if (!empty($matches)) {
+            if (! empty($matches)) {
                 $results[$category] = [
                     'label' => $config['label'],
                     'severity' => $config['severity'],
@@ -154,6 +154,7 @@ class DlpPatternService
                 }
             }
         }
+
         return false;
     }
 
@@ -169,6 +170,7 @@ class DlpPatternService
                 break;
             }
         }
+
         return $hasCritical ? 'critical' : 'warning';
     }
 
@@ -183,6 +185,7 @@ class DlpPatternService
         }
 
         $visible = min(3, (int) ($len * 0.2));
+
         return mb_substr($value, 0, $visible)
             . str_repeat('*', $len - $visible * 2)
             . mb_substr($value, -$visible);
@@ -247,6 +250,7 @@ class DlpPatternService
         if (preg_match('#^/(.+)/([imsxuU]*)$#s', $phpPattern, $m)) {
             return $m[1];
         }
+
         return null;
     }
 }

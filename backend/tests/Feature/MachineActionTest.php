@@ -12,8 +12,11 @@ class MachineActionTest extends TestCase
     use RefreshDatabase;
 
     private User $admin;
+
     private User $manager;
+
     private User $viewer;
+
     private Machine $machine;
 
     protected function setUp(): void

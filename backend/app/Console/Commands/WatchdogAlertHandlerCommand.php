@@ -12,6 +12,7 @@ use Illuminate\Console\Command;
 class WatchdogAlertHandlerCommand extends Command
 {
     protected $signature = 'icon:test-watchdog {type} {message}';
+
     protected $description = 'Simulate a watchdog alert for testing';
 
     public function handle(): int

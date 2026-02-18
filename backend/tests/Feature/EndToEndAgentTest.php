@@ -24,8 +24,11 @@ class EndToEndAgentTest extends TestCase
     use RefreshDatabase;
 
     private string $hmacSecret = 'e2e-test-hmac-secret';
+
     private string $apiKey;
+
     private string $machineId;
+
     private User $admin;
 
     protected function setUp(): void
@@ -58,6 +61,7 @@ class EndToEndAgentTest extends TestCase
     private function signedHeaders(string $body): array
     {
         $timestamp = (string) time();
+
         return [
             'X-Api-Key' => $this->apiKey,
             'X-Signature' => hash_hmac('sha256', $timestamp . '.' . $body, $this->hmacSecret),

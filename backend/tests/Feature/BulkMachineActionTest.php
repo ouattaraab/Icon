@@ -12,8 +12,11 @@ class BulkMachineActionTest extends TestCase
     use RefreshDatabase;
 
     private User $admin;
+
     private User $manager;
+
     private User $viewer;
+
     private array $machines;
 
     protected function setUp(): void

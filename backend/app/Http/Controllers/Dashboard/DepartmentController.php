@@ -16,9 +16,8 @@ class DepartmentController extends Controller
     public function index(Request $request): Response
     {
         $departments = Department::query()
-            ->when($request->query('search'), fn ($q, $search) =>
-                $q->where('name', 'ilike', "%{$search}%")
-                  ->orWhere('manager_name', 'ilike', "%{$search}%")
+            ->when($request->query('search'), fn ($q, $search) => $q->where('name', 'ilike', "%{$search}%")
+                ->orWhere('manager_name', 'ilike', "%{$search}%")
             )
             ->orderBy('name')
             ->paginate(25);
@@ -62,14 +61,14 @@ class DepartmentController extends Controller
 
         $changes = [];
         foreach (['name', 'description', 'manager_name'] as $field) {
-            if (array_key_exists($field, $validated) && $department->$field !== $validated[$field]) {
+            if (array_key_exists($field, $validated) && $validated[$field] !== $department->$field) {
                 $changes[$field] = ['old' => $department->$field, 'new' => $validated[$field]];
             }
         }
 
         $department->update($validated);
 
-        if (!empty($changes)) {
+        if (! empty($changes)) {
             AuditLog::log('department.updated', 'Department', $department->id, [
                 'name' => $department->name,
                 'changes' => $changes,

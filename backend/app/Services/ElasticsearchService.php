@@ -9,6 +9,7 @@ use Illuminate\Support\Str;
 class ElasticsearchService
 {
     private string $host;
+
     private string $index = 'icon-exchanges';
 
     public function __construct()
@@ -72,26 +73,26 @@ class ElasticsearchService
         }
 
         // Apply filters
-        if (!empty($filters['platform'])) {
+        if (! empty($filters['platform'])) {
             $filter[] = ['term' => ['platform' => $filters['platform']]];
         }
-        if (!empty($filters['machine_id'])) {
+        if (! empty($filters['machine_id'])) {
             $filter[] = ['term' => ['machine_id' => $filters['machine_id']]];
         }
-        if (!empty($filters['severity'])) {
+        if (! empty($filters['severity'])) {
             $filter[] = ['term' => ['severity' => $filters['severity']]];
         }
-        if (!empty($filters['date_from'])) {
+        if (! empty($filters['date_from'])) {
             $filter[] = ['range' => ['occurred_at' => ['gte' => $filters['date_from']]]];
         }
-        if (!empty($filters['date_to'])) {
+        if (! empty($filters['date_to'])) {
             $filter[] = ['range' => ['occurred_at' => ['lte' => $filters['date_to']]]];
         }
 
         $body = [
             'query' => [
                 'bool' => [
-                    'must' => $must ?: [['match_all' => (object)[]]],
+                    'must' => $must ?: [['match_all' => (object) []]],
                     'filter' => $filter,
                 ],
             ],
@@ -100,8 +101,8 @@ class ElasticsearchService
             'size' => $size,
             'highlight' => [
                 'fields' => [
-                    'prompt' => (object)[],
-                    'response' => (object)[],
+                    'prompt' => (object) [],
+                    'response' => (object) [],
                 ],
                 'pre_tags' => ['<mark>'],
                 'post_tags' => ['</mark>'],
@@ -113,6 +114,7 @@ class ElasticsearchService
 
             if ($response->successful()) {
                 $result = $response->json();
+
                 return [
                     'total' => $result['hits']['total']['value'] ?? 0,
                     'hits' => array_map(function ($hit) {
@@ -143,6 +145,7 @@ class ElasticsearchService
 
             if ($response->successful()) {
                 $data = $response->json();
+
                 return $data['_source'] ?? null;
             }
         } catch (\Throwable $e) {
@@ -181,6 +184,7 @@ class ElasticsearchService
                         $deleted++;
                     }
                 }
+
                 return $deleted;
             }
         } catch (\Throwable $e) {
@@ -225,9 +229,11 @@ class ElasticsearchService
 
         try {
             $response = Http::put("{$this->host}/{$this->index}", $mapping);
+
             return $response->successful();
         } catch (\Throwable $e) {
             Log::error('Failed to create ES index', ['error' => $e->getMessage()]);
+
             return false;
         }
     }
@@ -263,7 +269,7 @@ class ElasticsearchService
                         ],
                     ],
                     'filter' => [
-                        'french_elision' => ['type' => 'elision', 'articles' => ['l','m','t','qu','n','s','j','d','c']],
+                        'french_elision' => ['type' => 'elision', 'articles' => ['l', 'm', 't', 'qu', 'n', 's', 'j', 'd', 'c']],
                         'french_stop' => ['type' => 'stop', 'stopwords' => '_french_'],
                         'french_stemmer' => ['type' => 'stemmer', 'language' => 'french'],
                     ],

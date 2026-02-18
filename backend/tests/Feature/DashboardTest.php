@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\Alert;
 use App\Models\Machine;
-use App\Models\Rule;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
