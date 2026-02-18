@@ -1,6 +1,7 @@
 use std::path::PathBuf;
+use std::process::Command;
 use sha2::{Sha256, Digest};
-use tracing::{info, error};
+use tracing::{info, warn, error};
 
 use crate::sync::api_client::UpdateInfo;
 
@@ -41,6 +42,36 @@ pub async fn apply_update(update: &UpdateInfo) -> anyhow::Result<()> {
     {
         use std::os::unix::fs::PermissionsExt;
         std::fs::set_permissions(&temp_path, std::fs::Permissions::from_mode(0o755))?;
+    }
+
+    // Verify code signature before replacing the binary.
+    // This ensures the downloaded binary was signed by a trusted authority.
+    let temp_path_str = temp_path
+        .to_str()
+        .ok_or_else(|| anyhow::anyhow!("Temp binary path is not valid UTF-8"))?;
+
+    match verify_code_signature(temp_path_str) {
+        Ok(true) => {
+            info!("Code signature verified for downloaded binary");
+        }
+        Ok(false) => {
+            // Clean up the unverified binary
+            let _ = std::fs::remove_file(&temp_path);
+            warn!("Code signature verification failed for downloaded binary, aborting update");
+            anyhow::bail!(
+                "Update aborted: code signature verification failed for {}",
+                temp_path_str
+            );
+        }
+        Err(e) => {
+            // Clean up the unverified binary
+            let _ = std::fs::remove_file(&temp_path);
+            warn!(error = %e, "Code signature verification error, aborting update");
+            anyhow::bail!(
+                "Update aborted: code signature verification error: {}",
+                e
+            );
+        }
     }
 
     // Replace current binary
@@ -91,4 +122,58 @@ fn restart_service() {
             .args(["/C", "sc stop IconAgent && timeout /t 2 && sc start IconAgent"])
             .spawn();
     }
+}
+
+// ---------------------------------------------------------------------------
+// Code signature verification
+// ---------------------------------------------------------------------------
+
+/// Verify the code signature of a binary using platform-specific tools.
+/// Returns `Ok(true)` if the signature is valid, `Ok(false)` if invalid,
+/// or an error if the verification tool could not be executed.
+fn verify_code_signature(binary_path: &str) -> anyhow::Result<bool> {
+    #[cfg(target_os = "macos")]
+    {
+        verify_code_signature_macos(binary_path)
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        return verify_code_signature_windows(binary_path);
+    }
+
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    {
+        // On Linux / other platforms, code signing verification is not yet
+        // implemented. Log a warning and allow the update to proceed so we
+        // don't break existing behaviour.
+        let _ = binary_path;
+        warn!("Code signature verification is not supported on this platform, skipping");
+        Ok(true)
+    }
+}
+
+/// Verify code signature on macOS using the `codesign` tool.
+#[cfg(target_os = "macos")]
+fn verify_code_signature_macos(binary_path: &str) -> anyhow::Result<bool> {
+    let output = Command::new("codesign")
+        .args(["--verify", "--deep", "--strict", binary_path])
+        .output()?;
+    Ok(output.status.success())
+}
+
+/// Verify code signature on Windows using PowerShell `Get-AuthenticodeSignature`.
+#[cfg(target_os = "windows")]
+fn verify_code_signature_windows(binary_path: &str) -> anyhow::Result<bool> {
+    let output = Command::new("powershell")
+        .args([
+            "-Command",
+            &format!(
+                "(Get-AuthenticodeSignature '{}').Status -eq 'Valid'",
+                binary_path
+            ),
+        ])
+        .output()?;
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    Ok(stdout.trim() == "True")
 }

@@ -13,6 +13,7 @@ use tracing::{debug, info};
 const CERT_CACHE_SIZE: usize = 256;
 
 /// Manages the local CA certificate and per-domain cert generation for MITM
+#[allow(dead_code)] // pub API fields/methods used by installers and system setup
 pub struct CaManager {
     ca_cert_pem: String,
     ca_key_pem: String,
@@ -195,21 +196,20 @@ impl CaManager {
         Ok(PrivateKeyDer::Pkcs8(key))
     }
 
-    // Public accessor for CA cert path, used by install scripts and CLI tooling
+    /// Public accessor for CA cert path, used by install scripts and CLI tooling
     #[allow(dead_code)]
     pub fn cert_path(&self) -> &Path {
         &self.cert_path
     }
 
-    // Public accessor for CA PEM, used during trust store setup
+    /// Public accessor for CA PEM, used during trust store setup
     #[allow(dead_code)]
     pub fn ca_cert_pem(&self) -> &str {
         &self.ca_cert_pem
     }
 
-    /// Install the CA certificate in the system trust store
-    // Reserved for automated CA installation during agent setup
-    #[allow(dead_code)]
+    /// Install the CA certificate in the system trust store.
+    /// Called during first-boot setup to ensure the OS trusts our MITM CA.
     pub fn install_in_trust_store(&self) -> anyhow::Result<()> {
         let cert_path_str = self.cert_path.to_string_lossy();
 

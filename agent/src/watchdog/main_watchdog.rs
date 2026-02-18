@@ -224,69 +224,16 @@ fn check_data_directory() {
     }
 }
 
-/// Re-apply the system proxy PAC file configuration
+/// Re-apply the system proxy PAC file configuration.
+/// Delegates to the shared `system_proxy` module from the agent library crate.
 fn reapply_proxy_config() -> bool {
-    #[cfg(target_os = "macos")]
-    {
-        // Get all network services
-        let services = get_macos_network_services();
-        let mut success = false;
-
-        for service in &services {
-            let pac_url = "http://127.0.0.1:8443/proxy.pac".to_string();
-            let result = std::process::Command::new("networksetup")
-                .args(["-setautoproxyurl", service, &pac_url])
-                .output();
-
-            if let Ok(o) = result {
-                if o.status.success() {
-                    success = true;
-                }
-            }
+    let pac_url = "http://127.0.0.1:8443/proxy.pac";
+    match icon_agent::proxy::system_proxy::configure_system_proxy(pac_url) {
+        Ok(()) => true,
+        Err(e) => {
+            eprintln!("[watchdog] Failed to reapply proxy config: {}", e);
+            false
         }
-        success
-    }
-
-    #[cfg(target_os = "windows")]
-    {
-        let pac_url = "http://127.0.0.1:8443/proxy.pac";
-        let result = std::process::Command::new("reg")
-            .args([
-                "add",
-                r"HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings",
-                "/v", "AutoConfigURL",
-                "/t", "REG_SZ",
-                "/d", pac_url,
-                "/f",
-            ])
-            .output();
-
-        result.map(|o| o.status.success()).unwrap_or(false)
-    }
-
-    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-    {
-        false
-    }
-}
-
-#[cfg(target_os = "macos")]
-fn get_macos_network_services() -> Vec<String> {
-    let output = std::process::Command::new("networksetup")
-        .args(["-listallnetworkservices"])
-        .output();
-
-    match output {
-        Ok(o) => {
-            String::from_utf8_lossy(&o.stdout)
-                .lines()
-                .skip(1) // First line is a header
-                .filter(|l| !l.starts_with('*')) // Skip disabled services
-                .map(|l| l.trim().to_string())
-                .filter(|l| !l.is_empty())
-                .collect()
-        }
-        Err(_) => vec!["Wi-Fi".to_string()],
     }
 }
 

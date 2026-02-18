@@ -2,11 +2,13 @@
 
 namespace Database\Seeders;
 
+use App\Jobs\IndexExchangeJob;
 use App\Models\AgentDeployment;
 use App\Models\Alert;
 use App\Models\Department;
 use App\Models\Event;
 use App\Models\Machine;
+use App\Services\ElasticsearchService;
 use Illuminate\Database\Seeder;
 
 class DemoDataSeeder extends Seeder
@@ -149,6 +151,31 @@ class DemoDataSeeder extends Seeder
                     'error_message' => $status === 'failed' ? 'Agent process timed out during upgrade' : null,
                     'deployed_at' => now()->subDays(rand(0, 14))->subHours(rand(0, 23)),
                 ]);
+            }
+        }
+
+        // ── 5. Index demo exchanges in Elasticsearch ───────────────────
+        if (app()->bound(ElasticsearchService::class)) {
+            $this->command->info('Indexing demo exchanges in Elasticsearch...');
+            foreach (Event::where('event_type', 'prompt')->get() as $event) {
+                try {
+                    IndexExchangeJob::dispatchSync($event->id, [
+                        'event_id' => $event->id,
+                        'machine_id' => $event->machine_id,
+                        'platform' => $event->platform,
+                        'domain' => $event->domain,
+                        'event_type' => $event->event_type,
+                        'prompt' => 'Exemple de prompt de démonstration pour ' . $event->platform,
+                        'response' => 'Réponse générée par ' . $event->platform . ' pour la démonstration.',
+                        'severity' => $event->severity,
+                        'occurred_at' => $event->occurred_at,
+                        'created_at' => $event->created_at,
+                    ]);
+                } catch (\Exception $e) {
+                    // ES might not be running in dev, just skip
+                    $this->command->warn('Elasticsearch indexing skipped: ' . $e->getMessage());
+                    break;
+                }
             }
         }
 

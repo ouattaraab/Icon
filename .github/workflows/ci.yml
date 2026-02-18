@@ -280,8 +280,7 @@ jobs:
         run: npm ci
 
       - name: Lint frontend
-        # Remove || true once all existing lint issues are fixed
-        run: npx eslint resources/js/ --max-warnings 0 || true
+        run: npx eslint resources/js/ --max-warnings 0
 
       - name: Run Vitest
         run: npm test

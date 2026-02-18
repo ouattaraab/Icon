@@ -8,7 +8,6 @@ use App\Models\Alert;
 use App\Models\Event;
 use App\Models\Machine;
 use App\Services\DlpPatternService;
-use App\Services\ElasticsearchService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -31,11 +30,11 @@ class ProcessEventBatch implements ShouldQueue
 
     private int $alertsCreated = 0;
 
-    public function handle(ElasticsearchService $elasticsearch, DlpPatternService $dlp): void
+    public function handle(DlpPatternService $dlp): void
     {
         foreach ($this->events as $eventData) {
             try {
-                $this->processEvent($eventData, $elasticsearch, $dlp);
+                $this->processEvent($eventData, $dlp);
             } catch (\Throwable $e) {
                 Log::error('Failed to process event', [
                     'machine_id' => $this->machineId,
@@ -58,7 +57,7 @@ class ProcessEventBatch implements ShouldQueue
         ));
     }
 
-    private function processEvent(array $eventData, ElasticsearchService $elasticsearch, DlpPatternService $dlp): void
+    private function processEvent(array $eventData, DlpPatternService $dlp): void
     {
         // Server-side DLP scan on prompt content
         if (config('icon.dlp.enabled') && ! empty($eventData['prompt_excerpt'])) {
@@ -78,10 +77,21 @@ class ProcessEventBatch implements ShouldQueue
             }
         }
 
-        // Index in Elasticsearch for full-text search
-        $esId = null;
+        // Store metadata in PostgreSQL
+        $event = Event::create([
+            'machine_id' => $this->machineId,
+            'event_type' => $eventData['event_type'],
+            'platform' => $eventData['platform'] ?? null,
+            'domain' => $eventData['domain'] ?? null,
+            'rule_id' => $eventData['rule_id'] ?? null,
+            'severity' => $eventData['severity'] ?? 'info',
+            'metadata' => ! empty($eventData['metadata']) ? json_decode($eventData['metadata'], true) : null,
+            'occurred_at' => $eventData['occurred_at'],
+        ]);
+
+        // Dispatch Elasticsearch indexing as a separate job
         if (! empty($eventData['prompt_excerpt']) || ! empty($eventData['response_excerpt'])) {
-            $esId = $elasticsearch->indexExchange([
+            IndexExchangeJob::dispatch($event->id, [
                 'machine_id' => $this->machineId,
                 'platform' => $eventData['platform'] ?? null,
                 'domain' => $eventData['domain'] ?? null,
@@ -95,19 +105,6 @@ class ProcessEventBatch implements ShouldQueue
                 'occurred_at' => $eventData['occurred_at'],
             ]);
         }
-
-        // Store metadata in PostgreSQL
-        $event = Event::create([
-            'machine_id' => $this->machineId,
-            'event_type' => $eventData['event_type'],
-            'platform' => $eventData['platform'] ?? null,
-            'domain' => $eventData['domain'] ?? null,
-            'rule_id' => $eventData['rule_id'] ?? null,
-            'severity' => $eventData['severity'] ?? 'info',
-            'elasticsearch_id' => $esId,
-            'metadata' => ! empty($eventData['metadata']) ? json_decode($eventData['metadata'], true) : null,
-            'occurred_at' => $eventData['occurred_at'],
-        ]);
 
         // Generate alerts for block/critical events
         if (in_array($eventData['severity'] ?? '', ['warning', 'critical'])) {

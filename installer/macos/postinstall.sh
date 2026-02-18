@@ -106,6 +106,23 @@ cat > "${WATCHDOG_PLIST}" << 'PLISTEOF'
 </plist>
 PLISTEOF
 
+# Install CA certificate into macOS System keychain so the MITM proxy is trusted.
+# The agent generates the CA on first run; if the cert already exists from a
+# previous install we install it now so interception works immediately.
+CA_CERT="${DATA_DIR}/icon-ca.crt"
+if [ -f "${CA_CERT}" ]; then
+    echo "Installing CA certificate into System keychain..."
+    security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain "${CA_CERT}" \
+        && echo "CA certificate installed" \
+        || echo "WARNING: Failed to install CA certificate (will be retried by the agent on first boot)"
+else
+    echo "CA certificate not yet generated (will be created and installed on first agent boot)"
+fi
+
+# NOTE: System proxy PAC URL configuration is now handled by the agent itself
+# on first boot (via proxy::system_proxy::configure_system_proxy). The watchdog
+# also re-applies it if it detects tampering. No need to configure it here.
+
 # Load daemons
 launchctl load -w "${AGENT_PLIST}"
 launchctl load -w "${WATCHDOG_PLIST}"

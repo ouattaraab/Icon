@@ -1,4 +1,5 @@
 import { router } from '@inertiajs/react';
+import { useEffect, useState } from 'react';
 import DashboardLayout from '../../Layouts/DashboardLayout';
 import { useTheme } from '../../Contexts/ThemeContext';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -17,9 +18,55 @@ const statusLabels = {
 export default function AlertsIndex({ alerts, openCount, criticalCount, filters }) {
     const { theme: t } = useTheme();
     const isMobile = useIsMobile();
+    const [wsConnected, setWsConnected] = useState(false);
+
+    // Real-time Echo/WebSocket listener for new alerts
+    useEffect(() => {
+        if (typeof window === 'undefined' || !window.Echo) return;
+
+        const channel = window.Echo.channel('icon.dashboard');
+
+        channel.subscribed(() => setWsConnected(true));
+
+        channel.listen('.alert.created', () => {
+            // Reload only the alerts-related props to refresh the list
+            router.reload({ only: ['alerts', 'openCount', 'criticalCount'] });
+        });
+
+        channel.listen('.alert.status_changed', () => {
+            router.reload({ only: ['alerts', 'openCount', 'criticalCount'] });
+        });
+
+        return () => {
+            channel.stopListening('.alert.created');
+            channel.stopListening('.alert.status_changed');
+            setWsConnected(false);
+        };
+    }, []);
 
     return (
         <DashboardLayout title="Centre d'alertes">
+            {/* WebSocket connection status */}
+            <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                marginBottom: '1rem',
+            }}>
+                <span style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    background: wsConnected ? t.success : t.accent,
+                    display: 'inline-block',
+                    boxShadow: wsConnected ? `0 0 6px ${t.success}` : 'none',
+                    animation: 'pulse 2s infinite',
+                }} />
+                <span style={{ color: t.textFaint, fontSize: '0.75rem' }}>
+                    {wsConnected ? 'Temps réel actif' : 'Connexion en cours...'}
+                </span>
+            </div>
+
             {/* Summary */}
             <div className="icon-stat-grid" style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
                 <div style={{
@@ -167,6 +214,13 @@ export default function AlertsIndex({ alerts, openCount, criticalCount, filters 
                     );
                 })}
             </div>
+            {/* CSS animation for pulse */}
+            <style>{`
+                @keyframes pulse {
+                    0%, 100% { opacity: 1; }
+                    50% { opacity: 0.3; }
+                }
+            `}</style>
         </DashboardLayout>
     );
 }

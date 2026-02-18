@@ -113,13 +113,13 @@ async fn test_registration_sends_required_fields() {
             let body: serde_json::Value =
                 serde_json::from_slice(&req.body).expect("body should be valid JSON");
             // All four required fields must be present and non-empty
-            body.get("hostname").and_then(|v| v.as_str()).map_or(false, |s| !s.is_empty())
-                && body.get("os").and_then(|v| v.as_str()).map_or(false, |s| !s.is_empty())
+            body.get("hostname").and_then(|v| v.as_str()).is_some_and(|s| !s.is_empty())
+                && body.get("os").and_then(|v| v.as_str()).is_some_and(|s| !s.is_empty())
                 && body.get("os_version").and_then(|v| v.as_str()).is_some()
                 && body
                     .get("agent_version")
                     .and_then(|v| v.as_str())
-                    .map_or(false, |s| !s.is_empty())
+                    .is_some_and(|s| !s.is_empty())
         })
         .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
             "machine_id": "m-1",
@@ -517,7 +517,7 @@ async fn test_send_events_batch_body_contains_all_events() {
             let body: serde_json::Value =
                 serde_json::from_slice(&req.body).expect("body should be valid JSON");
             let events = body.get("events").and_then(|v| v.as_array());
-            events.map_or(false, |arr| arr.len() == 3)
+            events.is_some_and(|arr| arr.len() == 3)
         })
         .respond_with(ResponseTemplate::new(200))
         .expect(1)
@@ -1368,7 +1368,7 @@ async fn test_check_update_returns_update_info() {
     let mock_server = MockServer::start().await;
 
     let version = env!("CARGO_PKG_VERSION");
-    let path_str = format!("/api/agents/update");
+    let path_str = "/api/agents/update".to_string();
 
     Mock::given(method("GET"))
         .and(path(&path_str))

@@ -2,6 +2,7 @@ mod config;
 mod clipboard;
 mod proxy;
 mod rules;
+mod service;
 mod storage;
 mod sync;
 mod update;
@@ -13,6 +14,7 @@ use std::sync::Arc;
 
 use crate::config::AppConfig;
 use crate::proxy::domain_filter::DomainFilter;
+use crate::proxy::tls::CaManager;
 use crate::storage::database::Database;
 use crate::rules::engine::RuleEngine;
 use crate::sync::api_client::ApiClient;
@@ -35,6 +37,18 @@ struct Cli {
     /// Overrides the default platform-specific path.
     #[arg(long, value_name = "FILE")]
     config_path: Option<PathBuf>,
+
+    /// Run as a Windows Service (called by SCM, not intended for manual use).
+    #[arg(long)]
+    service: bool,
+
+    /// Install the agent as a system service and exit.
+    #[arg(long)]
+    install_service: bool,
+
+    /// Uninstall the agent system service and exit.
+    #[arg(long)]
+    uninstall_service: bool,
 }
 
 #[tokio::main]
@@ -46,8 +60,37 @@ async fn main() -> anyhow::Result<()> {
         return handle_generate_config(&cli.config_path);
     }
 
-    // Normal agent startup flow
+    // Handle --install-service
+    if cli.install_service {
+        return handle_install_service();
+    }
 
+    // Handle --uninstall-service
+    if cli.uninstall_service {
+        return handle_uninstall_service();
+    }
+
+    // Handle --service: start as a Windows Service via SCM
+    if cli.service {
+        #[cfg(target_os = "windows")]
+        {
+            service::windows::run_as_service()
+                .map_err(|e| anyhow::anyhow!("Windows Service dispatcher failed: {}", e))?;
+            return Ok(());
+        }
+
+        #[cfg(not(target_os = "windows"))]
+        {
+            anyhow::bail!("--service flag is only supported on Windows");
+        }
+    }
+
+    // Normal agent startup flow — run interactively
+    run_agent(&cli.config_path).await
+}
+
+/// Main agent logic. Called by both interactive mode and Windows Service mode.
+pub async fn run_agent(config_path: &Option<PathBuf>) -> anyhow::Result<()> {
     // Initialize logging
     tracing_subscriber::fmt()
         .with_env_filter(
@@ -60,7 +103,7 @@ async fn main() -> anyhow::Result<()> {
     info!("Icon Agent v{} starting...", env!("CARGO_PKG_VERSION"));
 
     // Load configuration (file + env vars)
-    let mut config = match &cli.config_path {
+    let mut config = match config_path {
         Some(path) => AppConfig::load_from(Some(path))?,
         None => AppConfig::load()?,
     };
@@ -127,6 +170,30 @@ async fn main() -> anyhow::Result<()> {
     // Sync monitored domains from server
     sync_domains_from_server(&api_client, &domain_filter).await;
 
+    // -----------------------------------------------------------------------
+    // First-boot setup: install CA certificate and configure system proxy
+    // -----------------------------------------------------------------------
+    let ca_manager = CaManager::load_or_create(&config.data_dir)?;
+
+    // Install the CA certificate in the OS trust store so the MITM proxy is
+    // transparently trusted by browsers and other TLS clients.
+    if let Err(e) = ca_manager.install_in_trust_store() {
+        error!(error = %e, "Failed to install CA certificate in trust store — \
+            HTTPS interception will not work until the certificate is trusted");
+    } else {
+        info!("CA certificate installed in system trust store");
+    }
+
+    // Configure the OS to use our PAC file so that monitored AI domains are
+    // automatically routed through the local MITM proxy.
+    let pac_url = format!("http://127.0.0.1:{}/proxy.pac", config.proxy_port);
+    if let Err(e) = proxy::system_proxy::configure_system_proxy(&pac_url) {
+        error!(error = %e, "Failed to configure system proxy — \
+            traffic will not be routed through the agent");
+    } else {
+        info!(pac_url = %pac_url, "System proxy configured");
+    }
+
     // Start all subsystems concurrently
     let proxy_handle = {
         let re = rule_engine.clone();
@@ -178,13 +245,52 @@ async fn main() -> anyhow::Result<()> {
 
     info!("All subsystems started. Icon Agent is running.");
 
+    // -----------------------------------------------------------------------
+    // Graceful shutdown: remove system proxy when the agent exits
+    // -----------------------------------------------------------------------
     // Wait for any subsystem to exit (they shouldn't under normal operation)
+    // or for a SIGTERM / Ctrl+C signal.
+    let shutdown_signal = async {
+        // Listen for SIGTERM (Unix) or Ctrl+C
+        #[cfg(unix)]
+        {
+            use tokio::signal::unix::{signal, SignalKind};
+            let mut sigterm = signal(SignalKind::terminate())
+                .expect("failed to register SIGTERM handler");
+            tokio::select! {
+                _ = sigterm.recv() => {
+                    info!("Received SIGTERM, shutting down...");
+                }
+                _ = tokio::signal::ctrl_c() => {
+                    info!("Received Ctrl+C, shutting down...");
+                }
+            }
+        }
+        #[cfg(not(unix))]
+        {
+            let _ = tokio::signal::ctrl_c().await;
+            info!("Received shutdown signal, shutting down...");
+        }
+    };
+
     tokio::select! {
         r = proxy_handle => error!(?r, "Proxy exited unexpectedly"),
         r = clipboard_handle => error!(?r, "Clipboard monitor exited unexpectedly"),
         r = heartbeat_handle => error!(?r, "Heartbeat exited unexpectedly"),
         r = queue_handle => error!(?r, "Event queue exited unexpectedly"),
         r = websocket_handle => error!(?r, "WebSocket listener exited unexpectedly"),
+        _ = shutdown_signal => {
+            info!("Shutdown signal received");
+        }
+    }
+
+    // Clean up: remove system proxy configuration so the OS does not try to
+    // route traffic through a proxy that is no longer running.
+    info!("Removing system proxy configuration...");
+    if let Err(e) = proxy::system_proxy::remove_system_proxy() {
+        error!(error = %e, "Failed to remove system proxy configuration during shutdown");
+    } else {
+        info!("System proxy configuration removed");
     }
 
     Ok(())
@@ -214,6 +320,57 @@ fn handle_generate_config(config_path_override: &Option<PathBuf>) -> anyhow::Res
     );
 
     Ok(())
+}
+
+/// Handle the --install-service CLI flag: install the platform service and exit.
+fn handle_install_service() -> anyhow::Result<()> {
+    let binary_path = std::env::current_exe()?;
+    let binary_str = binary_path
+        .to_str()
+        .ok_or_else(|| anyhow::anyhow!("Binary path is not valid UTF-8"))?;
+
+    #[cfg(target_os = "windows")]
+    {
+        service::windows::install_service(binary_str)?;
+        println!("Windows Service installed. Start with: sc start IconAgent");
+        return Ok(());
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        let _ = binary_str;
+        service::macos::install_service()?;
+        println!("LaunchDaemon installed and loaded.");
+        Ok(())
+    }
+
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    {
+        let _ = binary_str;
+        anyhow::bail!("Service installation is not supported on this platform");
+    }
+}
+
+/// Handle the --uninstall-service CLI flag: uninstall the platform service and exit.
+fn handle_uninstall_service() -> anyhow::Result<()> {
+    #[cfg(target_os = "windows")]
+    {
+        service::windows::uninstall_service()?;
+        println!("Windows Service uninstalled.");
+        return Ok(());
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        service::macos::uninstall_service()?;
+        println!("LaunchDaemon uninstalled.");
+        Ok(())
+    }
+
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    {
+        anyhow::bail!("Service uninstallation is not supported on this platform");
+    }
 }
 
 /// Restore machine_id, api_key, and hmac_secret from the local encrypted DB.
