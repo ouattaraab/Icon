@@ -57,10 +57,11 @@ class EndToEndAgentTest extends TestCase
 
     private function signedHeaders(string $body): array
     {
+        $timestamp = (string) time();
         return [
             'X-Api-Key' => $this->apiKey,
-            'X-Signature' => hash_hmac('sha256', $body, $this->hmacSecret),
-            'X-Timestamp' => (string) time(),
+            'X-Signature' => hash_hmac('sha256', $timestamp . '.' . $body, $this->hmacSecret),
+            'X-Timestamp' => $timestamp,
         ];
     }
 

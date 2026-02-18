@@ -51,16 +51,29 @@ class HmacMiddlewareTest extends TestCase
         ];
     }
 
+    /**
+     * Compute an HMAC signature using the {timestamp}.{body} format.
+     */
+    private function signPayload(string $body, string $secret, ?string $timestamp = null): array
+    {
+        $timestamp = $timestamp ?? (string) time();
+        $signedPayload = $timestamp . '.' . $body;
+        $signature = hash_hmac('sha256', $signedPayload, $secret);
+
+        return [$signature, $timestamp];
+    }
+
     // ── Valid Signature ─────────────────────────────────────────────────
 
     public function test_valid_hmac_signature_passes(): void
     {
         $payload = json_encode($this->heartbeatPayload());
-        $signature = hash_hmac('sha256', $payload, $this->hmacSecret);
+        [$signature, $timestamp] = $this->signPayload($payload, $this->hmacSecret);
 
         $response = $this->call('POST', '/api/agents/heartbeat', [], [], [], [
             'HTTP_X-Api-Key' => $this->apiKey,
             'HTTP_X-Signature' => $signature,
+            'HTTP_X-Timestamp' => $timestamp,
             'CONTENT_TYPE' => 'application/json',
         ], $payload);
 
@@ -71,9 +84,12 @@ class HmacMiddlewareTest extends TestCase
 
     public function test_invalid_hmac_signature_returns_401(): void
     {
+        $timestamp = (string) time();
+
         $this->postJson('/api/agents/heartbeat', $this->heartbeatPayload(), [
             'X-Api-Key' => $this->apiKey,
             'X-Signature' => 'totally-invalid-signature',
+            'X-Timestamp' => $timestamp,
         ])
             ->assertStatus(401)
             ->assertJson(['error' => 'Invalid HMAC signature']);
@@ -82,7 +98,8 @@ class HmacMiddlewareTest extends TestCase
     public function test_tampered_payload_returns_401(): void
     {
         $originalPayload = $this->heartbeatPayload();
-        $signature = hash_hmac('sha256', json_encode($originalPayload), $this->hmacSecret);
+        $body = json_encode($originalPayload);
+        [$signature, $timestamp] = $this->signPayload($body, $this->hmacSecret);
 
         // Tamper with the payload after signing
         $tamperedPayload = $originalPayload;
@@ -91,6 +108,7 @@ class HmacMiddlewareTest extends TestCase
         $this->postJson('/api/agents/heartbeat', $tamperedPayload, [
             'X-Api-Key' => $this->apiKey,
             'X-Signature' => $signature,
+            'X-Timestamp' => $timestamp,
         ])
             ->assertStatus(401)
             ->assertJson(['error' => 'Invalid HMAC signature']);
@@ -100,8 +118,11 @@ class HmacMiddlewareTest extends TestCase
 
     public function test_missing_signature_header_returns_401(): void
     {
+        $timestamp = (string) time();
+
         $this->postJson('/api/agents/heartbeat', $this->heartbeatPayload(), [
             'X-Api-Key' => $this->apiKey,
+            'X-Timestamp' => $timestamp,
             // No X-Signature header
         ])
             ->assertStatus(401)
@@ -111,13 +132,66 @@ class HmacMiddlewareTest extends TestCase
     public function test_missing_api_key_header_returns_401(): void
     {
         $payload = json_encode($this->heartbeatPayload());
-        $signature = hash_hmac('sha256', $payload, $this->hmacSecret);
+        [$signature, $timestamp] = $this->signPayload($payload, $this->hmacSecret);
 
-        // Only X-Signature, no X-Api-Key
+        // Only X-Signature + X-Timestamp, no X-Api-Key
         $this->postJson('/api/agents/heartbeat', $this->heartbeatPayload(), [
             'X-Signature' => $signature,
+            'X-Timestamp' => $timestamp,
         ])
             ->assertStatus(401);
+    }
+
+    // ── Timestamp Validation ────────────────────────────────────────────
+
+    public function test_missing_timestamp_returns_401(): void
+    {
+        $payload = json_encode($this->heartbeatPayload());
+        // Sign with a timestamp but do NOT send the X-Timestamp header
+        $signature = hash_hmac('sha256', time() . '.' . $payload, $this->hmacSecret);
+
+        $this->call('POST', '/api/agents/heartbeat', [], [], [], [
+            'HTTP_X-Api-Key' => $this->apiKey,
+            'HTTP_X-Signature' => $signature,
+            // No X-Timestamp header
+            'CONTENT_TYPE' => 'application/json',
+        ], $payload)
+            ->assertStatus(401)
+            ->assertJson(['error' => 'Missing timestamp']);
+    }
+
+    public function test_expired_timestamp_returns_401(): void
+    {
+        // Use a timestamp that is older than the max age (default 300 seconds)
+        $expiredTimestamp = (string) (time() - 600);
+        $payload = json_encode($this->heartbeatPayload());
+        [$signature] = $this->signPayload($payload, $this->hmacSecret, $expiredTimestamp);
+
+        $this->call('POST', '/api/agents/heartbeat', [], [], [], [
+            'HTTP_X-Api-Key' => $this->apiKey,
+            'HTTP_X-Signature' => $signature,
+            'HTTP_X-Timestamp' => $expiredTimestamp,
+            'CONTENT_TYPE' => 'application/json',
+        ], $payload)
+            ->assertStatus(401)
+            ->assertJson(['error' => 'Request timestamp expired']);
+    }
+
+    public function test_future_timestamp_returns_401(): void
+    {
+        // Use a timestamp that is too far in the future (>300 seconds ahead)
+        $futureTimestamp = (string) (time() + 600);
+        $payload = json_encode($this->heartbeatPayload());
+        [$signature] = $this->signPayload($payload, $this->hmacSecret, $futureTimestamp);
+
+        $this->call('POST', '/api/agents/heartbeat', [], [], [], [
+            'HTTP_X-Api-Key' => $this->apiKey,
+            'HTTP_X-Signature' => $signature,
+            'HTTP_X-Timestamp' => $futureTimestamp,
+            'CONTENT_TYPE' => 'application/json',
+        ], $payload)
+            ->assertStatus(401)
+            ->assertJson(['error' => 'Request timestamp expired']);
     }
 
     // ── HMAC Secret Usage ───────────────────────────────────────────────
@@ -125,14 +199,16 @@ class HmacMiddlewareTest extends TestCase
     public function test_hmac_uses_correct_machine_secret(): void
     {
         $payload = json_encode($this->heartbeatPayload());
+        $timestamp = (string) time();
 
         // Sign with a different secret (wrong secret)
         $wrongSecret = Str::random(64);
-        $wrongSignature = hash_hmac('sha256', $payload, $wrongSecret);
+        $wrongSignature = hash_hmac('sha256', $timestamp . '.' . $payload, $wrongSecret);
 
         $this->call('POST', '/api/agents/heartbeat', [], [], [], [
             'HTTP_X-Api-Key' => $this->apiKey,
             'HTTP_X-Signature' => $wrongSignature,
+            'HTTP_X-Timestamp' => $timestamp,
             'CONTENT_TYPE' => 'application/json',
         ], $payload)
             ->assertStatus(401)
@@ -164,11 +240,12 @@ class HmacMiddlewareTest extends TestCase
             'queue_size' => 0,
             'uptime_secs' => 60,
         ]);
-        $signature = hash_hmac('sha256', $payload, $globalSecret);
+        [$signature, $timestamp] = $this->signPayload($payload, $globalSecret);
 
         $response = $this->call('POST', '/api/agents/heartbeat', [], [], [], [
             'HTTP_X-Api-Key' => $apiKeyNoHmac,
             'HTTP_X-Signature' => $signature,
+            'HTTP_X-Timestamp' => $timestamp,
             'CONTENT_TYPE' => 'application/json',
         ], $payload);
 
@@ -205,5 +282,26 @@ class HmacMiddlewareTest extends TestCase
         $this->withHeaders(['X-Api-Key' => $this->apiKey])
             ->postJson('/api/agents/heartbeat', $this->heartbeatPayload())
             ->assertOk();
+    }
+
+    // ── Signature bound to timestamp ────────────────────────────────────
+
+    public function test_signature_with_wrong_timestamp_returns_401(): void
+    {
+        $payload = json_encode($this->heartbeatPayload());
+        $timestamp1 = (string) time();
+        $timestamp2 = (string) (time() - 10); // A different but still valid timestamp
+
+        // Sign with timestamp1 but send timestamp2
+        [$signature] = $this->signPayload($payload, $this->hmacSecret, $timestamp1);
+
+        $this->call('POST', '/api/agents/heartbeat', [], [], [], [
+            'HTTP_X-Api-Key' => $this->apiKey,
+            'HTTP_X-Signature' => $signature,
+            'HTTP_X-Timestamp' => $timestamp2,
+            'CONTENT_TYPE' => 'application/json',
+        ], $payload)
+            ->assertStatus(401)
+            ->assertJson(['error' => 'Invalid HMAC signature']);
     }
 }

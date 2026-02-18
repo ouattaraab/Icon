@@ -1,5 +1,6 @@
 use std::sync::Arc;
 use std::time::Instant;
+use tokio::sync::Mutex;
 use tokio::time::{interval, Duration};
 use tracing::{info, warn, debug, error};
 
@@ -19,6 +20,10 @@ pub async fn run_heartbeat_loop(
     let start_time = Instant::now();
 
     let machine_id = config.machine_id.clone().unwrap_or_else(|| "unregistered".to_string());
+
+    // Track the last version we attempted to update to, so we don't retry
+    // the same failed update on every heartbeat cycle.
+    let last_attempted_update_version: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
 
     loop {
         heartbeat_interval.tick().await;
@@ -48,12 +53,47 @@ pub async fn run_heartbeat_loop(
                     }
                 }
 
-                // Handle available update
+                // Handle available update — only attempt once per version
                 if let Some(update) = resp.update_available {
-                    info!(version = %update.version, "Update available, starting auto-update");
-                    match updater::apply_update(&update).await {
-                        Ok(()) => info!("Update applied successfully"),
-                        Err(e) => error!(error = %e, "Auto-update failed"),
+                    let mut last_version = last_attempted_update_version.lock().await;
+                    let already_attempted = last_version
+                        .as_ref()
+                        .map(|v| v == &update.version)
+                        .unwrap_or(false);
+
+                    if already_attempted {
+                        debug!(
+                            version = %update.version,
+                            "Skipping update, already attempted this version"
+                        );
+                    } else {
+                        info!(
+                            version = %update.version,
+                            download_url = %update.download_url,
+                            "Update available, starting auto-update"
+                        );
+
+                        // Record the version before attempting so we don't retry on failure
+                        *last_version = Some(update.version.clone());
+
+                        // Release the lock before the potentially long download
+                        drop(last_version);
+
+                        match updater::apply_update(&update).await {
+                            Ok(()) => {
+                                info!(
+                                    version = %update.version,
+                                    "Update applied successfully, agent will restart"
+                                );
+                            }
+                            Err(e) => {
+                                error!(
+                                    error = %e,
+                                    version = %update.version,
+                                    "Auto-update failed, will not retry this version"
+                                );
+                            }
+                        }
                     }
                 }
             }

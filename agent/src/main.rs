@@ -6,7 +6,9 @@ mod storage;
 mod sync;
 mod update;
 
+use clap::Parser;
 use tracing::{info, warn, error};
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use crate::config::AppConfig;
@@ -16,8 +18,36 @@ use crate::rules::engine::RuleEngine;
 use crate::sync::api_client::ApiClient;
 use crate::sync::queue::EventQueue;
 
+/// Icon Agent - Endpoint monitoring agent for GS2E
+#[derive(Parser, Debug)]
+#[command(
+    name = "icon-agent",
+    version,
+    about = "Icon Agent - AI-powered endpoint monitoring agent"
+)]
+struct Cli {
+    /// Generate a default config.toml file and exit.
+    /// The file is written to the default platform location unless --config-path is specified.
+    #[arg(long)]
+    generate_config: bool,
+
+    /// Path to the configuration file.
+    /// Overrides the default platform-specific path.
+    #[arg(long, value_name = "FILE")]
+    config_path: Option<PathBuf>,
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    let cli = Cli::parse();
+
+    // Handle --generate-config: write a default config and exit immediately
+    if cli.generate_config {
+        return handle_generate_config(&cli.config_path);
+    }
+
+    // Normal agent startup flow
+
     // Initialize logging
     tracing_subscriber::fmt()
         .with_env_filter(
@@ -30,7 +60,10 @@ async fn main() -> anyhow::Result<()> {
     info!("Icon Agent v{} starting...", env!("CARGO_PKG_VERSION"));
 
     // Load configuration (file + env vars)
-    let mut config = AppConfig::load()?;
+    let mut config = match &cli.config_path {
+        Some(path) => AppConfig::load_from(Some(path))?,
+        None => AppConfig::load()?,
+    };
     info!(server_url = %config.server_url, "Configuration loaded");
 
     // Initialize encrypted local database
@@ -153,6 +186,32 @@ async fn main() -> anyhow::Result<()> {
         r = queue_handle => error!(?r, "Event queue exited unexpectedly"),
         r = websocket_handle => error!(?r, "WebSocket listener exited unexpectedly"),
     }
+
+    Ok(())
+}
+
+/// Handle the --generate-config CLI flag: write a default config.toml and exit.
+fn handle_generate_config(config_path_override: &Option<PathBuf>) -> anyhow::Result<()> {
+    let target_path = match config_path_override {
+        Some(p) => p.clone(),
+        None => AppConfig::default_config_path(),
+    };
+
+    // Ensure the parent directory exists
+    if let Some(parent) = target_path.parent() {
+        if !parent.exists() {
+            std::fs::create_dir_all(parent)?;
+            eprintln!("Created directory: {}", parent.display());
+        }
+    }
+
+    let content = AppConfig::generate_default_config_toml();
+    std::fs::write(&target_path, &content)?;
+
+    println!("Default configuration written to: {}", target_path.display());
+    println!(
+        "Edit this file to customize the agent configuration before starting the service."
+    );
 
     Ok(())
 }

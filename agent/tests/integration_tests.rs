@@ -39,6 +39,7 @@ fn test_config(server_url: &str) -> AppConfig {
         websocket_url: "ws://localhost:0".to_string(),
         reverb_app_key: None,
         reverb_channel: None,
+        enrollment_key: None,
     }
 }
 
@@ -53,11 +54,13 @@ fn authenticated_config(server_url: &str) -> AppConfig {
 }
 
 /// Compute an HMAC-SHA256 signature for a given payload using the provided
-/// secret. This mirrors the logic inside `ApiClient::sign_payload`.
-fn compute_hmac(secret: &str, payload: &str) -> String {
+/// secret. This mirrors the logic inside `ApiClient::sign_payload`, which
+/// signs `{timestamp}.{payload}` to bind the signature to the timestamp.
+fn compute_hmac(secret: &str, timestamp: &str, payload: &str) -> String {
     let mut mac =
         HmacSha256::new_from_slice(secret.as_bytes()).expect("HMAC can take key of any size");
-    mac.update(payload.as_bytes());
+    let signed_data = format!("{}.{}", timestamp, payload);
+    mac.update(signed_data.as_bytes());
     hex::encode(mac.finalize().into_bytes())
 }
 
@@ -367,7 +370,8 @@ async fn test_send_events_hmac_signature_header() {
     let mock_server = MockServer::start().await;
     let hmac_secret = "test-hmac-secret-456";
 
-    // Capture the request and verify the HMAC signature manually
+    // Capture the request and verify the HMAC signature manually.
+    // The signature now covers "{timestamp}.{body}" instead of just "{body}".
     Mock::given(method("POST"))
         .and(path("/api/events"))
         .and(move |req: &wiremock::Request| {
@@ -378,11 +382,18 @@ async fn test_send_events_hmac_signature_header() {
                 .and_then(|v| v.to_str().ok())
                 .unwrap_or("");
 
+            // Extract the timestamp header
+            let timestamp = req
+                .headers
+                .get("X-Timestamp")
+                .and_then(|v| v.to_str().ok())
+                .unwrap_or("");
+
             // The body that was signed
             let body_str = std::str::from_utf8(&req.body).unwrap_or("");
 
-            // Recompute expected HMAC
-            let expected = compute_hmac(hmac_secret, body_str);
+            // Recompute expected HMAC using {timestamp}.{body}
+            let expected = compute_hmac(hmac_secret, timestamp, body_str);
 
             signature == expected
         })
@@ -1094,7 +1105,8 @@ async fn test_hmac_signature_is_correct() {
     let mock_server = MockServer::start().await;
     let hmac_secret = "test-hmac-secret-456";
 
-    // Install a mock that captures and validates the HMAC signature
+    // Install a mock that captures and validates the HMAC signature.
+    // The signature now covers "{timestamp}.{body}" to prevent replay attacks.
     Mock::given(method("POST"))
         .and(path("/api/events"))
         .and(move |req: &wiremock::Request| {
@@ -1102,11 +1114,15 @@ async fn test_hmac_signature_is_correct() {
                 Some(s) => s.to_string(),
                 None => return false,
             };
+            let timestamp = match req.headers.get("X-Timestamp").and_then(|v| v.to_str().ok()) {
+                Some(s) => s,
+                None => return false,
+            };
             let body_str = match std::str::from_utf8(&req.body) {
                 Ok(s) => s,
                 Err(_) => return false,
             };
-            let expected = compute_hmac(hmac_secret, body_str);
+            let expected = compute_hmac(hmac_secret, timestamp, body_str);
             signature == expected
         })
         .respond_with(ResponseTemplate::new(200))
@@ -1215,10 +1231,11 @@ async fn test_hmac_signature_deterministic() {
     // Verify that computing the same HMAC twice with the same inputs gives the
     // same result, confirming deterministic behavior.
     let secret = "deterministic-test-secret";
+    let timestamp = "1700000000";
     let payload = r#"{"machine_id":"test","events":[]}"#;
 
-    let sig1 = compute_hmac(secret, payload);
-    let sig2 = compute_hmac(secret, payload);
+    let sig1 = compute_hmac(secret, timestamp, payload);
+    let sig2 = compute_hmac(secret, timestamp, payload);
 
     assert_eq!(sig1, sig2, "HMAC should be deterministic");
     // Also verify it is a valid hex string of the right length (SHA-256 = 32 bytes = 64 hex chars)
@@ -1232,24 +1249,39 @@ async fn test_hmac_signature_deterministic() {
 #[tokio::test]
 async fn test_hmac_different_payloads_produce_different_signatures() {
     let secret = "shared-secret";
+    let timestamp = "1700000000";
     let payload_a = r#"{"machine_id":"a","events":[]}"#;
     let payload_b = r#"{"machine_id":"b","events":[]}"#;
 
-    let sig_a = compute_hmac(secret, payload_a);
-    let sig_b = compute_hmac(secret, payload_b);
+    let sig_a = compute_hmac(secret, timestamp, payload_a);
+    let sig_b = compute_hmac(secret, timestamp, payload_b);
 
     assert_ne!(sig_a, sig_b, "Different payloads should produce different HMACs");
 }
 
 #[tokio::test]
 async fn test_hmac_different_secrets_produce_different_signatures() {
+    let timestamp = "1700000000";
     let payload = r#"{"machine_id":"test","events":[]}"#;
-    let sig_1 = compute_hmac("secret-one", payload);
-    let sig_2 = compute_hmac("secret-two", payload);
+    let sig_1 = compute_hmac("secret-one", timestamp, payload);
+    let sig_2 = compute_hmac("secret-two", timestamp, payload);
 
     assert_ne!(
         sig_1, sig_2,
         "Different secrets should produce different HMACs"
+    );
+}
+
+#[tokio::test]
+async fn test_hmac_different_timestamps_produce_different_signatures() {
+    let secret = "shared-secret";
+    let payload = r#"{"machine_id":"test","events":[]}"#;
+    let sig_1 = compute_hmac(secret, "1700000000", payload);
+    let sig_2 = compute_hmac(secret, "1700000001", payload);
+
+    assert_ne!(
+        sig_1, sig_2,
+        "Different timestamps should produce different HMACs even with same payload"
     );
 }
 

@@ -392,13 +392,15 @@ class AgentApiTest extends TestCase
     {
         config(['icon.security.verify_signatures' => true]);
 
+        $timestamp = (string) time();
+
         $this->postJson('/api/agents/heartbeat', [
             'machine_id' => $this->machine->id,
             'status' => 'active',
             'agent_version' => '0.1.0',
             'queue_size' => 0,
             'uptime_secs' => 60,
-        ], ['X-Api-Key' => $this->apiKey])
+        ], ['X-Api-Key' => $this->apiKey, 'X-Timestamp' => $timestamp])
             ->assertStatus(401)
             ->assertJson(['error' => 'Missing HMAC signature']);
     }
@@ -406,6 +408,8 @@ class AgentApiTest extends TestCase
     public function test_hmac_invalid_signature_rejected(): void
     {
         config(['icon.security.verify_signatures' => true]);
+
+        $timestamp = (string) time();
 
         $this->postJson('/api/agents/heartbeat', [
             'machine_id' => $this->machine->id,
@@ -416,6 +420,7 @@ class AgentApiTest extends TestCase
         ], [
             'X-Api-Key' => $this->apiKey,
             'X-Signature' => 'invalid-signature',
+            'X-Timestamp' => $timestamp,
         ])
             ->assertStatus(401)
             ->assertJson(['error' => 'Invalid HMAC signature']);
@@ -425,6 +430,8 @@ class AgentApiTest extends TestCase
     {
         config(['icon.security.verify_signatures' => true]);
 
+        $timestamp = (string) time();
+
         $payload = json_encode([
             'machine_id' => $this->machine->id,
             'status' => 'active',
@@ -433,11 +440,12 @@ class AgentApiTest extends TestCase
             'uptime_secs' => 60,
         ]);
 
-        $signature = hash_hmac('sha256', $payload, $this->hmacSecret);
+        $signature = hash_hmac('sha256', $timestamp . '.' . $payload, $this->hmacSecret);
 
         $this->call('POST', '/api/agents/heartbeat', [], [], [], [
             'HTTP_X-Api-Key' => $this->apiKey,
             'HTTP_X-Signature' => $signature,
+            'HTTP_X-Timestamp' => $timestamp,
             'CONTENT_TYPE' => 'application/json',
         ], $payload)
             ->assertOk();

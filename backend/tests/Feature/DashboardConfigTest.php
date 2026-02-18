@@ -31,7 +31,7 @@ class DashboardConfigTest extends TestCase
         $page = $response->viewData('page');
         $config = $page['props']['dashboardConfig'];
         $this->assertArrayHasKey('widgets', $config);
-        $this->assertCount(7, $config['widgets']);
+        $this->assertCount(8, $config['widgets']);
     }
 
     public function test_save_dashboard_config(): void

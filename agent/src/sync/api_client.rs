@@ -17,6 +17,7 @@ pub struct ApiClient {
     server_url: String,
     api_key: Option<String>,
     hmac_secret: Option<String>,
+    enrollment_key: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -136,6 +137,7 @@ impl ApiClient {
             server_url: config.server_url.clone(),
             api_key: config.api_key.clone(),
             hmac_secret: config.hmac_secret.clone(),
+            enrollment_key: config.enrollment_key.clone(),
         })
     }
 
@@ -153,11 +155,17 @@ impl ApiClient {
             agent_version: env!("CARGO_PKG_VERSION").to_string(),
         };
 
-        let resp = self.client
+        let mut request = self.client
             .post(format!("{}/api/agents/register", self.server_url))
-            .json(&req)
-            .send()
-            .await?;
+            .json(&req);
+
+        // Include the enrollment key header if configured, so the server can
+        // authorize this new agent registration.
+        if let Some(ref key) = self.enrollment_key {
+            request = request.header("X-Enrollment-Key", key);
+        }
+
+        let resp = request.send().await?;
 
         let resp = resp
             .error_for_status()?
@@ -289,8 +297,8 @@ impl ApiClient {
         };
 
         let body_json = serde_json::to_string(body)?;
-        let signature = self.sign_payload(&body_json);
         let timestamp = chrono::Utc::now().timestamp().to_string();
+        let signature = self.sign_payload(&timestamp, &body_json);
 
         let mut req = self.client.post(&url)
             .header("Content-Type", "application/json")
@@ -324,10 +332,13 @@ impl ApiClient {
         resp.error_for_status().map_err(Into::into)
     }
 
-    fn sign_payload(&self, payload: &str) -> Option<String> {
+    fn sign_payload(&self, timestamp: &str, payload: &str) -> Option<String> {
         let secret = self.hmac_secret.as_ref()?;
         let mut mac = HmacSha256::new_from_slice(secret.as_bytes()).ok()?;
-        mac.update(payload.as_bytes());
+        // Include the timestamp in the signed data to bind the signature to
+        // a specific timestamp window and prevent replay attacks.
+        let signed_data = format!("{}.{}", timestamp, payload);
+        mac.update(signed_data.as_bytes());
         Some(hex::encode(mac.finalize().into_bytes()))
     }
 }

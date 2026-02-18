@@ -57,6 +57,12 @@ hex = "0.4"
 # Compression
 flate2 = "1"
 
+# CLI argument parsing
+clap = { version = "4", features = ["derive"] }
+
+# TOML serialization (for --generate-config)
+toml = "0.8"
+
 # Error handling
 anyhow = "1"
 
