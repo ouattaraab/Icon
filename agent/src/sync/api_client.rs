@@ -11,7 +11,6 @@ use crate::sync::cert_pinning;
 
 type HmacSha256 = Hmac<Sha256>;
 
-#[allow(dead_code)]
 pub struct ApiClient {
     client: Client,
     server_url: String,
@@ -37,6 +36,7 @@ pub struct RegisterResponse {
 
 /// Domain entry from the /api/domains/sync endpoint
 #[derive(Debug, Deserialize)]
+// Fields populated by serde deserialization from server JSON responses
 #[allow(dead_code)]
 pub struct DomainEntry {
     pub domain: String,
@@ -99,6 +99,7 @@ pub struct RuleSyncResponse {
 
 /// Watchdog alert payload (sent by the watchdog binary)
 #[derive(Debug, Serialize)]
+// Used by the icon-watchdog binary, not the main agent
 #[allow(dead_code)]
 pub struct WatchdogAlert {
     pub alert_type: String,
@@ -222,6 +223,8 @@ impl ApiClient {
     }
 
     /// Check for agent updates
+    // Update checks are currently handled via HeartbeatResponse.update_available;
+    // this method is retained for direct/CLI-triggered update checks.
     #[allow(dead_code)]
     pub async fn check_update(&self) -> anyhow::Result<Option<UpdateInfo>> {
         let url = format!(
@@ -257,6 +260,7 @@ impl ApiClient {
     }
 
     /// Send a watchdog alert to the server
+    // Used by the icon-watchdog binary, not the main agent
     #[allow(dead_code)]
     pub async fn send_watchdog_alert(&self, alert_type: &str, message: &str) -> anyhow::Result<()> {
         let alert = WatchdogAlert {

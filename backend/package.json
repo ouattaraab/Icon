@@ -5,7 +5,9 @@
         "build": "vite build",
         "dev": "vite",
         "test": "vitest run",
-        "test:watch": "vitest"
+        "test:watch": "vitest",
+        "lint": "eslint resources/js/",
+        "lint:fix": "eslint resources/js/ --fix"
     },
     "dependencies": {
         "@inertiajs/react": "^1.0",
@@ -15,12 +17,17 @@
         "react-dom": "^18.3"
     },
     "devDependencies": {
+        "@eslint/js": "^9.0.0",
         "@testing-library/jest-dom": "^6.9.1",
         "@testing-library/react": "^16.3.2",
         "@vitejs/plugin-react": "^4.3",
         "autoprefixer": "^10.4.20",
         "axios": "^1.7.4",
         "concurrently": "^9.0.1",
+        "eslint": "^9.0.0",
+        "eslint-plugin-react": "^7.37.0",
+        "eslint-plugin-react-hooks": "^5.0.0",
+        "globals": "^15.0.0",
         "jsdom": "^28.1.0",
         "laravel-vite-plugin": "^1.2.0",
         "postcss": "^8.4.47",

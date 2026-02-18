@@ -49,6 +49,7 @@ fn default_activity_timeout() -> u64 {
 
 /// Payload for the `rule.changed` event
 #[derive(Debug, Deserialize)]
+// Fields populated by serde deserialization from JSON payloads
 #[allow(dead_code)]
 struct RuleChangedPayload {
     action: String,

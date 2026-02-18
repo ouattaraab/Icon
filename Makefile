@@ -50,6 +50,21 @@ backend-migrate: ## Exécuter les migrations
 backend-seed: ## Seeder la base de données
 	cd $(BACKEND_DIR) && php artisan db:seed
 
+# ── Linting ─────────────────────────────────────────────────
+.PHONY: lint lint-frontend lint-backend lint-fix
+
+lint-frontend: ## Linter le code JavaScript (ESLint)
+	cd $(BACKEND_DIR) && npx eslint resources/js/
+
+lint-backend: ## Vérifier le style PHP (Pint, dry-run)
+	cd $(BACKEND_DIR) && ./vendor/bin/pint --test
+
+lint: lint-frontend lint-backend ## Lancer tous les linters
+
+lint-fix: ## Corriger automatiquement les problèmes de lint
+	cd $(BACKEND_DIR) && npx eslint resources/js/ --fix
+	cd $(BACKEND_DIR) && ./vendor/bin/pint
+
 # ── Docker ──────────────────────────────────────────────────
 .PHONY: up down logs ps build
 
